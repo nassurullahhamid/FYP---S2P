@@ -58,17 +58,14 @@ Route::middleware('auth')->group(function () {
     Route::post('/tickets', [TicketController::class, 'store'])->name('tickets.store');
     Route::get('/tickets', [TicketController::class, 'index'])->name('tickets.index');
     Route::get('/senarai-tiket', [TicketController::class, 'index'])->name('tickets.senarai');
-    Route::post('/tickets/{id}/sahkan', [TicketController::class, 'sahkanKategori'])->name('tickets.sahkan');
     Route::get('/tickets/{id_tiket}', [TicketController::class, 'show'])->name('tickets.show');
     Route::post('/tickets/{ticket}/processAction', [TicketController::class, 'processAction'])->name('tickets.processAction');
-    Route::post('/tickets/{ticket}/resubmit', [TicketController::class, 'resubmitTicket'])->name('tickets.resubmitTicket');
     Route::post('/tickets/{ticket}/pic-update', [TicketController::class, 'picUpdate'])->name('tickets.picUpdate');
     Route::get('/tickets/{id_tiket}/verify-action', [TicketController::class, 'handleEmailRedirect'])->name('tickets.email.redirect');
 
     // Site Visit & Asset Loan Details
     Route::get('/aset/kuantiti', [TicketController::class, 'getKuantitiAset'])->name('aset.getKuantitiAset');
     Route::post('/tickets/{id_tiket}/laporan-tapak', [TicketController::class, 'storeLaporanTapak'])->name('tickets.storeLaporanTapak');
-    Route::post('/tickets/{ticket}/laporan-tapak', [TicketController::class, 'storeLaporanTapak'])->name('tickets.saveMaklumatTapak');
     Route::post('/tickets/{id_tiket}/peminjaman', [TicketController::class, 'storePeminjaman'])->name('tickets.storePeminjaman');
     Route::post('/tickets/{id_tiket}/jana-aset', [TicketController::class, 'janaSenaraiAset'])->name('tickets.janaSenaraiAset');
     Route::get('/tickets/{id_tiket}/cetak-peminjaman/{serial_no}', [TicketController::class, 'cetakPeminjaman'])->name('tickets.cetakPeminjaman');
