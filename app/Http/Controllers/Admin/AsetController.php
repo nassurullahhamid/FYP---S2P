@@ -65,16 +65,6 @@ class AsetController extends Controller
         return Redirect::route('assets.index')->with('success', 'Aset baharu berjaya didaftarkan.');
     }
 
-    // Display assets filtered by category
-    public function showCategory($category)
-    {
-        $filteredAssets = Aset::where('nama_aset', $category)->get();
-
-        return Inertia::render('Admin/PaparSenaraiAset', [
-            'category' => $category,
-            'filteredAssets' => $filteredAssets
-        ]);
-    }
 
     //  Update an existing asset's details
     public function update(Request $request, $serial_no)
