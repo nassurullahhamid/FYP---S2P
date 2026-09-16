@@ -13,7 +13,7 @@ class Aset extends Model
     public $incrementing = false;
     protected $keyType = 'string';
     protected $fillable = [
-        'serial_no', 'nama_aset', 'model', 'cpu', 'ram', 'hard_disk', 'os', 'status_aset', 'pengguna_ic'
+        'serial_no', 'nama_aset', 'model', 'cpu', 'ram', 'hard_disk', 'os', 'status', 'pengguna_ic'
     ];
 
     // Relationship: An asset belongs to a specific Pengguna

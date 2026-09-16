@@ -18,7 +18,6 @@ class Laporan extends Model
         'cadangan_penambahbaikan',
         'objektif',
         'kos_items',
-        'jumlah_kos',
         'rumusan',
         'logical_diagram',
         'physical_diagram',
