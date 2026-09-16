@@ -18,11 +18,15 @@ createInertiaApp({
         const root = createRoot(el);
         root.render(<App {...props} />);
 
-        document.addEventListener('invalid', (function(e) {
-            e.preventDefault();
-        }, true));
-    },
+        document.addEventListener(
+            'invalid',
+            function (e) {
+                e.preventDefault();
+            },
+            true,
+        );
+            },
     progress: {
         color: '#4B5563',
-    },
+            },
 });
