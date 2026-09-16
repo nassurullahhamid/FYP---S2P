@@ -542,7 +542,7 @@ class TicketController extends Controller
             }
 
             if ($oldKategori !== $newKategori) {
-                return redirect()->route('tickets.show', ['id_ticket' => $newIdTiket])->with('success', $mesejSukses);
+                return redirect()->route('tickets.show', ['id_tiket' => $newIdTiket])->with('success', $mesejSukses);
             }
 
             return back()->with('success', $mesejSukses);

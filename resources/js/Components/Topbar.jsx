@@ -42,7 +42,7 @@ export default function Topbar({ title = "Dashboard" }) {
                     if (notiData?.url) {
                         router.get(notiData.url);
                     } else if (notiData?.id_tiket) {
-                        router.get(route('tickets.show', { id_ticket: notiData.id_tiket }));
+                        router.get(route('tickets.show', { id_tiket: notiData.id_tiket }));
                     }
                 }
             });
@@ -53,7 +53,7 @@ export default function Topbar({ title = "Dashboard" }) {
             if (notiData?.url) {
                 router.get(notiData.url);
             } else if (notiData?.id_tiket) {
-                router.get(route('tickets.show', { id_ticket: notiData.id_tiket }));
+                router.get(route('tickets.show', { id_tiket: notiData.id_tiket }));
             }
         }
     };
