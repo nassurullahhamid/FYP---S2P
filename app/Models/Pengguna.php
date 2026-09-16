@@ -29,7 +29,7 @@ class Pengguna extends Authenticatable
     ];
 
     protected $hidden = [
-        'password',
+        'kata_laluan',
         'remember_token',
     ];
 
@@ -78,15 +78,10 @@ class Pengguna extends Authenticatable
         $this->notify(new CustomResetPassword($token));
     }
 
-    // Relationship: One-to-Many for pengguna with laporan
-    public function laporan()
-{
-
-    return $this->hasMany(Laporan::class, 'pengguna_ic', 'no_ic');
-}
-
-    public function penulis()
+    // Relationship: One-to-Many for Pengguna with Laporan
+    public function laporan(): HasMany
     {
-        return $this->belongsTo(Pengguna::class, 'pengguna_ic', 'no_ic');
+        return $this->hasMany(Laporan::class, 'pengguna_ic', 'no_ic');
     }
+
 }
