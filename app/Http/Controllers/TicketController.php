@@ -1288,19 +1288,6 @@ class TicketController extends Controller
         }
     }
 
-    /**
-     * Edit LKK view.
-     */
-    public function editLKK(string $id_tiket)
-    {
-        $ticket = Tiket::where('id_tiket', $id_tiket)->firstOrFail();
-        $laporanSediaAda = DB::table('laporan')->where('id_tiket', $id_tiket)->first();
-
-        return Inertia::render('Tickets/BorangLKK', [
-            'ticket'  => $ticket,
-            'laporan' => $laporanSediaAda
-        ]);
-    }
 
     /**
      * Store and process Digital Transformation LKK report workflow.
