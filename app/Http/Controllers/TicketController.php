@@ -1808,16 +1808,6 @@ class TicketController extends Controller
         }
     }
 
-    public function showLog(string $id_ticket): InertiaResponse
-    {
-        $ticket = Tiket::where('id_tiket', $id_ticket)->firstOrFail();
-        $auditTrail = DB::table('jejak_tiket')->where('id_tiket', $id_ticket)->orderBy('created_at', 'asc')->orderBy('id', 'asc')->get();
-
-        return Inertia::render('Tickets/JejakAktiviti', [
-            'ticket'     => $ticket,
-            'auditTrail' => $auditTrail,
-        ]);
-    }
 
     private function clearTicketNotifications(string $id_tiket)
     {
