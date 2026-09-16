@@ -3,6 +3,7 @@
 namespace App\Models;
 
 use Illuminate\Database\Eloquent\Model;
+use Illuminate\Database\Eloquent\Relations\BelongsTo;
 use Illuminate\Database\Eloquent\Relations\BelongsToMany;
 use Illuminate\Database\Eloquent\Relations\HasOne;
 use Illuminate\Support\Facades\Auth;
@@ -28,7 +29,6 @@ class Tiket extends Model
         'lokasi',
         'daerah',
         'kategori',
-        'sub_kategori',
         'lampiran',
         'tahap_keutamaan',
         'sla',
@@ -40,6 +40,11 @@ class Tiket extends Model
         'catatan_penutupan',
         'bukti_penutupan',
     ];
+
+    public function pengguna(): BelongsTo
+    {
+        return $this->belongsTo(Pengguna::class, 'pengguna_ic', 'no_ic');
+    }
 
     public function petugas(): BelongsToMany
     {
@@ -75,11 +80,6 @@ protected static function boot()
     static::deleting(function ($ticket) {
         DB::table('jejak_tiket')->where('id_tiket', $ticket->id_tiket)->delete();
     });
-}
-
-public function logs()
-{
-    return $this->hasMany(DB::table('jejak_tiket')->where('id_tiket', $this->id_tiket)->get());
 }
 
     public function mejaBantuan(): HasOne

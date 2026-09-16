@@ -10,9 +10,6 @@ class MejaBantuan extends Model
     protected $table = 'meja_bantuan';
     protected $primaryKey = 'id_mb';
 
-    public $incrementing = false;
-    protected $keyType = 'string';
-
     protected $fillable = [
         'id_tiket',
         'sub_kategori',
