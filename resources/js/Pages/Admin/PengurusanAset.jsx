@@ -141,20 +141,27 @@ function AssetIcon({ type }) {
 }
 
 function StatusBadge({ status }) {
-    const available = status === 'Tersedia';
-    const borrowed = status === 'Dipinjam';
-
     let className =
         'bg-slate-100 text-slate-700 border-slate-200';
 
-    if (available) {
+    if (status === 'Tersedia') {
         className =
             'bg-emerald-50 text-emerald-700 border-emerald-200';
     }
 
-    if (borrowed) {
+    if (status === 'Dipinjam') {
         className =
             'bg-amber-50 text-amber-700 border-amber-200';
+    }
+
+    if (status === 'Rosak') {
+        className =
+            'bg-red-50 text-red-700 border-red-200';
+    }
+
+    if (status === 'Perlu Pemeriksaan') {
+        className =
+            'bg-orange-50 text-orange-700 border-orange-200';
     }
 
     return (
@@ -615,8 +622,8 @@ const submitReturn = (e) => {
                                                     {item.nama_aset}
                                                 </div>
 
-                                                <div className="mt-3 grid grid-cols-3 gap-2 text-center">
-                                                    <div>
+                                                <div className="mt-3 grid grid-cols-2 gap-2 text-center">
+                                                    <div className="col-span-2 rounded-lg bg-white p-2">
                                                         <p className="text-lg font-bold text-slate-800">
                                                             {item.jumlah}
                                                         </p>
@@ -625,7 +632,7 @@ const submitReturn = (e) => {
                                                         </p>
                                                     </div>
 
-                                                    <div>
+                                                    <div className="rounded-lg bg-emerald-50 p-2">
                                                         <p className="text-lg font-bold text-emerald-700">
                                                             {item.baki}
                                                         </p>
@@ -634,12 +641,30 @@ const submitReturn = (e) => {
                                                         </p>
                                                     </div>
 
-                                                    <div>
+                                                    <div className="rounded-lg bg-amber-50 p-2">
                                                         <p className="text-lg font-bold text-amber-700">
                                                             {item.dipinjam}
                                                         </p>
                                                         <p className="text-xs text-slate-500">
                                                             Dipinjam
+                                                        </p>
+                                                    </div>
+
+                                                    <div className="rounded-lg bg-red-50 p-2">
+                                                        <p className="text-lg font-bold text-red-700">
+                                                            {item.rosak ?? 0}
+                                                        </p>
+                                                        <p className="text-xs text-slate-500">
+                                                            Rosak
+                                                        </p>
+                                                    </div>
+
+                                                    <div className="rounded-lg bg-orange-50 p-2">
+                                                        <p className="text-lg font-bold text-orange-700">
+                                                            {item.perlu_pemeriksaan ?? 0}
+                                                        </p>
+                                                        <p className="text-xs text-slate-500">
+                                                            Perlu Pemeriksaan
                                                         </p>
                                                     </div>
                                                 </div>
@@ -710,6 +735,12 @@ const submitReturn = (e) => {
                                                 </option>
                                                 <option value="Dipinjam">
                                                     Dipinjam
+                                                </option>
+                                                <option value="Rosak">
+                                                    Rosak
+                                                </option>
+                                                <option value="Perlu Pemeriksaan">
+                                                    Perlu Pemeriksaan
                                                 </option>
                                             </select>
                                         </div>
@@ -1336,6 +1367,58 @@ const submitReturn = (e) => {
         </div>
     </form>
 </Modal>
+            <Modal
+                open={deleteOpen}
+                title="Padam Aset"
+                onClose={closeDeleteModal}
+                maxWidth="max-w-lg"
+            >
+                <div>
+                    <div className="mb-4 flex h-12 w-12 items-center justify-center rounded-full bg-red-100 text-red-600">
+                        <CircleX size={24} />
+                    </div>
+
+                    <h3 className="text-lg font-bold text-slate-800">
+                        Adakah anda pasti?
+                    </h3>
+
+                    <p className="mt-2 text-sm leading-6 text-slate-600">
+                        Rekod aset{' '}
+                        <span className="font-bold text-slate-800">
+                            {selectedAsset?.serial_no}
+                        </span>{' '}
+                        akan dipadamkan daripada inventori. Tindakan ini
+                        tidak boleh dibatalkan melalui halaman ini.
+                    </p>
+
+                    {selectedAsset?.status === 'Dipinjam' && (
+                        <div className="mt-4 rounded-xl border border-amber-200 bg-amber-50 p-3 text-sm text-amber-800">
+                            Perhatian: aset ini mempunyai status{' '}
+                            <strong>Dipinjam</strong>. Pastikan rekod
+                            peminjaman telah disemak sebelum meneruskan.
+                        </div>
+                    )}
+
+                    <div className="mt-6 flex justify-end gap-3">
+                        <button
+                            type="button"
+                            onClick={closeDeleteModal}
+                            className="rounded-xl border border-slate-300 px-4 py-2.5 text-sm font-semibold text-slate-700 transition hover:bg-slate-50"
+                        >
+                            Batal
+                        </button>
+
+                        <button
+                            type="button"
+                            onClick={confirmDelete}
+                            className="inline-flex items-center gap-2 rounded-xl bg-red-600 px-4 py-2.5 text-sm font-semibold text-white transition hover:bg-red-700"
+                        >
+                            <Trash2 size={17} />
+                            Padam Aset
+                        </button>
+                    </div>
+                </div>
+            </Modal>
 </>
     );
 }

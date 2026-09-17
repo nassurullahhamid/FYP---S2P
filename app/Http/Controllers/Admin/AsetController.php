@@ -19,11 +19,14 @@ class AsetController extends Controller
     {
         $assets = Aset::latest()->get();
 
-        $summary = Aset::select('nama_aset',
-            DB::raw('count(*) as jumlah'),
-            DB::raw('sum(case when status = "Dipinjam" then 1 else 0 end) as dipinjam'),
-            DB::raw('sum(case when status = "Tersedia" then 1 else 0 end) as baki')
-        )
+        $summary = Aset::select(
+        'nama_aset',
+        DB::raw('count(*) as jumlah'),
+        DB::raw('sum(case when status = "Dipinjam" then 1 else 0 end) as dipinjam'),
+        DB::raw('sum(case when status = "Tersedia" then 1 else 0 end) as baki'),
+        DB::raw('sum(case when status = "Rosak" then 1 else 0 end) as rosak'),
+        DB::raw('sum(case when status = "Perlu Pemeriksaan" then 1 else 0 end) as perlu_pemeriksaan')
+    )
         ->groupBy('nama_aset')
         ->get();
 
