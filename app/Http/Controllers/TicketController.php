@@ -756,7 +756,8 @@ class TicketController extends Controller
         $userSemasa = Auth::user();
 
         $ticket->update([
-            'status_tiket' => 'Selesai'
+            'status_tiket' => 'Selesai',
+            'tarikh_tutup' => now()
         ]);
 
         $ticket->rekodLog('Disahkan', 'Oleh ' . $userSemasa->nama, 'DISAHKAN');
@@ -1141,6 +1142,7 @@ class TicketController extends Controller
         try {
             DB::table('tiket')->where('id_tiket', $id_tiket)->update([
                 'status_tiket' => 'Selesai',
+                'tarikh_tutup' => now(),
                 'updated_at'   => now()
             ]);
 
@@ -1284,6 +1286,10 @@ class TicketController extends Controller
                 'status_tiket' => $statusBaru,
                 'updated_at'   => now()
             ];
+
+            if ($isKwSahkan) {
+                $updateTiketData['tarikh_tutup'] = now();
+            }
 
             if (($isKwPembetulan || $isKutdPembetulan) && !empty($ulasanInput)) {
                 $updateTiketData['ulasan_semakan'] = $ulasanInput;
@@ -1611,6 +1617,10 @@ class TicketController extends Controller
                 'updated_at'   => now()
             ];
 
+            if ($statusBaru === 'Selesai') {
+                $updateTiketData['tarikh_tutup'] = now();
+            }
+
             if (in_array($tindakan, ['KW_PEMBETULAN', 'KUTD_PEMBETULAN']) && !empty($ulasanInput)) {
                 $updateTiketData['ulasan_semakan'] = $ulasanInput;
             }
@@ -1823,7 +1833,10 @@ class TicketController extends Controller
                     $ticket->rekodLog('Disahkan', 'Oleh ' . $userSemasa->nama);
                     break;
                 case 'lulus_tutup':
-                    $ticket->update(['status_tiket' => 'Selesai']);
+                    $ticket->update([
+                        'status_tiket' => 'Selesai',
+                        'tarikh_tutup' => now()
+                    ]);
                     $ticket->rekodLog('Divalidasi', 'Oleh ' . $userSemasa->nama, 'LULUS');
                     $ticket->rekodLog('Tiket Ditutup', 'Oleh ' . $userSemasa->nama, 'SELESAI');
                     break;
