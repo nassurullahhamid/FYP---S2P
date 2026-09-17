@@ -1605,6 +1605,27 @@ class TicketController extends Controller
             }
         }
 
+        if ($tindakan === 'KUTD_SAH_SEMAKAN') {
+            $userSemasa = $request->user();
+            $perananSemasa = strtolower(trim((string) ($userSemasa->peranan ?? '')));
+            $statusSemasa = strtolower(trim((string) $ticket->status_tiket));
+
+            $perananKutd = ['ketua_utd', 'ketua utd', 'kutd'];
+            $statusSemakanKutd = [
+                'menunggu semakan',
+                'semakan kutd',
+                'semakan laporan teknikal',
+            ];
+
+            if (!in_array($perananSemasa, $perananKutd, true)) {
+                abort(403, 'Hanya KUTD dibenarkan mengesahkan semakan LKK.');
+            }
+
+            if (!in_array($statusSemasa, $statusSemakanKutd, true)) {
+                abort(403, 'Status tiket tidak membenarkan pengesahan semakan LKK oleh KUTD.');
+            }
+        }
+
         if ($tindakan === 'KUPP_HANTAR_VALIDASI') {
             $userSemasa = $request->user();
             $perananSemasa = strtolower(trim((string) ($userSemasa->peranan ?? '')));
