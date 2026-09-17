@@ -1071,7 +1071,7 @@ class TicketController extends Controller
     public function prosesPengesahanKutd(Request $request, $id_tiket)
     {
         $request->validate([
-            'tindakan' => 'required|string',
+            'tindakan' => 'required|in:pulang_pic,hantar_kw',
             'ulasan'   => 'nullable|string'
         ]);
 
