@@ -1035,18 +1035,40 @@ class TicketController extends Controller
      */
     public function hantarKeKUTD($id_tiket)
     {
+        $ticket = DB::table('tiket')->where('id_tiket', $id_tiket)->first();
+
+        if (!$ticket) {
+            abort(404, 'Tiket tidak dijumpai.');
+        }
+
+        $adakahPeminjaman = DB::table('meja_bantuan')
+            ->where('id_tiket', $id_tiket)
+            ->where('sub_kategori', 'Peminjaman Peralatan ICT')
+            ->exists();
+
+        if (!$adakahPeminjaman) {
+            abort(403, 'Tindakan ini hanya sah untuk tiket Peminjaman Peralatan ICT.');
+        }
+
+        if ($ticket->status_tiket !== 'Dalam Tindakan Pegawai') {
+            abort(403, 'Tiket tidak berada pada status Dalam Tindakan Pegawai.');
+        }
+
+        $adakahPIC = DB::table('tugasan_tiket')
+            ->where('id_tiket', $id_tiket)
+            ->where('no_ic', Auth::user()->no_ic)
+            ->exists();
+
+        if (!$adakahPIC) {
+            abort(403, 'Hanya PIC yang ditugaskan boleh menghantar tiket untuk pengesahan.');
+        }
+
         DB::beginTransaction();
         try {
             DB::table('tiket')->where('id_tiket', $id_tiket)->update([
                 'status_tiket' => 'Menunggu Pengesahan',
                 'updated_at'   => now()
             ]);
-
-            $ticket = DB::table('tiket')->where('id_tiket', $id_tiket)->first();
-
-            if (!$ticket) {
-                throw new \Exception("Tiket tidak dijumpai.");
-            }
 
             $alreadyLogged = DB::table('jejak_tiket')
                 ->where('id_tiket', $id_tiket)
@@ -1098,11 +1120,49 @@ class TicketController extends Controller
             'ulasan'   => 'nullable|string'
         ]);
 
+        $userSemasa = Auth::user();
+        $perananSemasa = strtolower(trim($userSemasa->peranan ?? '' ));
+
+        $perananPengesah = [
+            'ketua_upp',
+            'ketua upp',
+            'kupp',
+            'ketua_utd',
+            'ketua utd',
+            'kutd',
+            'ketua_wilayah',
+            'ketua wilayah',
+            'kw',
+        ];
+
+        if (!in_array($perananSemasa, $perananPengesah, true)) {
+            abort(403, 'Anda tidak mempunyai kebenaran untuk mengesahkan tiket peminjaman.');
+        }
+
+        $ticket = DB::table('tiket')->where('id_tiket', $id_tiket)->first();
+
+        if (!$ticket) {
+            abort(404, 'Tiket tidak dijumpai.');
+        }
+
+        $adakahPeminjaman = DB::table('meja_bantuan')
+            ->where('id_tiket', $id_tiket)
+            ->where('sub_kategori', 'Peminjaman Peralatan ICT')
+            ->exists();
+
+        if (!$adakahPeminjaman) {
+            abort(403, 'Tindakan ini hanya sah untuk tiket Peminjaman Peralatan ICT.');
+        }
+
+        if ($ticket->status_tiket !== 'Menunggu Pengesahan') {
+            abort(403, 'Tiket tidak berada pada status Menunggu Pengesahan.');
+        }
+
+        $tindakan = $request->tindakan;
+        $ulasan   = $request->ulasan ?? 'Tiada ulasan dinyatakan.';
+
         DB::beginTransaction();
         try {
-            $ticket = DB::table('tiket')->where('id_tiket', $id_tiket)->first();
-            $tindakan = $request->tindakan;
-            $ulasan   = $request->ulasan ?? 'Tiada ulasan dinyatakan.';
 
             if ($tindakan === 'pulang_pic') {
                 $statusBaru   = 'Dalam Tindakan Pegawai';
