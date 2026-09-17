@@ -1502,6 +1502,22 @@ class TicketController extends Controller
         $tindakan = $request->input('tindakan', $request->query('tindakan'));
         $hasTindakan = !empty($tindakan);
 
+        $tindakanSah = [
+            'HANTAR_KE_KUTD',
+            'AGIH_KE_PIC',
+            'PIC_HANTAR_SEMAKAN',
+            'SAHKAN_PEMINJAMAN_SELESAI',
+            'KUTD_SAH_SEMAKAN',
+            'KUPP_HANTAR_VALIDASI',
+            'KW_PEMBETULAN',
+            'KUTD_PEMBETULAN',
+            'KW_VALIDASI_SELESAI',
+        ];
+
+        if ($hasTindakan && !in_array($tindakan, $tindakanSah, true)) {
+            abort(422, 'Tindakan LKK tidak sah.');
+        }
+
         $isDraft = filter_var($request->input('is_draft', $request->query('is_draft')), FILTER_VALIDATE_BOOLEAN);
         $isKuppSahkan = filter_var($request->input('is_kupp_sahkan', $request->query('is_kupp_sahkan')), FILTER_VALIDATE_BOOLEAN) || $tindakan === 'KUPP_HANTAR_VALIDASI';
         $isKutdHantar = filter_var($request->input('is_kutd_hantar', $request->query('is_kutd_hantar')), FILTER_VALIDATE_BOOLEAN) || $tindakan === 'KUTD_SAH_SEMAKAN';
