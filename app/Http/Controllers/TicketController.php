@@ -1070,6 +1070,8 @@ class TicketController extends Controller
                 'updated_at'   => now()
             ]);
 
+            $ticket->status_tiket = 'Menunggu Pengesahan';
+
             $alreadyLogged = DB::table('jejak_tiket')
                 ->where('id_tiket', $id_tiket)
                 ->where('aktiviti', 'Pegawai Pelaksana')
