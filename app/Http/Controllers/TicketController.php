@@ -1605,6 +1605,66 @@ class TicketController extends Controller
             }
         }
 
+        if ($tindakan === 'AGIH_KE_PIC') {
+            $userSemasa = $request->user();
+            $perananSemasa = strtolower(trim((string) ($userSemasa->peranan ?? '')));
+            $statusSemasa = strtolower(trim((string) $ticket->status_tiket));
+
+            $perananKutd = ['ketua_utd', 'ketua utd', 'kutd'];
+
+            $statusAgihanKutd = [
+                'tugasan utd',
+                'tindakan kutd (agihan)',
+            ];
+
+            if (!in_array($perananSemasa, $perananKutd, true)) {
+                abort(403, 'Hanya KUTD dibenarkan mengagihkan tugasan kepada PIC.');
+            }
+
+            if (!in_array($statusSemasa, $statusAgihanKutd, true)) {
+                abort(403, 'Status tiket tidak membenarkan KUTD mengagihkan tugasan kepada PIC.');
+            }
+
+            $picInput = $request->input('pic_ic', []);
+            $picInput = is_array($picInput) ? $picInput : [$picInput];
+
+            $picInput = array_values(array_filter(
+                array_map(fn($ic) => trim((string) $ic), $picInput),
+                fn($ic) => $ic !== ''
+            ));
+
+            if (empty($picInput)) {
+                abort(422, 'Sekurang-kurangnya seorang PIC mesti dipilih.');
+            }
+
+            if (count($picInput) !== count(array_unique($picInput))) {
+                abort(422, 'PIC yang sama tidak boleh dipilih lebih daripada sekali.');
+            }
+
+            $pegawaiPIC = Pengguna::whereIn('no_ic', $picInput)
+                ->whereNotNull('no_ic')
+                ->where('no_ic', '!=', '')
+                ->get();
+
+            if ($pegawaiPIC->count() !== count($picInput)) {
+                abort(422, 'Terdapat PIC yang tidak sah atau tidak wujud dalam sistem.');
+            }
+
+            $perananPICDibenarkan = [
+                'pic',
+                'juruteknik',
+            ];
+
+            $picTidakSah = $pegawaiPIC->first(function ($pegawai) use ($perananPICDibenarkan) {
+                $peranan = strtolower(trim((string) ($pegawai->peranan ?? '')));
+                return !in_array($peranan, $perananPICDibenarkan, true);
+            });
+
+            if ($picTidakSah) {
+                abort(403, 'Hanya pegawai berperanan PIC atau Juruteknik boleh ditugaskan.');
+            }
+        }
+
         if ($tindakan === 'PIC_HANTAR_SEMAKAN') {
             $userSemasa = $request->user();
             $statusSemasa = strtolower(trim((string) $ticket->status_tiket));
