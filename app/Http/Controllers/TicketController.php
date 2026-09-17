@@ -1552,6 +1552,27 @@ class TicketController extends Controller
             }
         }
 
+        if ($tindakan === 'KW_PEMBETULAN') {
+            $userSemasa = $request->user();
+            $perananSemasa = strtolower(trim((string) ($userSemasa->peranan ?? '')));
+            $statusSemasa = strtolower(trim((string) $ticket->status_tiket));
+
+            $perananKw = ['ketua_wilayah', 'ketua wilayah', 'kw'];
+            $statusPembetulanKw = ['menunggu validasi', 'menunggu validasi kw'];
+
+            if ($isPeminjaman) {
+                abort(403, 'Tindakan pembetulan KW ini tidak dibenarkan untuk LKK peminjaman.');
+            }
+
+            if (!in_array($perananSemasa, $perananKw, true)) {
+                abort(403, 'Hanya Ketua Wilayah dibenarkan mengembalikan LKK untuk pembetulan.');
+            }
+
+            if (!in_array($statusSemasa, $statusPembetulanKw, true)) {
+                abort(403, 'Status tiket tidak membenarkan LKK dikembalikan untuk pembetulan.');
+            }
+        }
+
         if ($tindakan === 'KW_VALIDASI_SELESAI') {
             $userSemasa = $request->user();
             $perananSemasa = strtolower(trim((string) ($userSemasa->peranan ?? '')));
