@@ -1552,6 +1552,23 @@ class TicketController extends Controller
             }
         }
 
+        if ($tindakan === 'KW_VALIDASI_SELESAI') {
+            $userSemasa = $request->user();
+            $perananSemasa = strtolower(trim((string) ($userSemasa->peranan ?? '')));
+            $statusSemasa = strtolower(trim((string) $ticket->status_tiket));
+
+            $perananKw = ['ketua_wilayah', 'ketua wilayah', 'kw'];
+            $statusValidasiKw = ['menunggu validasi', 'validasi kw', 'menunggu validasi kw'];
+
+            if (!in_array($perananSemasa, $perananKw, true)) {
+                abort(403, 'Hanya Ketua Wilayah dibenarkan membuat validasi akhir LKK.');
+            }
+
+            if (!in_array($statusSemasa, $statusValidasiKw, true)) {
+                abort(403, 'Status tiket tidak membenarkan validasi akhir LKK.');
+            }
+        }
+
         $isDraft = filter_var($request->input('is_draft', $request->query('is_draft')), FILTER_VALIDATE_BOOLEAN);
         $isKuppSahkan = filter_var($request->input('is_kupp_sahkan', $request->query('is_kupp_sahkan')), FILTER_VALIDATE_BOOLEAN) || $tindakan === 'KUPP_HANTAR_VALIDASI';
         $isKutdHantar = filter_var($request->input('is_kutd_hantar', $request->query('is_kutd_hantar')), FILTER_VALIDATE_BOOLEAN) || $tindakan === 'KUTD_SAH_SEMAKAN';
