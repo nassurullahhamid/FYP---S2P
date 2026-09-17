@@ -961,10 +961,13 @@ class TicketController extends Controller
         if ($laporan && $laporan->kos_items) {
             $kosItems = json_decode($laporan->kos_items, true);
 
+            $itemDitemui = false;
+
             if (isset($kosItems['senarai_siri'])) {
                 foreach ($kosItems['senarai_siri'] as &$item) {
                     $siriSemasa = $item['serial_no'] ?? $item['no_siri'] ?? null;
                     if ($siriSemasa === $serial_no) {
+                        $itemDitemui = true;
                         $item['no_pendaftaran_harta'] = $request->no_harta;
                         $item['status_perkakasan']     = $request->status_perkakasan;
                         $item['mod_penggunaan']        = $request->mod_penggunaan;
@@ -972,6 +975,10 @@ class TicketController extends Controller
                         $item['catatan']               = $request->catatan;
                     }
                 }
+            }
+
+            if (!$itemDitemui) {
+                return back()->withErrors(['sistem' => 'Nombor siri aset tidak ditemui dalam rekod peminjaman tiket ini.']);
             }
 
             DB::table('laporan')->where('id_tiket', $id_tiket)->update([
