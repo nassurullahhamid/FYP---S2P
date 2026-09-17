@@ -11,8 +11,7 @@ export default function BorangLKKRangkaian({ ticket, senaraiKosSelamat, existing
     const isCurrentUserPIC = currentUser?.no_ic && ticket?.petugas?.some(p => p.no_ic === currentUser.no_ic);
 
     const perananSemasa = String(currentUser.peranan || '').trim().toLowerCase();
-    const isKUPP = perananSemasa === 'ketua_upp' || perananSemasa === 'kupp';
-    const isKUTD = ['ketua_utd', 'kutd', 'juruteknik'].includes(perananSemasa);
+    const isKUTD = ['ketua_utd', 'kutd'].includes(perananSemasa);
     const isKW = perananSemasa === 'ketua_wilayah' || perananSemasa === 'kw';
 
     const statusFormat = String(ticket.status_tiket || '').trim().toLowerCase();

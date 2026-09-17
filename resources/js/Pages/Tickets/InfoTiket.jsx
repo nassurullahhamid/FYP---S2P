@@ -68,16 +68,9 @@ export default function InfoTiket({ auth, backUrl, ticket, senaraiPengguna, sena
 
     const isAlreadyClassified = ticket.status_tiket !== 'Menunggu Klasifikasi';
 
-    const assignedPetugasIC = [
-        ...(ticket?.petugas?.map(p => p.no_ic) || []),
-        ...(Array.isArray(ticket?.pic_ic) ? ticket.pic_ic : [ticket?.pic_ic]),
-        ticket?.no_ic
-    ].filter(Boolean);
+    const assignedPetugasIC = ticket?.petugas?.map(p => p.no_ic).filter(Boolean) || [];
 
-    const isCurrentUserPIC = user?.no_ic && (
-        assignedPetugasIC.includes(user.no_ic) ||
-        roleStr.includes('pic') || roleStr.includes('juruteknik')
-    );
+    const isCurrentUserPIC = user?.no_ic && assignedPetugasIC.includes(user.no_ic);
 
     const isKR = String(ticket.kategori || data.kategori || '').toLowerCase().includes('rangkaian');
     const isTD = String(ticket.kategori || data.kategori || '').toLowerCase().includes('transformasi');
