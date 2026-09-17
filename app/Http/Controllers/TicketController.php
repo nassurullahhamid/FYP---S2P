@@ -799,15 +799,67 @@ class TicketController extends Controller
     public function storePeminjaman(Request $request, $id_tiket)
     {
         $request->validate([
-            'id_aset'        => 'required',
-            'kuantiti_lulus' => 'required|integer|min:1',
-            'pic_ic'         => 'required',
-            'senarai_aset'   => 'required|array'
+            'id_aset'                  => 'required|string',
+            'kuantiti_lulus'           => 'required|integer|min:1',
+            'pic_ic'                   => 'required|string|exists:pengguna,no_ic',
+            'senarai_aset'             => 'required|array|min:1',
+            'senarai_aset.*.serial_no' => 'required|string|distinct',
         ]);
+
+        if (count($request->senarai_aset) !== (int) $request->kuantiti_lulus) {
+            return back()->withErrors([
+                'senarai_aset' => 'Bilangan aset yang dipilih tidak sepadan dengan kuantiti yang diluluskan.'
+            ]);
+        }
 
         DB::beginTransaction();
         try {
-            $ticket = DB::table('tiket')->where('id_tiket', $id_tiket)->first();
+            $ticket = DB::table('tiket')
+                ->where('id_tiket', $id_tiket)
+                ->lockForUpdate()
+                ->first();
+
+            if (!$ticket) {
+                DB::rollBack();
+                return back()->withErrors(['sistem' => 'Tiket peminjaman tidak dijumpai.']);
+            }
+
+            $senaraiSiriAset = collect($request->senarai_aset)
+                ->pluck('serial_no')
+                ->values()
+                ->toArray();
+
+            $asetDipilih = DB::table('aset')
+                ->whereIn('serial_no', $senaraiSiriAset)
+                ->lockForUpdate()
+                ->get();
+
+            if ($asetDipilih->count() !== count($senaraiSiriAset)) {
+                DB::rollBack();
+                return back()->withErrors([
+                    'senarai_aset' => 'Satu atau lebih aset yang dipilih tidak wujud dalam rekod inventori.'
+                ]);
+            }
+
+            if ($asetDipilih->contains(fn ($aset) => $aset->nama_aset !== $request->id_aset)) {
+                DB::rollBack();
+                return back()->withErrors([
+                    'senarai_aset' => 'Satu atau lebih aset yang dipilih tidak sepadan dengan kategori aset yang diluluskan.'
+                ]);
+            }
+
+            if ($asetDipilih->contains(fn ($aset) => $aset->status !== 'Tersedia')) {
+                DB::rollBack();
+                return back()->withErrors([
+                    'senarai_aset' => 'Satu atau lebih aset yang dipilih tidak lagi tersedia untuk dipinjam.'
+                ]);
+            }
+
+            $senaraiAsetDisahkan = $asetDipilih->map(fn ($aset) => [
+                'serial_no' => $aset->serial_no,
+                'nama_aset' => $aset->nama_aset,
+                'model' => $aset->model,
+            ])->values()->all();
 
             DB::table('tiket')->where('id_tiket', $id_tiket)->update([
                 'status_tiket'      => 'Dalam Tindakan Pegawai',
@@ -817,7 +869,7 @@ class TicketController extends Controller
             $rekodPeminjaman = [
                 'nama_aset'    => $request->id_aset,
                 'kuantiti'     => $request->kuantiti_lulus,
-                'senarai_siri' => $request->senarai_aset,
+                'senarai_siri' => $senaraiAsetDisahkan,
                 'tarikh_lulus' => now()->toDateTimeString()
             ];
 
@@ -840,13 +892,19 @@ class TicketController extends Controller
                 ]
             );
 
-            $senaraiSiriAset = collect($request->senarai_aset)->map(function ($item) {
-                return $item['serial_no'] ?? $item['no_siri'] ?? null;
-            })->filter()->toArray();
+            $jumlahAsetDikemasKini = DB::table('aset')
+                ->whereIn('serial_no', $senaraiSiriAset)
+                ->where('status', 'Tersedia')
+                ->update([
+                    'status' => 'Dipinjam'
+                ]);
 
-            DB::table('aset')->whereIn('serial_no', $senaraiSiriAset)->update([
-                'status' => 'Dipinjam'
-            ]);
+            if ($jumlahAsetDikemasKini !== (int) $request->kuantiti_lulus) {
+                DB::rollBack();
+                return back()->withErrors([
+                    'senarai_aset' => 'Kelulusan dibatalkan kerana status inventori aset telah berubah. Sila jana semula senarai aset.'
+                ]);
+            }
 
             DB::table('jejak_tiket')->insert([
                 'id_tiket'       => $id_tiket,
