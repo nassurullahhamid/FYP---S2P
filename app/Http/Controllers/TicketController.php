@@ -10,7 +10,7 @@ use App\Notifications\NewTicketNoti;
 use App\Notifications\PengesahanKetuaNoti;
 use App\Notifications\ValidasiKWNoti;
 use App\Notifications\LKKPembetulanNoti;
-use App\Notifications\TugasanPICNoti;
+use App\Notifications\TugasanPicNoti;
 use Illuminate\Http\Request;
 use Illuminate\Http\RedirectResponse;
 use Illuminate\Support\Facades\Redirect;
