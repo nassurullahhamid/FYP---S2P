@@ -283,6 +283,10 @@ export default function PengurusanPengguna({ users = [] }) {
             {
                 preserveScroll: true,
                 onSuccess: () => setDeletingUser(null),
+                onError: () => {
+                    setDeletingUser(null);
+                    window.scrollTo({ top: 0, behavior: 'smooth' });
+                },
             }
         );
     };

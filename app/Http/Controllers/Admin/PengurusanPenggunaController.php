@@ -5,6 +5,7 @@ namespace App\Http\Controllers\Admin;
 use App\Http\Controllers\Controller;
 use App\Models\Pengguna;
 use Illuminate\Http\Request;
+use Illuminate\Support\Facades\DB;
 use Illuminate\Support\Facades\Hash;
 use Illuminate\Support\Facades\Redirect;
 use Illuminate\Validation\Rule;
@@ -89,6 +90,22 @@ class PengurusanPenggunaController extends Controller
         if ($request->user()->no_ic === $user->no_ic) {
             return back()->withErrors([
                 'sistem' => 'Anda tidak dibenarkan memadam akaun anda sendiri yang sedang digunakan.'
+            ]);
+        }
+
+        $mempunyaiSejarah = DB::table('tiket')
+            ->where('pengguna_ic', $user->no_ic)
+            ->orWhere('disahkan_oleh_ic', $user->no_ic)
+            ->orWhere('disemak_oleh_ic', $user->no_ic)
+            ->exists()
+            || DB::table('laporan')->where('pengguna_ic', $user->no_ic)->exists()
+            || DB::table('tugasan_tiket')->where('no_ic', $user->no_ic)->exists()
+            || DB::table('aset')->where('pengguna_ic', $user->no_ic)->exists()
+            || DB::table('pemulangan_aset')->where('diterima_oleh_ic', $user->no_ic)->exists();
+
+        if ($mempunyaiSejarah) {
+            return back()->withErrors([
+                'sistem' => 'Akaun ini mempunyai sejarah operasi dan tidak boleh dipadamkan. Tukar status pengguna kepada Tidak Aktif untuk mengekalkan rekod audit sistem.'
             ]);
         }
 
