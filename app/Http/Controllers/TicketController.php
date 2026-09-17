@@ -1605,6 +1605,23 @@ class TicketController extends Controller
             }
         }
 
+        if ($tindakan === 'KUPP_HANTAR_VALIDASI') {
+            $userSemasa = $request->user();
+            $perananSemasa = strtolower(trim((string) ($userSemasa->peranan ?? '')));
+            $statusSemasa = strtolower(trim((string) $ticket->status_tiket));
+
+            $perananKupp = ['ketua_upp', 'ketua upp', 'kupp'];
+            $statusPengesahanKupp = ['menunggu pengesahan', 'menunggu pengesahan lkk'];
+
+            if (!in_array($perananSemasa, $perananKupp, true)) {
+                abort(403, 'Hanya KUPP dibenarkan mengesahkan LKK untuk dihantar kepada Ketua Wilayah.');
+            }
+
+            if (!in_array($statusSemasa, $statusPengesahanKupp, true)) {
+                abort(403, 'Status tiket tidak membenarkan pengesahan LKK oleh KUPP.');
+            }
+        }
+
         if ($tindakan === 'KW_PEMBETULAN') {
             $userSemasa = $request->user();
             $perananSemasa = strtolower(trim((string) ($userSemasa->peranan ?? '')));
