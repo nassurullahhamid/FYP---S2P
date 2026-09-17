@@ -1221,7 +1221,48 @@ class TicketController extends Controller
             'ulasan' => 'nullable|string'
         ]);
 
+        $userSemasa = Auth::user();
+        $perananSemasa = strtolower(trim($userSemasa->peranan ?? ''));
+
+        $perananPengesah = [
+            'ketua_upp',
+            'ketua upp',
+            'kupp',
+            'ketua_utd',
+            'ketua utd',
+            'kutd',
+            'ketua_wilayah',
+            'ketua wilayah',
+            'kw',
+        ];
+
+        if (!in_array($perananSemasa, $perananPengesah, true)) {
+            abort(403, 'Anda tidak mempunyai kebenaran untuk menutup tiket peminjaman.');
+        }
+
+        $ticket = DB::table('tiket')
+            ->where('id_tiket', $id_tiket)
+            ->first();
+
+        if (!$ticket) {
+            abort(404, 'Tiket tidak dijumpai.');
+        }
+
+        $adakahPeminjaman = DB::table('meja_bantuan')
+            ->where('id_tiket', $id_tiket)
+            ->where('sub_kategori', 'Peminjaman Peralatan ICT')
+            ->exists();
+
+        if (!$adakahPeminjaman) {
+            abort(403, 'Tindakan ini hanya sah untuk tiket Peminjaman Peralatan ICT.');
+        }
+
+        if ($ticket->status_tiket !== 'Menunggu Pengesahan') {
+            abort(403, 'Tiket tidak berada pada status Menunggu Pengesahan.');
+        }
+
         DB::beginTransaction();
+
         try {
             DB::table('tiket')->where('id_tiket', $id_tiket)->update([
                 'status_tiket' => 'Selesai',
@@ -1231,10 +1272,10 @@ class TicketController extends Controller
 
             DB::table('jejak_tiket')->insert([
                 'id_tiket'       => $id_tiket,
-                'nama_pelaku'    => Auth::user()->nama,
-                'peranan_pelaku' => Auth::user()->peranan,
+                'nama_pelaku'    => $userSemasa->nama,
+                'peranan_pelaku' => $userSemasa->peranan,
                 'aktiviti'       => 'Divalidasi',
-                'pesanan'        => 'Oleh ' . Auth::user()->nama,
+                'pesanan'        => 'Oleh ' . $userSemasa->nama,
                 'status_badge'   => 'LULUS',
                 'created_at'     => now(),
                 'updated_at'     => now()
@@ -1242,10 +1283,10 @@ class TicketController extends Controller
 
             DB::table('jejak_tiket')->insert([
                 'id_tiket'       => $id_tiket,
-                'nama_pelaku'    => Auth::user()->nama,
-                'peranan_pelaku' => Auth::user()->peranan,
+                'nama_pelaku'    => $userSemasa->nama,
+                'peranan_pelaku' => $userSemasa->peranan,
                 'aktiviti'       => 'Tiket Ditutup',
-                'pesanan'        => 'Oleh ' . Auth::user()->nama,
+                'pesanan'        => 'Oleh ' . $userSemasa->nama,
                 'status_badge'   => 'SELESAI',
                 'created_at'     => now()->addSecond(),
                 'updated_at'     => now()
@@ -1254,15 +1295,18 @@ class TicketController extends Controller
             $this->clearTicketNotifications($id_tiket);
 
             DB::commit();
+
             return back()->with('success', 'Tiket peminjaman peralatan berjaya disahkan, divalidasi, dan ditutup secara rasmi!');
 
         } catch (\Exception $e) {
             DB::rollBack();
             Log::error('Ralat sahkanTutupPeminjaman: ' . $e->getMessage());
-            return back()->withErrors(['sistem' => 'Gagal menutup tiket peminjaman: ' . $e->getMessage()]);
+
+            return back()->withErrors([
+                'sistem' => 'Gagal menutup tiket peminjaman: ' . $e->getMessage()
+            ]);
         }
     }
-
     /**
      * Store and process Network Consultation LKK report (Filled by KUTD / Reviewed by KW).
      */
