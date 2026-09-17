@@ -1605,6 +1605,32 @@ class TicketController extends Controller
             }
         }
 
+        if ($tindakan === 'PIC_HANTAR_SEMAKAN') {
+            $userSemasa = $request->user();
+            $statusSemasa = strtolower(trim((string) $ticket->status_tiket));
+
+
+            $statusBolehHantarPic = [
+                'dalam tindakan pegawai',
+                'tindakan pic',
+                'lkk perlu pembetulan',
+            ];
+
+            $adakahPIC = DB::table('tugasan_tiket')
+                ->where('id_tiket', $id_tiket)
+                ->where('no_ic', $userSemasa->no_ic)
+                ->exists();
+
+
+            if (!$adakahPIC) {
+                abort(403, 'Anda bukan PIC yang ditugaskan untuk tiket ini.');
+            }
+
+            if (!in_array($statusSemasa, $statusBolehHantarPic, true)) {
+                abort(403, 'Status tiket tidak membenarkan PIC menghantar laporan teknikal untuk semakan.');
+            }
+        }
+
         if ($tindakan === 'KUTD_SAH_SEMAKAN') {
             $userSemasa = $request->user();
             $perananSemasa = strtolower(trim((string) ($userSemasa->peranan ?? '')));
