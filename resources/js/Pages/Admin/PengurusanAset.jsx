@@ -263,6 +263,7 @@ export default function PengurusanAset({
     const [createOpen, setCreateOpen] = useState(false);
     const [editOpen, setEditOpen] = useState(false);
     const [deleteOpen, setDeleteOpen] = useState(false);
+    const [returnOpen, setReturnOpen] = useState(false);
     const [selectedAsset, setSelectedAsset] = useState(null);
 
     const createForm = useForm({
@@ -283,6 +284,12 @@ export default function PengurusanAset({
         ram: '',
         hard_disk: '',
         os: '',
+    });
+
+    const returnForm = useForm({
+        tarikh_pulang: '',
+        keadaan_aset: 'Baik',
+        catatan: '',
     });
 
     const filteredAssets = useMemo(() => {
@@ -463,6 +470,53 @@ export default function PengurusanAset({
             },
         );
     };
+
+    const getLocalDateTime = () => {
+    const now = new Date();
+    const offset = now.getTimezoneOffset() * 60000;
+
+    return new Date(now.getTime() - offset)
+        .toISOString()
+        .slice(0, 16);
+};
+
+const openReturnModal = (asset) => {
+    setSelectedAsset(asset);
+
+    returnForm.setData({
+        tarikh_pulang: getLocalDateTime(),
+        keadaan_aset: 'Baik',
+        catatan: '',
+    });
+
+    returnForm.clearErrors();
+    setReturnOpen(true);
+};
+
+const closeReturnModal = () => {
+    setReturnOpen(false);
+    setSelectedAsset(null);
+    returnForm.reset();
+    returnForm.clearErrors();
+};
+
+const submitReturn = (e) => {
+    e.preventDefault();
+
+    if (!selectedAsset) return;
+
+    returnForm.post(
+        route('assets.pemulangan.store', {
+            serial_no: selectedAsset.serial_no,
+        }),
+        {
+            preserveScroll: true,
+            onSuccess: () => {
+                closeReturnModal();
+            },
+        },
+    );
+};
 
     return (
         <>
@@ -788,6 +842,16 @@ export default function PengurusanAset({
 
                                                         <td className="whitespace-nowrap px-5 py-4 text-right">
                                                             <div className="flex justify-end gap-2">
+                                                                {asset.status === 'Dipinjam' && (
+                                                            <button
+                                                                type="button"
+                                                                onClick={() => openReturnModal(asset)}
+                                                                title="Rekod pemulangan aset"
+                                                                className="rounded-lg border border-emerald-200 bg-emerald-50 px-3 py-2 text-xs font-semibold text-emerald-700 transition hover:bg-emerald-100"
+                                                            >
+                                                                Pemulangan
+                                                            </button>
+)}
                                                                 <button
                                                                     type="button"
                                                                     onClick={() =>
@@ -1081,57 +1145,197 @@ export default function PengurusanAset({
             </Modal>
 
             <Modal
-                open={deleteOpen}
-                title="Padam Aset"
-                onClose={closeDeleteModal}
-                maxWidth="max-w-lg"
-            >
-                <div>
-                    <div className="mb-4 flex h-12 w-12 items-center justify-center rounded-full bg-red-100 text-red-600">
-                        <CircleX size={24} />
+    open={returnOpen}
+    title={
+        selectedAsset
+            ? `Rekod Pemulangan — ${selectedAsset.serial_no}`
+            : 'Rekod Pemulangan Aset'
+    }
+    onClose={closeReturnModal}
+    maxWidth="max-w-2xl"
+>
+    <form onSubmit={submitReturn} className="space-y-5">
+        {selectedAsset && (
+            <div className="rounded-xl border border-slate-200 bg-slate-50 p-4">
+                <div className="grid grid-cols-1 gap-4 sm:grid-cols-3">
+                    <div>
+                        <p className="text-xs font-semibold uppercase tracking-wide text-slate-500">
+                            Nombor Siri
+                        </p>
+
+                        <p className="mt-1 font-bold text-slate-800">
+                            {selectedAsset.serial_no}
+                        </p>
                     </div>
 
-                    <h3 className="text-lg font-bold text-slate-800">
-                        Adakah anda pasti?
-                    </h3>
+                    <div>
+                        <p className="text-xs font-semibold uppercase tracking-wide text-slate-500">
+                            Aset
+                        </p>
 
-                    <p className="mt-2 text-sm leading-6 text-slate-600">
-                        Rekod aset{' '}
-                        <span className="font-bold text-slate-800">
-                            {selectedAsset?.serial_no}
-                        </span>{' '}
-                        akan dipadamkan daripada inventori. Tindakan ini
-                        tidak boleh dibatalkan melalui halaman ini.
-                    </p>
+                        <p className="mt-1 font-semibold text-slate-800">
+                            {selectedAsset.nama_aset || '-'}
+                        </p>
+                    </div>
 
-                    {selectedAsset?.status === 'Dipinjam' && (
-                        <div className="mt-4 rounded-xl border border-amber-200 bg-amber-50 p-3 text-sm text-amber-800">
-                            Perhatian: aset ini mempunyai status{' '}
-                            <strong>Dipinjam</strong>. Pastikan rekod
-                            peminjaman telah disemak sebelum meneruskan.
-                        </div>
-                    )}
+                    <div>
+                        <p className="text-xs font-semibold uppercase tracking-wide text-slate-500">
+                            Model
+                        </p>
 
-                    <div className="mt-6 flex justify-end gap-3">
-                        <button
-                            type="button"
-                            onClick={closeDeleteModal}
-                            className="rounded-xl border border-slate-300 px-4 py-2.5 text-sm font-semibold text-slate-700 transition hover:bg-slate-50"
-                        >
-                            Batal
-                        </button>
-
-                        <button
-                            type="button"
-                            onClick={confirmDelete}
-                            className="inline-flex items-center gap-2 rounded-xl bg-red-600 px-4 py-2.5 text-sm font-semibold text-white transition hover:bg-red-700"
-                        >
-                            <Trash2 size={17} />
-                            Padam Aset
-                        </button>
+                        <p className="mt-1 font-semibold text-slate-800">
+                            {selectedAsset.model || '-'}
+                        </p>
                     </div>
                 </div>
-            </Modal>
-        </>
+
+                <div className="mt-4 border-t border-slate-200 pt-3">
+                    <p className="text-xs font-semibold uppercase tracking-wide text-slate-500">
+                        Status Semasa
+                    </p>
+
+                    <div className="mt-1">
+                        <StatusBadge status={selectedAsset.status} />
+                    </div>
+                </div>
+            </div>
+        )}
+
+        {returnForm.errors.pemulangan && (
+            <div className="rounded-xl border border-red-200 bg-red-50 p-4 text-sm text-red-700">
+                {returnForm.errors.pemulangan}
+            </div>
+        )}
+
+        <FormField
+            label="Tarikh dan Masa Pemulangan"
+            required
+            error={returnForm.errors.tarikh_pulang}
+        >
+            <input
+                type="datetime-local"
+                value={returnForm.data.tarikh_pulang}
+                max={getLocalDateTime()}
+                onChange={(e) =>
+                    returnForm.setData(
+                        'tarikh_pulang',
+                        e.target.value,
+                    )
+                }
+                className="w-full rounded-xl border-slate-300 text-sm shadow-sm focus:border-blue-500 focus:ring-blue-500"
+            />
+        </FormField>
+
+        <FormField
+            label="Keadaan Aset Semasa Dipulangkan"
+            required
+            error={returnForm.errors.keadaan_aset}
+        >
+            <select
+                value={returnForm.data.keadaan_aset}
+                onChange={(e) =>
+                    returnForm.setData(
+                        'keadaan_aset',
+                        e.target.value,
+                    )
+                }
+                className="w-full rounded-xl border-slate-300 text-sm shadow-sm focus:border-blue-500 focus:ring-blue-500"
+            >
+                <option value="Baik">
+                    Baik
+                </option>
+
+                <option value="Rosak">
+                    Rosak
+                </option>
+
+                <option value="Perlu Pemeriksaan">
+                    Perlu Pemeriksaan
+                </option>
+            </select>
+        </FormField>
+
+        <FormField
+            label="Catatan"
+            error={returnForm.errors.catatan}
+        >
+            <textarea
+                rows="4"
+                value={returnForm.data.catatan}
+                onChange={(e) =>
+                    returnForm.setData(
+                        'catatan',
+                        e.target.value,
+                    )
+                }
+                placeholder="Contoh: Aset diterima lengkap bersama pengecas dan beg komputer."
+                className="w-full resize-y rounded-xl border-slate-300 text-sm shadow-sm focus:border-blue-500 focus:ring-blue-500"
+            />
+        </FormField>
+
+        <div className="rounded-xl border border-blue-200 bg-blue-50 p-4">
+            <p className="text-sm font-bold text-blue-900">
+                Status aset selepas pemulangan
+            </p>
+
+            {returnForm.data.keadaan_aset === 'Baik' && (
+                <p className="mt-1 text-sm leading-6 text-blue-800">
+                    Aset akan ditukar daripada{' '}
+                    <strong>Dipinjam</strong> kepada{' '}
+                    <strong>Tersedia</strong> dan boleh digunakan
+                    untuk peminjaman seterusnya.
+                </p>
+            )}
+
+            {returnForm.data.keadaan_aset === 'Rosak' && (
+                <p className="mt-1 text-sm leading-6 text-blue-800">
+                    Aset akan ditukar daripada{' '}
+                    <strong>Dipinjam</strong> kepada{' '}
+                    <strong>Rosak</strong> dan tidak akan dianggap
+                    sebagai aset tersedia.
+                </p>
+            )}
+
+            {returnForm.data.keadaan_aset ===
+                'Perlu Pemeriksaan' && (
+                <p className="mt-1 text-sm leading-6 text-blue-800">
+                    Aset akan ditukar daripada{' '}
+                    <strong>Dipinjam</strong> kepada{' '}
+                    <strong>Perlu Pemeriksaan</strong> dan tidak
+                    akan dianggap sebagai aset tersedia sehingga
+                    pemeriksaan lanjut dibuat.
+                </p>
+            )}
+        </div>
+
+        <div className="rounded-xl border border-amber-200 bg-amber-50 p-4 text-sm leading-6 text-amber-800">
+            Pastikan aset fizikal telah diterima sebelum rekod
+            pemulangan disahkan. Rekod ini akan disimpan sebagai
+            sejarah transaksi pemulangan aset.
+        </div>
+
+        <div className="flex justify-end gap-3 border-t border-slate-200 pt-5">
+            <button
+                type="button"
+                onClick={closeReturnModal}
+                disabled={returnForm.processing}
+                className="rounded-xl border border-slate-300 px-4 py-2.5 text-sm font-semibold text-slate-700 transition hover:bg-slate-50 disabled:cursor-not-allowed disabled:opacity-60"
+            >
+                Batal
+            </button>
+
+            <button
+                type="submit"
+                disabled={returnForm.processing}
+                className="rounded-xl bg-emerald-700 px-5 py-2.5 text-sm font-semibold text-white transition hover:bg-emerald-800 disabled:cursor-not-allowed disabled:opacity-60"
+            >
+                {returnForm.processing
+                    ? 'Memproses...'
+                    : 'Sahkan Pemulangan'}
+            </button>
+        </div>
+    </form>
+</Modal>
+</>
     );
 }

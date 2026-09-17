@@ -95,6 +95,7 @@ Route::middleware('auth')->group(function () {
     Route::get('/pengurusan-aset', [AsetController::class, 'index'])->name('assets.index');
     Route::post('/pengurusan-aset', [AsetController::class, 'store'])->name('assets.store');
     Route::patch('/pengurusan-aset/{serial_no}', [AsetController::class, 'update'])->name('assets.update');
+    Route::post('/pengurusan-aset/{serial_no}/pemulangan', [AsetController::class, 'storePemulangan'])->name('assets.pemulangan.store');
     Route::delete('/pengurusan-aset/{serial_no}', [AsetController::class, 'destroy'])->name('assets.destroy');
 
 });

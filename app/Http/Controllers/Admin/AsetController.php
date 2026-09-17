@@ -93,6 +93,180 @@ class AsetController extends Controller
         return Redirect::back()->with('success', 'Maklumat spesifikasi aset berjaya dikemaskini.');
     }
 
+/**
+ * Record the physical return of a borrowed asset.
+ */
+public function storePemulangan(Request $request, $serial_no)
+{
+    $validated = $request->validate([
+        'keadaan_aset' => [
+            'required',
+            'string',
+            Rule::in(['Baik', 'Rosak', 'Perlu Pemeriksaan']),
+        ],
+        'tarikh_pulang' => [
+            'required',
+            'date',
+            'before_or_equal:now',
+        ],
+        'catatan' => [
+            'nullable',
+            'string',
+            'max:2000',
+        ],
+    ]);
+
+    DB::beginTransaction();
+
+    try {
+        // Kunci rekod aset sepanjang transaksi untuk mengelakkan
+        // pemulangan serentak atau pemulangan aset yang sama dua kali.
+        $asset = DB::table('aset')
+            ->where('serial_no', $serial_no)
+            ->lockForUpdate()
+            ->first();
+
+        if (!$asset) {
+            DB::rollBack();
+
+            return Redirect::back()->withErrors([
+                'pemulangan' => 'Aset tidak dijumpai dalam rekod inventori.',
+            ]);
+        }
+
+        if ($asset->status !== 'Dipinjam') {
+            DB::rollBack();
+
+            return Redirect::back()->withErrors([
+                'pemulangan' => 'Hanya aset berstatus Dipinjam boleh direkodkan sebagai dipulangkan.',
+            ]);
+        }
+
+/*
+ * Cari peminjaman TERKINI bagi serial aset ini yang masih belum
+ * mempunyai rekod pemulangan.
+ *
+ * Satu aset boleh melalui beberapa kitaran:
+ * Pinjam A -> Pulang A -> Pinjam B -> Pulang B.
+ *
+ * Oleh itu rekod peminjaman lama yang sudah dipulangkan mesti
+ * diabaikan.
+ */
+$laporanCalon = DB::table('laporan')
+    ->join('tiket', 'tiket.id_tiket', '=', 'laporan.id_tiket')
+    ->where('laporan.kos_items', 'like', '%' . $serial_no . '%')
+    ->orderByDesc('laporan.updated_at')
+    ->get([
+        'laporan.id_tiket',
+        'laporan.kos_items',
+        'laporan.updated_at',
+        'tiket.status_tiket',
+    ]);
+
+$rekodPeminjaman = null;
+
+foreach ($laporanCalon as $laporan) {
+    $kosItems = json_decode($laporan->kos_items, true);
+
+    if (!is_array($kosItems)) {
+        continue;
+    }
+
+    $senaraiSiri = $kosItems['senarai_siri'] ?? [];
+
+    if (!is_array($senaraiSiri)) {
+        continue;
+    }
+
+    foreach ($senaraiSiri as $item) {
+        $serialSepadan =
+            ($item['serial_no'] ?? null) === $serial_no;
+
+        $adalahPinjaman =
+            ($item['mod_penggunaan'] ?? null) === 'Dipinjamkan';
+
+        if (!$serialSepadan || !$adalahPinjaman) {
+            continue;
+        }
+
+        /*
+         * Jika kombinasi tiket + serial ini sudah mempunyai rekod
+         * pemulangan, ia ialah kitaran peminjaman lama.
+         */
+        $sudahDipulangkan = DB::table('pemulangan_aset')
+            ->where('id_tiket', $laporan->id_tiket)
+            ->where('serial_no', $serial_no)
+            ->exists();
+
+        if ($sudahDipulangkan) {
+            continue;
+        }
+
+        $rekodPeminjaman = [
+            'id_tiket' => $laporan->id_tiket,
+            'item' => $item,
+        ];
+
+        break 2;
+    }
+}
+
+if (!$rekodPeminjaman) {
+    DB::rollBack();
+
+    return Redirect::back()->withErrors([
+        'pemulangan' => 'Tiada rekod peminjaman aktif yang sah dijumpai bagi aset ini.',
+    ]);
+}
+
+        DB::table('pemulangan_aset')->insert([
+            'id_tiket' => $rekodPeminjaman['id_tiket'],
+            'serial_no' => $serial_no,
+            'tarikh_pulang' => $validated['tarikh_pulang'],
+            'diterima_oleh_ic' => $request->user()->no_ic,
+            'keadaan_aset' => $validated['keadaan_aset'],
+            'catatan' => $validated['catatan'] ?? null,
+            'created_at' => now(),
+            'updated_at' => now(),
+        ]);
+
+        /*
+         * Aset hanya kembali Tersedia jika keadaan fizikalnya Baik.
+         * Aset rosak atau perlu diperiksa tidak boleh ditawarkan semula
+         * untuk peminjaman.
+         */
+        $statusBaharu = match ($validated['keadaan_aset']) {
+            'Baik' => 'Tersedia',
+            'Rosak' => 'Rosak',
+            'Perlu Pemeriksaan' => 'Perlu Pemeriksaan',
+        };
+
+        DB::table('aset')
+            ->where('serial_no', $serial_no)
+            ->update([
+                'status' => $statusBaharu,
+                'updated_at' => now(),
+            ]);
+
+        DB::commit();
+
+        return Redirect::back()->with(
+            'success',
+            $statusBaharu === 'Tersedia'
+                ? 'Pemulangan aset berjaya direkodkan dan aset kini tersedia untuk dipinjam semula.'
+                : 'Pemulangan aset berjaya direkodkan. Aset tidak ditandakan tersedia kerana memerlukan tindakan lanjut.'
+        );
+    } catch (\Throwable $e) {
+        DB::rollBack();
+
+        report($e);
+
+        return Redirect::back()->withErrors([
+            'pemulangan' => 'Pemulangan aset gagal diproses. Sila cuba semula.',
+        ]);
+    }
+}
+
     // Remove the asset from inventory
     public function destroy($serial_no)
     {
