@@ -1518,6 +1518,40 @@ class TicketController extends Controller
             abort(422, 'Tindakan LKK tidak sah.');
         }
 
+        if ($tindakan === 'SAHKAN_PEMINJAMAN_SELESAI') {
+            $userSemasa = $request->user();
+            $perananSemasa = strtolower(trim((string) ($userSemasa->peranan ?? '')));
+            $statusSemasa = strtolower(trim((string) $ticket->status_tiket));
+
+            $perananPengesah = [
+                'ketua_upp', 'ketua upp', 'kupp',
+                'ketua_utd', 'ketua utd', 'kutd',
+                'ketua_wilayah', 'ketua wilayah', 'kw',
+            ];
+
+            $statusPeminjamanSah = [
+                'menunggu pengesahan',
+                'menunggu pengesahan lkk',
+                'menunggu semakan',
+                'semakan kutd',
+                'menunggu validasi',
+                'validasi kw',
+                'menunggu validasi kw',
+            ];
+
+            if (!$isPeminjaman) {
+                abort(403, 'Tindakan ini hanya dibenarkan untuk Peminjaman Peralatan ICT.');
+            }
+
+            if (!in_array($perananSemasa, $perananPengesah, true)) {
+                abort(403, 'Anda tidak dibenarkan mengesahkan penutupan tiket peminjaman ini.');
+            }
+
+            if (!in_array($statusSemasa, $statusPeminjamanSah, true)) {
+                abort(403, 'Status tiket tidak membenarkan pengesahan penutupan peminjaman.');
+            }
+        }
+
         $isDraft = filter_var($request->input('is_draft', $request->query('is_draft')), FILTER_VALIDATE_BOOLEAN);
         $isKuppSahkan = filter_var($request->input('is_kupp_sahkan', $request->query('is_kupp_sahkan')), FILTER_VALIDATE_BOOLEAN) || $tindakan === 'KUPP_HANTAR_VALIDASI';
         $isKutdHantar = filter_var($request->input('is_kutd_hantar', $request->query('is_kutd_hantar')), FILTER_VALIDATE_BOOLEAN) || $tindakan === 'KUTD_SAH_SEMAKAN';
