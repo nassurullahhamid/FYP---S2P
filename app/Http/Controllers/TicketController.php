@@ -1552,6 +1552,59 @@ class TicketController extends Controller
             }
         }
 
+        if ($tindakan === 'KUTD_PEMBETULAN') {
+            $userSemasa = $request->user();
+            $perananSemasa = strtolower(trim((string) ($userSemasa->peranan ?? '')));
+            $statusSemasa = strtolower(trim((string) $ticket->status_tiket));
+
+            $perananKupp = ['ketua_upp', 'ketua upp', 'kupp'];
+            $perananKutd = ['ketua_utd', 'ketua utd', 'kutd'];
+            $perananKw = ['ketua_wilayah', 'ketua wilayah', 'kw'];
+
+            $statusPeminjamanSah = [
+                'menunggu pengesahan',
+                'menunggu pengesahan lkk',
+                'menunggu semakan',
+                'semakan kutd',
+                'menunggu validasi',
+                'validasi kw',
+                'menunggu validasi kw',
+            ];
+
+            $statusSemakanKutd = [
+                'menunggu semakan',
+                'semakan kutd',
+                'semakan laporan teknikal',
+            ];
+
+            $statusSemakanKupp = [
+                'menunggu pengesahan',
+                'menunggu pengesahan lkk',
+            ];
+
+            if ($isPeminjaman) {
+                $perananPeminjamanSah = array_merge($perananKupp, $perananKutd, $perananKw);
+
+                if (!in_array($perananSemasa, $perananPeminjamanSah, true)) {
+                    abort(403, 'Anda tidak dibenarkan mengembalikan LKK peminjaman untuk pembetulan.');
+                }
+
+                if (!in_array($statusSemasa, $statusPeminjamanSah, true)) {
+                    abort(403, 'Status tiket peminjaman tidak membenarkan LKK dikembalikan untuk pembetulan.');
+                }
+            } elseif (in_array($statusSemasa, $statusSemakanKutd, true)) {
+                if (!in_array($perananSemasa, $perananKutd, true)) {
+                    abort(403, 'Hanya KUTD dibenarkan mengembalikan LKK pada peringkat semakan teknikal.');
+                }
+            } elseif (in_array($statusSemasa, $statusSemakanKupp, true)) {
+                if (!in_array($perananSemasa, $perananKupp, true)) {
+                    abort(403, 'Hanya KUPP dibenarkan mengembalikan LKK pada peringkat pengesahan.');
+                }
+            } else {
+                abort(403, 'Status tiket tidak membenarkan LKK dikembalikan untuk pembetulan.');
+            }
+        }
+
         if ($tindakan === 'KW_PEMBETULAN') {
             $userSemasa = $request->user();
             $perananSemasa = strtolower(trim((string) ($userSemasa->peranan ?? '')));
