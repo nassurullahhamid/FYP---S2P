@@ -270,12 +270,39 @@ if (!$rekodPeminjaman) {
     }
 }
 
-    // Remove the asset from inventory
+    // Remove an asset only when it has no operational history
     public function destroy($serial_no)
     {
         $asset = Aset::where('serial_no', $serial_no)->firstOrFail();
+
+        if ($asset->status === 'Dipinjam') {
+            return Redirect::back()->withErrors([
+                'aset' => 'Aset sedang dipinjam dan tidak boleh dipadamkan.',
+            ]);
+        }
+
+        $mempunyaiSejarah =
+            DB::table('meja_bantuan')
+                ->where('serial_no', $serial_no)
+                ->exists()
+            || DB::table('pemulangan_aset')
+                ->where('serial_no', $serial_no)
+                ->exists()
+            || DB::table('laporan')
+                ->where('kos_items', 'like', '%' . $serial_no . '%')
+                ->exists();
+
+        if ($mempunyaiSejarah) {
+            return Redirect::back()->withErrors([
+                'aset' => 'Aset ini mempunyai sejarah operasi dan tidak boleh dipadamkan bagi mengekalkan rekod audit sistem.',
+            ]);
+        }
+
         $asset->delete();
 
-        return Redirect::back()->with('success', 'Aset berjaya dipadamkan daripada rekod inventori.');
+        return Redirect::back()->with(
+            'success',
+            'Aset berjaya dipadamkan daripada rekod inventori.'
+        );
     }
 }

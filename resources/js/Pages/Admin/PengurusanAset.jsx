@@ -261,7 +261,7 @@ export default function PengurusanAset({
     summary = [],
     users = [],
 }) {
-    const { flash = {} } = usePage().props;
+    const { flash = {}, errors: pageErrors = {} } = usePage().props;
 
     const [search, setSearch] = useState('');
     const [typeFilter, setTypeFilter] = useState('');
@@ -474,6 +474,10 @@ export default function PengurusanAset({
                 onSuccess: () => {
                     closeDeleteModal();
                 },
+                onError: () => {
+                    closeDeleteModal();
+                    window.scrollTo({ top: 0, behavior: 'smooth' });
+                },
             },
         );
     };
@@ -565,6 +569,16 @@ const submitReturn = (e) => {
                                         className="mt-0.5 shrink-0"
                                     />
                                     <span>{flash.success}</span>
+                                </div>
+                            )}
+
+                            {pageErrors.aset && (
+                                <div className="mb-6 flex items-start gap-3 rounded-xl border border-red-200 bg-red-50 p-4 text-sm text-red-700">
+                                    <CircleX
+                                        size={20}
+                                        className="mt-0.5 shrink-0"
+                                    />
+                                    <span>{pageErrors.aset}</span>
                                 </div>
                             )}
 
