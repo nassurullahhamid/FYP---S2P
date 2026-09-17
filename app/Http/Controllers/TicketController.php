@@ -998,6 +998,22 @@ class TicketController extends Controller
     public function cetakPeminjaman(Request $request, $id_tiket, $serial_no)
     {
         $ticket = Tiket::with(['laporan'])->where('id_tiket', $id_tiket)->firstOrFail();
+
+        $laporan = $ticket->laporan;
+        $kosItems = $laporan && $laporan->kos_items
+            ? (is_string($laporan->kos_items) ? json_decode($laporan->kos_items, true) : $laporan->kos_items)
+            : [];
+
+        $senaraiSiri = is_array($kosItems['senarai_siri'] ?? null) ? $kosItems['senarai_siri'] : [];
+        $serialDitemui = collect($senaraiSiri)->contains(function ($item) use ($serial_no) {
+            $siri = $item['serial_no'] ?? $item['no_siri'] ?? null;
+            return (string) $siri === (string) $serial_no;
+        });
+
+        if (!$serialDitemui) {
+            abort(404, 'Nombor siri aset tidak ditemui dalam rekod peminjaman tiket ini.');
+        }
+
         $picRecord = DB::table('tugasan_tiket')->where('id_tiket', $id_tiket)->first();
 
         $pic = null;
