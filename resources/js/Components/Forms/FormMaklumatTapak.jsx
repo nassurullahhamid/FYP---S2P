@@ -6,17 +6,10 @@ export default function FormMaklumatTapak({ ticket, auth, senaraiPengguna }) {
     const dataTapak = ticket.konsultasi_rangkaian || {};
 
     const user = auth?.user;
-    const assignedPetugasIC = [
-        ...(ticket?.petugas?.map(p => p.no_ic) || []),
-        ...(Array.isArray(ticket?.pic_ic) ? ticket.pic_ic : [ticket?.pic_ic]),
-        ticket?.no_ic
-    ].filter(Boolean);
+    const assignedPetugasIC = ticket?.petugas?.map(p => p.no_ic).filter(Boolean) || [];
 
     const statusFormat = String(ticket.status_tiket || '').trim().toLowerCase();
-    const isCurrentUserPIC = user?.no_ic && (
-        assignedPetugasIC.includes(user.no_ic) ||
-        ['pic', 'juruteknik'].includes(String(user?.peranan || '').trim().toLowerCase())
-    );
+    const isCurrentUserPIC = user?.no_ic && assignedPetugasIC.includes(user.no_ic);
 
     // Only allow editing for the assigned PIC while ticket is in active action
     const bolehEditTapak = isCurrentUserPIC && statusFormat === 'dalam tindakan pegawai';
@@ -60,7 +53,6 @@ export default function FormMaklumatTapak({ ticket, auth, senaraiPengguna }) {
         firewall: dataTapak.firewall || 'TIADA',
         rumusan: dataTapak.rumusan || '',
         ulasan_teknikal: dapatkanUlasanAwal(),
-        hantar_ke_kutd: true,
     });
 
     // Technical comments dynamic array handlers
