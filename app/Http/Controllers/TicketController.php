@@ -324,7 +324,7 @@ class TicketController extends Controller
         ];
 
         // Extra validation if processed by KUPP
-        if (in_array($perananAktif, ['ketua_upp', 'kupp', 'ketua upp']) && $ticket->status_tiket === 'Menunggu Klasifikasi') {
+        if (in_array($perananAktif, ['ketua_upp', 'kupp', 'ketua upp']) && in_array($ticket->status_tiket, ['Menunggu Klasifikasi', 'Menunggu Semakan Dokumen'], true)) {
             $rules['bisa_kendalikan'] = ['required', 'in:Ya,Tidak'];
 
             $adakahPeminjaman = ($request->input('sub_kategori') === 'Peminjaman Peralatan ICT' || $ticket->sub_kategori === 'Peminjaman Peralatan ICT');
@@ -332,7 +332,7 @@ class TicketController extends Controller
             if ($adakahPeminjaman) {
                 $rules['no_ic'] = ['nullable', 'string'];
             } else {
-                $rules['no_ic'] = ['required_if:bisa_kendalikan,Ya', 'nullable', 'string'];
+                $rules['no_ic'] = ['required_if:bisa_kendalikan,Ya', 'nullable', 'string', 'exists:pengguna,no_ic'];
             }
         }
 
@@ -340,6 +340,15 @@ class TicketController extends Controller
             $rules['serial_no'] = ['required', 'string'];
             $rules['kuantiti_dipinjam'] = ['required', 'integer', 'min:1'];
         }
+        if ($ticket->status_tiket === 'Tugasan UTD') {
+            $rules['senarai_pic_ic'] = ['required', 'array', 'min:1'];
+            $rules['senarai_pic_ic.*'] = ['required', 'string', 'distinct', 'exists:pengguna,no_ic'];
+            if ($request->input('kategori') === 'Konsultasi Rangkaian') {
+                $rules['tarikh_lawatan'] = ['required', 'date'];
+                $rules['masa_lawatan'] = ['required', 'date_format:H:i'];
+            }
+        }
+
 
         $validated = $request->validate($rules);
 
@@ -356,7 +365,20 @@ class TicketController extends Controller
 
         // Check user role
         $isKUPP = in_array($perananAktif, ['ketua_upp', 'kupp', 'ketua upp']);
+        $isKUTD = in_array($perananAktif, ['ketua_utd', 'kutd', 'ketua utd']);
         $isPengurusanLain = in_array($perananAktif, ['ketua_utd', 'kutd', 'ketua utd', 'ketua_wilayah', 'kw', 'ketua wilayah']);
+
+        if ($ticket->status_tiket === 'Menunggu Klasifikasi' && !($isKUPP || $isPengurusanLain)) {
+            abort(403, 'Hanya KUPP, KUTD atau KW dibenarkan memproses tiket berstatus Menunggu Klasifikasi.');
+        }
+
+        if ($ticket->status_tiket === 'Tugasan UTD' && !$isKUTD) {
+            abort(403, 'Hanya KUTD dibenarkan memproses tiket berstatus Tugasan UTD.');
+        }
+
+        if ($ticket->status_tiket === 'Menunggu Semakan Dokumen' && !$isKUPP) {
+            abort(403, 'Hanya KUPP dibenarkan memproses tiket berstatus Menunggu Semakan Dokumen.');
+        }
 
         // Status transition logic
         if ($statusLama === 'Menunggu Klasifikasi') {
