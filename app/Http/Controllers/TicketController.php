@@ -1081,6 +1081,37 @@ class TicketController extends Controller
             'catatan'           => 'nullable|string',
         ]);
 
+        $adakahPIC = DB::table('tugasan_tiket')
+            ->where('id_tiket', $id_tiket)
+            ->where('no_ic', Auth::user()->no_ic)
+            ->exists();
+
+        if (!$adakahPIC) {
+            abort(403, 'Hanya PIC yang ditugaskan boleh mengemaskini borang peminjaman ini.');
+        }
+
+        $ticket = DB::table('tiket')
+            ->where('id_tiket', $id_tiket)
+            ->first();
+
+        if (!$ticket) {
+            abort(404, 'Tiket peminjaman tidak dijumpai.');
+        }
+
+        $adakahPeminjaman = $ticket->kategori === 'Meja Bantuan'
+            && DB::table('meja_bantuan')
+                ->where('id_tiket', $id_tiket)
+                ->where('sub_kategori', 'Peminjaman Peralatan ICT')
+                ->exists();
+
+        if (!$adakahPeminjaman) {
+            abort(403, 'Tindakan ini hanya sah untuk tiket Meja Bantuan - Peminjaman Peralatan ICT.');
+        }
+
+        if ($ticket->status_tiket !== 'Dalam Tindakan Pegawai') {
+            abort(403, 'Borang peminjaman hanya boleh dikemaskini semasa tiket berada dalam status Dalam Tindakan Pegawai.');
+        }
+
         $serial_no = $request->serial_no;
 
         $laporan = DB::table('laporan')->where('id_tiket', $id_tiket)->first();
