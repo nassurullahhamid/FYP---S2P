@@ -1144,6 +1144,17 @@ class TicketController extends Controller
                 'updated_at' => now()
             ]);
 
+            DB::table('jejak_tiket')->insert([
+                'id_tiket'       => $id_tiket,
+                'nama_pelaku'    => Auth::user()->nama,
+                'peranan_pelaku' => Auth::user()->peranan,
+                'aktiviti'       => 'Borang Peminjaman Dikemaskini',
+                'pesanan'        => 'Oleh ' . Auth::user()->nama . ' - Borang peminjaman dikemaskini selepas pembetulan.',
+                'status_badge'   => 'INFO',
+                'created_at'     => now(),
+                'updated_at'     => now()
+            ]);
+
             return back()->with('success', 'Maklumat borang peminjaman berjaya disimpan!');
         }
 
