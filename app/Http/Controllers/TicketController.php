@@ -1038,7 +1038,7 @@ class TicketController extends Controller
                 'id_tiket'       => $id_tiket,
                 'nama_pelaku'    => Auth::user()->nama,
                 'peranan_pelaku' => Auth::user()->peranan,
-                'aktiviti'       => 'Permohonan diluluskan',
+                'aktiviti'       => 'Disokong',
                 'pesanan'        => 'Oleh ' . Auth::user()->nama,
                 'status_badge'   => 'LULUS',
                 'created_at'     => now(),
@@ -1144,16 +1144,31 @@ class TicketController extends Controller
                 'updated_at' => now()
             ]);
 
-            DB::table('jejak_tiket')->insert([
-                'id_tiket'       => $id_tiket,
-                'nama_pelaku'    => Auth::user()->nama,
-                'peranan_pelaku' => Auth::user()->peranan,
-                'aktiviti'       => 'Borang Peminjaman Dikemaskini',
-                'pesanan'        => 'Oleh ' . Auth::user()->nama . ' - Borang peminjaman dikemaskini selepas pembetulan.',
-                'status_badge'   => 'INFO',
-                'created_at'     => now(),
-                'updated_at'     => now()
-            ]);
+            $idPemulanganTerakhir = DB::table('jejak_tiket')
+                ->where('id_tiket', $id_tiket)
+                ->where('aktiviti', 'Tiket Dikembalikan')
+                ->max('id');
+
+            if ($idPemulanganTerakhir) {
+                $sudahDikemaskini = DB::table('jejak_tiket')
+                    ->where('id_tiket', $id_tiket)
+                    ->where('aktiviti', 'Tiket Dikemaskini')
+                    ->where('id', '>', $idPemulanganTerakhir)
+                    ->exists();
+
+                if (!$sudahDikemaskini) {
+                    DB::table('jejak_tiket')->insert([
+                        'id_tiket'       => $id_tiket,
+                        'nama_pelaku'    => Auth::user()->nama,
+                        'peranan_pelaku' => Auth::user()->peranan,
+                        'aktiviti'       => 'Tiket Dikemaskini',
+                        'pesanan'        => 'Oleh ' . Auth::user()->nama,
+                        'status_badge'   => 'INFO',
+                        'created_at'     => now(),
+                        'updated_at'     => now()
+                    ]);
+                }
+            }
 
             return back()->with('success', 'Maklumat borang peminjaman berjaya disimpan!');
         }
@@ -1406,9 +1421,9 @@ class TicketController extends Controller
 
             if ($tindakan === 'pulang_pic') {
                 $statusBaru   = 'Dalam Tindakan Pegawai';
-                $aktivitiLog  = 'Tiket dipulangkan';
+                $aktivitiLog  = 'Tiket Dikembalikan';
                 $badgeStatus  = 'INFO';
-                $pesananAudit = 'Tiket dikembalikan kepada petugas untuk pembetulan';
+                $pesananAudit = 'Oleh ' . Auth::user()->nama;
             } else {
                 $statusBaru   = 'Menunggu Validasi';
                 $aktivitiLog  = 'Disahkan';
@@ -1523,11 +1538,6 @@ class TicketController extends Controller
             abort(403, 'Tiket tidak berada pada status Menunggu Validasi.');
         }
 
-        $ulasanKw = trim((string) $request->input('ulasan', ''));
-
-        $pesananValidasi = $ulasanKw !== ''
-            ? 'Ulasan KW: ' . $ulasanKw
-            : 'Oleh ' . $userSemasa->nama;
 
         DB::beginTransaction();
 
@@ -1542,8 +1552,8 @@ class TicketController extends Controller
                 'id_tiket'       => $id_tiket,
                 'nama_pelaku'    => $userSemasa->nama,
                 'peranan_pelaku' => $userSemasa->peranan,
-                'aktiviti'       => 'Divalidasi',
-                'pesanan'        => $pesananValidasi,
+                'aktiviti'       => 'Diluluskan',
+                'pesanan'        => 'Oleh ' . $userSemasa->nama,
                 'status_badge'   => 'LULUS',
                 'created_at'     => now(),
                 'updated_at'     => now()
@@ -1564,7 +1574,7 @@ class TicketController extends Controller
 
             DB::commit();
 
-            return back()->with('success', 'Tiket peminjaman peralatan berjaya disahkan, divalidasi, dan ditutup secara rasmi!');
+            return back()->with('success', 'Tiket peminjaman peralatan berjaya diluluskan dan ditutup secara rasmi!');
 
         } catch (\Exception $e) {
             DB::rollBack();
