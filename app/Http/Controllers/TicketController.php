@@ -499,7 +499,7 @@ class TicketController extends Controller
                     'status_tiket'    => $statusBaharu,
                     'kategori'        => $validated['kategori'],
                     'tahap_keutamaan' => $validated['tahap_keutamaan'],
-                    'sla'             => now()->addDays($hariSla),
+                    'sla'             => $statusLama === 'Menunggu Klasifikasi' ? now()->addDays($hariSla) : $ticket->sla,
                 ]);
 
                 $childTable = match ($validated['kategori']) {
