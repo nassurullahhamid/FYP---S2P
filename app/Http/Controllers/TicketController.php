@@ -1157,6 +1157,42 @@ class TicketController extends Controller
     {
         $ticket = Tiket::with(['laporan'])->where('id_tiket', $id_tiket)->firstOrFail();
 
+        $adakahPeminjaman = $ticket->kategori === 'Meja Bantuan'
+            && DB::table('meja_bantuan')
+                ->where('id_tiket', $id_tiket)
+                ->where('sub_kategori', 'Peminjaman Peralatan ICT')
+                ->exists();
+
+        if (!$adakahPeminjaman) {
+            abort(403, 'Cetakan ini hanya sah untuk tiket Meja Bantuan - Peminjaman Peralatan ICT.');
+        }
+
+        $userSemasa = Auth::user();
+        $perananSemasa = strtolower(trim($userSemasa->peranan ?? ''));
+
+        $perananPengurus = [
+            'ketua_upp',
+            'ketua upp',
+            'kupp',
+            'ketua_utd',
+            'ketua utd',
+            'kutd',
+            'ketua_wilayah',
+            'ketua wilayah',
+            'kw',
+        ];
+
+        $adakahPengurus = in_array($perananSemasa, $perananPengurus, true);
+
+        $adakahPIC = DB::table('tugasan_tiket')
+            ->where('id_tiket', $id_tiket)
+            ->where('no_ic', $userSemasa->no_ic)
+            ->exists();
+
+        if (!$adakahPengurus && !$adakahPIC) {
+            abort(403, 'Anda tidak mempunyai kebenaran untuk melihat atau mencetak borang peminjaman ini.');
+        }
+
         $laporan = $ticket->laporan;
         $kosItems = $laporan && $laporan->kos_items
             ? (is_string($laporan->kos_items) ? json_decode($laporan->kos_items, true) : $laporan->kos_items)
