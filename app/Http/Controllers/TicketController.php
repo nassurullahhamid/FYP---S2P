@@ -1258,6 +1258,43 @@ class TicketController extends Controller
             abort(403, 'Hanya PIC yang ditugaskan boleh menghantar tiket untuk pengesahan.');
         }
 
+        $laporan = DB::table('laporan')
+            ->where('id_tiket', $id_tiket)
+            ->first();
+
+        if (!$laporan || !$laporan->kos_items) {
+            return back()->withErrors([
+                'sistem' => 'Maklumat kelulusan peminjaman tidak dijumpai.'
+            ]);
+        }
+
+        $kosItems = json_decode($laporan->kos_items, true);
+        $senaraiSiri = $kosItems['senarai_siri'] ?? [];
+
+        if (!is_array($senaraiSiri) || empty($senaraiSiri)) {
+            return back()->withErrors([
+                'sistem' => 'Senarai aset peminjaman tidak dijumpai.'
+            ]);
+        }
+
+        $borangBelumLengkap = collect($senaraiSiri)->contains(function ($item) {
+            $serialNo = trim((string) ($item['serial_no'] ?? $item['no_siri'] ?? ''));
+            $statusPerkakasan = trim((string) ($item['status_perkakasan'] ?? ''));
+            $modPenggunaan = trim((string) ($item['mod_penggunaan'] ?? ''));
+            $jawatanPenerima = trim((string) ($item['jawatan_penerima'] ?? ''));
+
+            return $serialNo === ''
+                || $statusPerkakasan === ''
+                || $modPenggunaan === ''
+                || $jawatanPenerima === '';
+        });
+
+        if ($borangBelumLengkap) {
+            return back()->withErrors([
+                'sistem' => 'Sila lengkapkan borang peminjaman bagi semua aset sebelum dihantar kepada KUTD.'
+            ]);
+        }
+
         DB::beginTransaction();
         try {
             DB::table('tiket')->where('id_tiket', $id_tiket)->update([
