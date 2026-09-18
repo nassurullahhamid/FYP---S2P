@@ -890,6 +890,33 @@ class TicketController extends Controller
                 return back()->withErrors(['sistem' => 'Tiket peminjaman tidak dijumpai.']);
             }
 
+            $userSemasa = Auth::user();
+            $perananSemasa = strtolower(trim($userSemasa->peranan ?? ''));
+
+            $perananKUPP = [
+                'ketua_upp',
+                'ketua upp',
+                'kupp',
+            ];
+
+            if (!in_array($perananSemasa, $perananKUPP, true)) {
+                abort(403, 'Hanya Ketua UPP dibenarkan meluluskan permohonan peminjaman peralatan ICT.');
+            }
+
+            $adakahPeminjaman = $ticket->kategori === 'Meja Bantuan'
+                && DB::table('meja_bantuan')
+                    ->where('id_tiket', $id_tiket)
+                    ->where('sub_kategori', 'Peminjaman Peralatan ICT')
+                    ->exists();
+
+            if (!$adakahPeminjaman) {
+                abort(403, 'Tindakan ini hanya sah untuk tiket Meja Bantuan - Peminjaman Peralatan ICT.');
+            }
+
+            if ($ticket->status_tiket !== 'Menunggu Kelulusan') {
+                abort(403, 'Tiket peminjaman tidak berada pada status Menunggu Kelulusan.');
+            }
+
             $senaraiSiriAset = collect($request->senarai_aset)
                 ->pluck('serial_no')
                 ->values()
