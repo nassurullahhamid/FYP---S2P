@@ -1656,6 +1656,23 @@ class TicketController extends Controller
         if ($hasTindakan && !in_array($tindakan, $tindakanSah, true)) {
             abort(422, 'Tindakan LKK tidak sah.');
         }
+        if ($tindakan === 'HANTAR_KE_KUTD') {
+            $userSemasa = $request->user();
+            $perananSemasa = strtolower(trim((string) ($userSemasa->peranan ?? '')));
+            $statusSemasa = strtolower(trim((string) $ticket->status_tiket));
+
+            $perananKupp = ['ketua_upp', 'ketua upp', 'kupp'];
+            $statusFasa1 = ['tugasan upp'];
+
+            if (!in_array($perananSemasa, $perananKupp, true)) {
+                abort(403, 'Hanya KUPP dibenarkan menghantar LKK kepada KUTD.');
+            }
+
+            if (!in_array($statusSemasa, $statusFasa1, true)) {
+                abort(403, 'Status tiket tidak membenarkan KUPP menghantar LKK kepada KUTD.');
+            }
+        }
+
 
         if ($tindakan === 'SAHKAN_PEMINJAMAN_SELESAI') {
             $userSemasa = $request->user();
