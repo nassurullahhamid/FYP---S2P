@@ -1629,6 +1629,10 @@ class TicketController extends Controller
         $ticket = \App\Models\Tiket::with('transformasiDigital')->where('id_tiket', $id_tiket)->first();
 
         if (!$ticket) return back()->withErrors(['sistem' => 'Tiket tidak dijumpai.']);
+        if (strtolower(trim((string) $ticket->kategori)) !== 'transformasi digital') {
+            abort(403, 'Tindakan LKK Transformasi Digital tidak dibenarkan untuk kategori tiket ini.');
+        }
+
 
         $subKategori = $ticket->transformasiDigital?->sub_kategori
             ?? $ticket->transformasi_digital?->sub_kategori
