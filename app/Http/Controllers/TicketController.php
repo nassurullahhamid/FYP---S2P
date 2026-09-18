@@ -1944,8 +1944,9 @@ class TicketController extends Controller
         $isPengesahanSaja = $isKwSahkan || $isKwPembetulan || $isKutdPembetulan;
 
         $rules = [
-            'gambar_tapak' => ['nullable'],
-            'gambar_cadangan' => ['nullable'],
+            'gambar_tapak' => ['nullable', 'array'],
+            'gambar_tapak.*' => ['file', 'image', 'max:5120'],
+            'gambar_cadangan' => ['nullable', 'file', 'mimes:jpg,jpeg,png,pdf', 'max:5120'],
         ];
 
         if ($isPengesahanSaja) {
