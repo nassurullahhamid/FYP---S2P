@@ -1157,7 +1157,7 @@ class TicketController extends Controller
 
             $this->clearTicketNotifications($id_tiket);
 
-            $senaraiPengesah = \App\Models\Pengguna::whereIn('peranan', ['ketua_upp', 'kupp', 'ketua upp', 'Ketua UPP', 'ketua_utd', 'kutd', 'ketua utd', 'Ketua UTD', 'ketua_wilayah', 'kw', 'ketua wilayah', 'Ketua Wilayah'])
+            $senaraiPengesah = \App\Models\Pengguna::whereIn('peranan', ['ketua_utd', 'kutd', 'ketua utd', 'Ketua UTD'])
                 ->whereNotNull('no_ic')
                 ->where('no_ic', '!=', '')
                 ->get()
@@ -1191,15 +1191,9 @@ class TicketController extends Controller
         $perananSemasa = strtolower(trim($userSemasa->peranan ?? '' ));
 
         $perananPengesah = [
-            'ketua_upp',
-            'ketua upp',
-            'kupp',
             'ketua_utd',
             'ketua utd',
             'kutd',
-            'ketua_wilayah',
-            'ketua wilayah',
-            'kw',
         ];
 
         if (!in_array($perananSemasa, $perananPengesah, true)) {
@@ -1292,19 +1286,13 @@ class TicketController extends Controller
         $perananSemasa = strtolower(trim($userSemasa->peranan ?? ''));
 
         $perananPengesah = [
-            'ketua_upp',
-            'ketua upp',
-            'kupp',
-            'ketua_utd',
-            'ketua utd',
-            'kutd',
             'ketua_wilayah',
             'ketua wilayah',
             'kw',
         ];
 
         if (!in_array($perananSemasa, $perananPengesah, true)) {
-            abort(403, 'Anda tidak mempunyai kebenaran untuk menutup tiket peminjaman.');
+            abort(403, 'Hanya Ketua Wilayah dibenarkan menutup tiket peminjaman.');
         }
 
         $ticket = DB::table('tiket')
@@ -1324,8 +1312,8 @@ class TicketController extends Controller
             abort(403, 'Tindakan ini hanya sah untuk tiket Peminjaman Peralatan ICT.');
         }
 
-        if ($ticket->status_tiket !== 'Menunggu Pengesahan') {
-            abort(403, 'Tiket tidak berada pada status Menunggu Pengesahan.');
+        if ($ticket->status_tiket !== 'Menunggu Validasi') {
+            abort(403, 'Tiket tidak berada pada status Menunggu Validasi.');
         }
 
         DB::beginTransaction();

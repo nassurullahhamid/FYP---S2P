@@ -42,6 +42,7 @@ export default function BorangPeminjamanPeralatan({ ticket, senaraiAset, senarai
     const isPengurus = isKUPP || isKUTD || isKW;
 
     const isMenungguPengesahan = ['menunggu pengesahan', 'menunggu semakan', 'semakan kutd'].includes(statusFormat);
+    const isMenungguValidasi = statusFormat === 'menunggu validasi';
 
     // Helper: Format user roles
     const formatPeranan = (peranan) => {
@@ -151,6 +152,25 @@ export default function BorangPeminjamanPeralatan({ ticket, senaraiAset, senarai
             },
             onError: (errors) => {
                 alert("Gagal! Sistem ralat: " + (errors.sistem || Object.values(errors).join('\n')));
+            }
+        });
+    };
+
+    // KUTD action handler (Send to KW for final validation)
+    const handleHantarKeKW = () => {
+        if (!confirm("Adakah anda pasti untuk menghantar tiket peminjaman ini kepada Ketua Wilayah untuk validasi akhir?")) return;
+
+        router.post(route('tickets.prosesPengesahanKutd', ticket.id_tiket), {
+            tindakan: 'hantar_kw',
+            ulasan: ulasanPengesahan
+        }, {
+            preserveScroll: true,
+            onSuccess: () => {
+                alert("Tiket berjaya dihantar kepada Ketua Wilayah untuk validasi akhir!");
+                setUlasanPengesahan('');
+            },
+            onError: (errors) => {
+                alert("Gagal menghantar tiket kepada Ketua Wilayah: " + (errors.sistem || Object.values(errors).join('\n')));
             }
         });
     };
@@ -607,7 +627,7 @@ export default function BorangPeminjamanPeralatan({ ticket, senaraiAset, senarai
                     )}
 
                     {/* Unified Manager (KUPP/KUTD/KW) validation block */}
-                    {isMenungguPengesahan && isPengurus && (
+                    {isMenungguPengesahan && isKUTD && (
                         <div className="bg-emerald-50/60 p-5 rounded-2xl border border-emerald-200/80 shadow-sm space-y-4 mt-6 animate-in fade-in slide-in-from-bottom-3 duration-200">
                             <div className="flex items-center gap-2">
                                 <div className="p-1.5 bg-emerald-100 text-emerald-700 rounded-lg">
@@ -643,6 +663,44 @@ export default function BorangPeminjamanPeralatan({ ticket, senaraiAset, senarai
 
                                 <button
                                     type="button"
+                                    onClick={handleHantarKeKW}
+                                    className="inline-flex items-center justify-center gap-2 px-5 py-2.5 bg-emerald-600 hover:bg-emerald-700 text-white font-black text-xs uppercase rounded-xl shadow-sm transition-all active:scale-95 cursor-pointer"
+                                >
+                                    <CheckCircle2 size={14} className="shrink-0" />
+                                    <span>Hantar ke KW</span>
+                                </button>
+                            </div>
+                        </div>
+                    )}
+
+                    {/* KW Final Validation Block */}
+                    {isMenungguValidasi && isKW && (
+                        <div className="bg-emerald-50/60 p-5 rounded-2xl border border-emerald-200/80 shadow-sm space-y-4 mt-6">
+                            <div className="flex items-center gap-2">
+                                <div className="p-1.5 bg-emerald-100 text-emerald-700 rounded-lg">
+                                    <CheckCircle2 size={14} />
+                                </div>
+                                <h4 className="text-xs font-black text-emerald-900 uppercase tracking-wider">
+                                    Validasi Akhir Ketua Wilayah
+                                </h4>
+                            </div>
+
+                            <div className="space-y-2">
+                                <label className="text-[10px] uppercase font-black text-slate-500 tracking-wide block">
+                                    Nota / Ulasan Validasi:
+                                </label>
+                                <textarea
+                                    value={ulasanPengesahan}
+                                    onChange={(e) => setUlasanPengesahan(e.target.value)}
+                                    placeholder="Masukkan nota atau ulasan validasi akhir..."
+                                    className="w-full p-3 bg-white border border-gray-200 rounded-xl text-xs font-medium text-slate-800 focus:ring-2 focus:ring-emerald-500/20 focus:outline-none"
+                                    rows={3}
+                                />
+                            </div>
+
+                            <div className="flex justify-end pt-3 border-t border-emerald-200/40">
+                                <button
+                                    type="button"
                                     onClick={handlePenutupan}
                                     className="inline-flex items-center justify-center gap-2 px-5 py-2.5 bg-emerald-600 hover:bg-emerald-700 text-white font-black text-xs uppercase rounded-xl shadow-sm transition-all active:scale-95 cursor-pointer"
                                 >
@@ -652,7 +710,6 @@ export default function BorangPeminjamanPeralatan({ ticket, senaraiAset, senarai
                             </div>
                         </div>
                     )}
-
                 </div>
             </div>
         );
