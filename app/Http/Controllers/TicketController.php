@@ -1424,10 +1424,37 @@ class TicketController extends Controller
 
             $this->clearTicketNotifications($id_tiket);
 
+            if ($tindakan === 'pulang_pic') {
+                $picRecord = DB::table('tugasan_tiket')
+                    ->where('id_tiket', $id_tiket)
+                    ->first();
+
+                if ($picRecord && !empty($picRecord->no_ic)) {
+                    $picUser = \App\Models\Pengguna::where('no_ic', $picRecord->no_ic)->first();
+
+                    if ($picUser) {
+                        $picUser->notify(new \App\Notifications\PeminjamanPembetulanNoti(
+                            $ticket,
+                            Auth::user()->nama,
+                            $ulasan
+                        ));
+                    }
+                }
+            }
+
             if ($tindakan === 'hantar_kw') {
-                $senaraiKw = \App\Models\Pengguna::whereIn('peranan', ['ketua_wilayah', 'kw', 'ketua wilayah', 'Ketua Wilayah'])->get();
+                $senaraiKw = \App\Models\Pengguna::whereIn('peranan', [
+                    'ketua_wilayah',
+                    'kw',
+                    'ketua wilayah',
+                    'Ketua Wilayah'
+                ])->get();
+
                 foreach ($senaraiKw as $kwUser) {
-                    $kwUser->notify(new \App\Notifications\ValidasiKWNoti($ticket, Auth::user()->nama));
+                    $kwUser->notify(new \App\Notifications\ValidasiKWNoti(
+                        $ticket,
+                        Auth::user()->nama
+                    ));
                 }
             }
 
