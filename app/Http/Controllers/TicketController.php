@@ -313,6 +313,11 @@ class TicketController extends Controller
     {
         $userAktif = Auth::user();
         $ticket = Tiket::where('id_tiket', $id_tiket)->firstOrFail();
+        $statusProsesSah = ['Menunggu Klasifikasi', 'Menunggu Semakan Dokumen', 'Tugasan UTD'];
+        if (!in_array($ticket->status_tiket, $statusProsesSah, true)) {
+            abort(403, 'Status tiket semasa tidak dibenarkan untuk diproses melalui tindakan ini.');
+        }
+
         $perananAktif = strtolower(trim($userAktif->peranan));
 
         $mesejSukses = "Tiket berjaya dikemaskini.";
