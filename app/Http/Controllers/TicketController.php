@@ -1434,10 +1434,11 @@ class TicketController extends Controller
             abort(404, 'Tiket tidak dijumpai.');
         }
 
-        $adakahPeminjaman = DB::table('meja_bantuan')
-            ->where('id_tiket', $id_tiket)
-            ->where('sub_kategori', 'Peminjaman Peralatan ICT')
-            ->exists();
+        $adakahPeminjaman = $ticket->kategori === 'Meja Bantuan'
+            && DB::table('meja_bantuan')
+                ->where('id_tiket', $id_tiket)
+                ->where('sub_kategori', 'Peminjaman Peralatan ICT')
+                ->exists();
 
         if (!$adakahPeminjaman) {
             abort(403, 'Tindakan ini hanya sah untuk tiket Peminjaman Peralatan ICT.');
