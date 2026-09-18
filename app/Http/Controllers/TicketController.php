@@ -1823,6 +1823,7 @@ class TicketController extends Controller
             if ($picTidakSah) {
                 abort(403, 'Hanya pegawai berperanan PIC atau Juruteknik boleh ditugaskan.');
             }
+            $request->merge(['pic_ic' => $picInput]);
         }
 
         if ($tindakan === 'PIC_HANTAR_SEMAKAN') {
