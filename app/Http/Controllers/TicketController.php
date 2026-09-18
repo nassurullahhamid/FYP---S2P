@@ -1523,6 +1523,12 @@ class TicketController extends Controller
             abort(403, 'Tiket tidak berada pada status Menunggu Validasi.');
         }
 
+        $ulasanKw = trim((string) $request->input('ulasan', ''));
+
+        $pesananValidasi = $ulasanKw !== ''
+            ? 'Ulasan KW: ' . $ulasanKw
+            : 'Oleh ' . $userSemasa->nama;
+
         DB::beginTransaction();
 
         try {
@@ -1537,7 +1543,7 @@ class TicketController extends Controller
                 'nama_pelaku'    => $userSemasa->nama,
                 'peranan_pelaku' => $userSemasa->peranan,
                 'aktiviti'       => 'Divalidasi',
-                'pesanan'        => 'Oleh ' . $userSemasa->nama,
+                'pesanan'        => $pesananValidasi,
                 'status_badge'   => 'LULUS',
                 'created_at'     => now(),
                 'updated_at'     => now()
