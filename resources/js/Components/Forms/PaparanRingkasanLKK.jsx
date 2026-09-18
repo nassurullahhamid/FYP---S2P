@@ -10,18 +10,21 @@ export default function PaparanRingkasanLKK({ ticket, auth, senaraiPegawai }) {
     const [disemakOleh, setDisemakOleh] = useState(laporan.disemak_oleh || '');
 
     const isTD = ticket.kategori === 'Transformasi Digital';
+    const isMB = ticket.kategori === 'Meja Bantuan';
     const isKR = ticket.kategori === 'Konsultasi Rangkaian';
 
     const subKat = String(
+        ticket.sub_kategori ||
         ticket.transformasi_digital?.sub_kategori ||
         ticket.transformasiDigital?.sub_kategori ||
-        ticket.sub_kategori ||
+        ticket.meja_bantuan?.sub_kategori ||
+        ticket.mejaBantuan?.sub_kategori ||
         ''
     ).toLowerCase();
 
     const isPembekalan = isTD && subKat.includes('pembekalan');
-    const isPeminjaman = isTD && subKat.includes('peminjaman');
-    const isBilikMesyuarat = isTD && !isPembekalan && !isPeminjaman;
+    const isPeminjaman = isMB && subKat.includes('peminjaman');
+    const isBilikMesyuarat = isTD && subKat.includes('pemodenan bilik mesyuarat');
 
     const parseData = (dataStr, defaultArray = []) => {
         if (!dataStr) return defaultArray;
