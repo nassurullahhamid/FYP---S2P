@@ -290,7 +290,12 @@ class TicketController extends Controller
             ->get();
 
         $dataKos = null;
-        if ($ticket->laporan && $ticket->laporan->kos_items) {
+        if (
+            $ticket->kategori === 'Meja Bantuan' &&
+            $ticket->sub_kategori === 'Peminjaman Peralatan ICT' &&
+            $ticket->laporan &&
+            $ticket->laporan->kos_items
+        ) {
             $dataKos = $ticket->laporan->kos_items;
         }
 
