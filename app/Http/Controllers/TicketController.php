@@ -1629,18 +1629,24 @@ class TicketController extends Controller
         $ticket = \App\Models\Tiket::with('transformasiDigital')->where('id_tiket', $id_tiket)->first();
 
         if (!$ticket) return back()->withErrors(['sistem' => 'Tiket tidak dijumpai.']);
-        if (strtolower(trim((string) $ticket->kategori)) !== 'transformasi digital') {
-            abort(403, 'Tindakan LKK Transformasi Digital tidak dibenarkan untuk kategori tiket ini.');
+        $kategoriSemasa = strtolower(trim((string) $ticket->kategori));
+
+        $isPeminjaman = DB::table('meja_bantuan')
+            ->where('id_tiket', $id_tiket)
+            ->where('sub_kategori', 'Peminjaman Peralatan ICT')
+            ->exists();
+
+        if ($kategoriSemasa !== 'transformasi digital' && !$isPeminjaman) {
+            abort(403, 'Tindakan LKK tidak dibenarkan untuk kategori tiket ini.');
         }
 
-
-        $subKategori = $ticket->transformasiDigital?->sub_kategori
-            ?? $ticket->transformasi_digital?->sub_kategori
-            ?? $ticket->sub_kategori
-            ?? '';
+        $subKategori = $isPeminjaman
+            ? 'Peminjaman Peralatan ICT'
+            : ($ticket->transformasiDigital?->sub_kategori
+                ?? $ticket->transformasi_digital?->sub_kategori
+                ?? '');
 
         $isPembekalan = str_contains(strtolower($subKategori), 'pembekalan');
-        $isPeminjaman = str_contains(strtolower($subKategori), 'peminjaman');
 
         $tindakan = $request->input('tindakan', $request->query('tindakan'));
         $hasTindakan = !empty($tindakan);
