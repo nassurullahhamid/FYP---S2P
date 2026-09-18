@@ -843,6 +843,41 @@ class TicketController extends Controller
             'kuantiti_lulus' => 'required|integer|min:1',
         ]);
 
+        $userSemasa = Auth::user();
+        $perananSemasa = strtolower(trim($userSemasa->peranan ?? ''));
+
+        $perananKUPP = [
+            'ketua_upp',
+            'ketua upp',
+            'kupp',
+        ];
+
+        if (!in_array($perananSemasa, $perananKUPP, true)) {
+            abort(403, 'Hanya Ketua UPP dibenarkan menjana senarai aset untuk kelulusan peminjaman.');
+        }
+
+        $ticket = DB::table('tiket')
+            ->where('id_tiket', $id_tiket)
+            ->first();
+
+        if (!$ticket) {
+            abort(404, 'Tiket peminjaman tidak dijumpai.');
+        }
+
+        $adakahPeminjaman = $ticket->kategori === 'Meja Bantuan'
+            && DB::table('meja_bantuan')
+                ->where('id_tiket', $id_tiket)
+                ->where('sub_kategori', 'Peminjaman Peralatan ICT')
+                ->exists();
+
+        if (!$adakahPeminjaman) {
+            abort(403, 'Tindakan ini hanya sah untuk tiket Meja Bantuan - Peminjaman Peralatan ICT.');
+        }
+
+        if ($ticket->status_tiket !== 'Menunggu Kelulusan') {
+            abort(403, 'Senarai aset hanya boleh dijana untuk tiket berstatus Menunggu Kelulusan.');
+        }
+
         $senaraiAset = DB::table('aset')
             ->where('nama_aset', $request->id_aset)
             ->where('status', 'Tersedia')
