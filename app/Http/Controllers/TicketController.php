@@ -318,6 +318,14 @@ class TicketController extends Controller
             abort(403, 'Status tiket semasa tidak dibenarkan untuk diproses melalui tindakan ini.');
         }
 
+        if ($ticket->status_tiket !== 'Menunggu Klasifikasi') {
+            $request->merge([
+                'kategori' => $ticket->kategori,
+                'sub_kategori' => $ticket->sub_kategori,
+                'tahap_keutamaan' => $ticket->tahap_keutamaan,
+            ]);
+        }
+
         $perananAktif = strtolower(trim($userAktif->peranan));
 
         $mesejSukses = "Tiket berjaya dikemaskini.";
