@@ -2182,9 +2182,9 @@ class TicketController extends Controller
 
             $ticket->update($updateTiketData);
 
-            $this->clearTicketNotifications($id_tiket);
+            if ($hasTindakan && !$isDraft) $this->clearTicketNotifications($id_tiket);
 
-            if ($hasTindakan) {
+            if ($hasTindakan && !$isDraft) {
                 $hantarNotiTanpaBertindih = function($targetUsersCollection, $notificationInstance) use ($id_tiket) {
                     $penerimaSah = $targetUsersCollection->filter(function($u) use ($id_tiket) {
                         $userKey = $u->no_ic ?? $u->id;
