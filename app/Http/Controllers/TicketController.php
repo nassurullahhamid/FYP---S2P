@@ -1330,6 +1330,32 @@ class TicketController extends Controller
 
             $ticket->status_tiket = 'Menunggu Pengesahan';
 
+            $idPemulanganTerakhir = DB::table('jejak_tiket')
+                ->where('id_tiket', $id_tiket)
+                ->where('aktiviti', 'Tiket Dikembalikan')
+                ->max('id');
+
+            if ($idPemulanganTerakhir) {
+                $sudahDikemaskini = DB::table('jejak_tiket')
+                    ->where('id_tiket', $id_tiket)
+                    ->where('aktiviti', 'Tiket Dikemaskini')
+                    ->where('id', '>', $idPemulanganTerakhir)
+                    ->exists();
+
+                if (!$sudahDikemaskini) {
+                    DB::table('jejak_tiket')->insert([
+                        'id_tiket'       => $id_tiket,
+                        'nama_pelaku'    => Auth::user()->nama,
+                        'peranan_pelaku' => Auth::user()->peranan,
+                        'aktiviti'       => 'Tiket Dikemaskini',
+                        'pesanan'        => 'Oleh ' . Auth::user()->nama,
+                        'status_badge'   => 'INFO',
+                        'created_at'     => now(),
+                        'updated_at'     => now()
+                    ]);
+                }
+            }
+
             $alreadyLogged = DB::table('jejak_tiket')
                 ->where('id_tiket', $id_tiket)
                 ->where('aktiviti', 'Pegawai Pelaksana')

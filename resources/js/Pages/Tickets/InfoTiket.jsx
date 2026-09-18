@@ -789,9 +789,11 @@ export default function InfoTiket({ auth, backUrl, ticket, senaraiPengguna, sena
                                                             <h4 className="text-[11px] font-bold text-slate-800 leading-tight break-words">
                                                                 {tajukAktiviti}
                                                             </h4>
-                                                            <p className="text-[10px] font-black uppercase text-slate-500 mt-0.5">
-                                                                Oleh <span className="text-slate-700 font-black">{log.nama_pelaku}</span>
-                                                            </p>
+                                                            {String(tajukAktiviti).toLowerCase() !== 'tiket ditutup' && (
+                                                                <p className="text-[10px] font-black uppercase text-slate-500 mt-0.5">
+                                                                    Oleh <span className="text-slate-700 font-black">{log.nama_pelaku}</span>
+                                                                </p>
+                                                            )}
                                                             <p className="text-[9px] font-medium text-slate-400 mt-1 flex items-center gap-1.5 whitespace-nowrap">
                                                                 <span>{dt.date}</span>
                                                                 <span className="text-gray-300">|</span>
