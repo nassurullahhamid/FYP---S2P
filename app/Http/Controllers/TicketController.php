@@ -1636,7 +1636,7 @@ class TicketController extends Controller
         if (!$ticket) return back()->withErrors(['sistem' => 'Tiket tidak dijumpai.']);
         $kategoriSemasa = strtolower(trim((string) $ticket->kategori));
 
-        $isPeminjaman = DB::table('meja_bantuan')
+        $isPeminjaman = $kategoriSemasa === 'meja bantuan' && DB::table('meja_bantuan')
             ->where('id_tiket', $id_tiket)
             ->where('sub_kategori', 'Peminjaman Peralatan ICT')
             ->exists();
