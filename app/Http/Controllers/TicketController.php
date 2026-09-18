@@ -12,6 +12,7 @@ use App\Notifications\ValidasiKWNoti;
 use App\Notifications\LKKPembetulanNoti;
 use App\Notifications\TugasanPicNoti;
 use Illuminate\Http\Request;
+use Illuminate\Validation\Rule;
 use Illuminate\Http\RedirectResponse;
 use Illuminate\Support\Facades\Redirect;
 use Illuminate\Support\Facades\DB;
@@ -329,11 +330,18 @@ class TicketController extends Controller
         $perananAktif = strtolower(trim($userAktif->peranan));
 
         $mesejSukses = "Tiket berjaya dikemaskini.";
+        $subKategoriSah = match ($request->input('kategori')) {
+            'Meja Bantuan' => ['Penyelenggaraan Komputer', 'Penyelenggaraan Rangkaian', 'Sistem Aplikasi', 'Perkhidmatan E-mel', 'Perkhidmatan Lintas Langsung', 'Peminjaman Peralatan ICT'],
+            'Konsultasi Rangkaian' => ['Pemasangan Baharu', 'Naiktaraf'],
+            'Transformasi Digital' => ['Pemodenan Bilik Mesyuarat', 'Pembekalan Peralatan ICT'],
+            default => [],
+        };
+
 
         $rules = [
-            'kategori'        => ['required', 'string'],
-            'sub_kategori'    => ['required', 'string'],
-            'tahap_keutamaan' => ['required', 'string'],
+            'kategori'        => ['required', 'string', 'in:Meja Bantuan,Konsultasi Rangkaian,Transformasi Digital'],
+            'sub_kategori'    => ['required', 'string', Rule::in($subKategoriSah)],
+            'tahap_keutamaan' => ['required', 'string', 'in:Rendah,Sederhana,Tinggi'],
         ];
 
         // Extra validation if processed by KUPP
