@@ -1334,15 +1334,94 @@ class TicketController extends Controller
         $ticket = Tiket::where('id_tiket', $id_tiket)->firstOrFail();
 
         $tindakan         = $request->input('tindakan');
+        $tindakanSah = ['KUTD_SAH_SEMAKAN', 'KW_VALIDASI_SELESAI', 'KW_PEMBETULAN', 'KUTD_PEMBETULAN'];
+
+        if ($tindakan && !in_array($tindakan, $tindakanSah, true)) {
+            abort(422, 'Tindakan LKK Rangkaian tidak sah.');
+        }
+        if ($ticket->kategori !== 'Konsultasi Rangkaian') {
+            abort(403, 'LKK Rangkaian hanya dibenarkan untuk tiket Konsultasi Rangkaian.');
+        }
+
+        if ($tindakan === 'KUTD_SAH_SEMAKAN') {
+            $perananSemasa = strtolower(trim((string) ($request->user()->peranan ?? '')));
+            $statusSemasa = strtolower(trim((string) $ticket->status_tiket));
+
+            $perananKUTD = ['ketua_utd', 'ketua utd', 'kutd'];
+            $statusKUTDSah = ['menunggu pengesahan', 'menunggu pengesahan lkk', 'menunggu semakan', 'semakan kutd', 'lkk perlu pembetulan'];
+
+            if (!in_array($perananSemasa, $perananKUTD, true)) {
+                abort(403, 'Hanya KUTD dibenarkan mengesahkan LKK Rangkaian.');
+            }
+
+            if (!in_array($statusSemasa, $statusKUTDSah, true)) {
+                abort(403, 'Status tiket tidak membenarkan KUTD mengesahkan LKK Rangkaian.');
+            }
+        }
+        if (in_array($tindakan, ['KW_VALIDASI_SELESAI', 'KW_PEMBETULAN'], true)) {
+            $perananSemasa = strtolower(trim((string) ($request->user()->peranan ?? '')));
+            $statusSemasa = strtolower(trim((string) $ticket->status_tiket));
+
+            $perananKW = ['ketua_wilayah', 'ketua wilayah', 'kw'];
+            $statusKWSah = ['menunggu validasi', 'menunggu validasi kw'];
+
+            if (!in_array($perananSemasa, $perananKW, true)) {
+                abort(403, 'Hanya Ketua Wilayah dibenarkan membuat validasi LKK Rangkaian.');
+            }
+
+            if (!in_array($statusSemasa, $statusKWSah, true)) {
+                abort(403, 'Status tiket tidak membenarkan Ketua Wilayah memproses LKK Rangkaian.');
+            }
+        }
+        if ($tindakan === 'KUTD_PEMBETULAN') {
+            $perananSemasa = strtolower(trim((string) ($request->user()->peranan ?? '')));
+            $statusSemasa = strtolower(trim((string) $ticket->status_tiket));
+
+            $perananKUTD = ['ketua_utd', 'ketua utd', 'kutd'];
+            $statusKUTDPembetulan = ['menunggu pengesahan', 'menunggu pengesahan lkk'];
+
+            if (!in_array($perananSemasa, $perananKUTD, true)) {
+                abort(403, 'Hanya KUTD dibenarkan memulangkan LKK Rangkaian untuk pembetulan.');
+            }
+
+            if (!in_array($statusSemasa, $statusKUTDPembetulan, true)) {
+                abort(403, 'Status tiket tidak membenarkan KUTD memulangkan LKK Rangkaian untuk pembetulan.');
+            }
+        }
+        if ($request->boolean('is_draft') && $tindakan) {
+            abort(422, 'Draf LKK Rangkaian tidak boleh mengandungi tindakan workflow.');
+        }
+
+        if ($request->boolean('is_draft') && !$tindakan) {
+            $perananSemasa = strtolower(trim((string) ($request->user()->peranan ?? '')));
+            $statusSemasa = strtolower(trim((string) $ticket->status_tiket));
+
+            $perananKUTD = ['ketua_utd', 'ketua utd', 'kutd'];
+            $statusDraftKUTD = ['menunggu pengesahan', 'menunggu pengesahan lkk', 'menunggu semakan', 'semakan kutd', 'lkk perlu pembetulan'];
+
+            if (!in_array($perananSemasa, $perananKUTD, true)) {
+                abort(403, 'Hanya KUTD dibenarkan menyimpan draf LKK Rangkaian.');
+            }
+
+            if (!in_array($statusSemasa, $statusDraftKUTD, true)) {
+                abort(403, 'Status tiket tidak membenarkan KUTD menyimpan draf LKK Rangkaian.');
+            }
+        }
+        if (!$tindakan && !$request->boolean('is_draft')) {
+            abort(422, 'Tindakan LKK Rangkaian diperlukan.');
+        }
+
         $isDraft          = $request->boolean('is_draft');
-        $isKutdHantar     = $request->boolean('is_kutd_hantar') || $tindakan === 'KUTD_SAH_SEMAKAN';
-        $isKwSahkan       = $request->boolean('is_kw_sahkan') || $tindakan === 'KW_VALIDASI_SELESAI';
-        $isKwPembetulan   = $request->boolean('is_kw_pembetulan') || $tindakan === 'KW_PEMBETULAN';
-        $isKutdPembetulan = $request->boolean('is_kutd_pembetulan') || $tindakan === 'KUTD_PEMBETULAN';
+        $isKutdHantar     = $tindakan === 'KUTD_SAH_SEMAKAN';
+        $isKwSahkan       = $tindakan === 'KW_VALIDASI_SELESAI';
+        $isKwPembetulan   = $tindakan === 'KW_PEMBETULAN';
+        $isKutdPembetulan = $tindakan === 'KUTD_PEMBETULAN';
 
-        $isPengesahanSaja = $isKwSahkan || $isKwPembetulan || $isKutdPembetulan || in_array($tindakan, ['KW_VALIDASI_SELESAI', 'KW_PEMBETULAN', 'KUTD_PEMBETULAN', 'SAHKAN_PEMINJAMAN_SELESAI']);
+        $isPengesahanSaja = $isKwSahkan || $isKwPembetulan || $isKutdPembetulan;
 
-        if ($isPengesahanSaja) {
+        if ($isKwPembetulan || $isKutdPembetulan) {
+            $request->validate(['ulasan_ketua' => 'required|string']);
+        } elseif ($isPengesahanSaja) {
             $request->validate(['ulasan_ketua' => 'nullable|string', 'ulasan_semakan' => 'nullable|string']);
         } else {
             $laporanSediaAda = DB::table('laporan')->where('id_tiket', $id_tiket)->first();
@@ -1591,7 +1670,7 @@ class TicketController extends Controller
             $statusSemakanKutd = [
                 'menunggu semakan',
                 'semakan kutd',
-                'semakan laporan teknikal',
+                'lkk perlu pembetulan',
             ];
 
             $statusSemakanKupp = [
@@ -1717,7 +1796,7 @@ class TicketController extends Controller
             $statusSemakanKutd = [
                 'menunggu semakan',
                 'semakan kutd',
-                'semakan laporan teknikal',
+                'lkk perlu pembetulan',
             ];
 
             if (!in_array($perananSemasa, $perananKutd, true)) {
