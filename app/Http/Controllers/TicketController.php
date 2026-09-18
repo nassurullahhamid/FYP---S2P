@@ -611,6 +611,26 @@ class TicketController extends Controller
      */
     public function storeLaporanTapak(Request $request, string $id_tiket)
     {
+        $ticket = Tiket::where('id_tiket', $id_tiket)->firstOrFail();
+        $userSemasa = $request->user();
+
+        if ($ticket->kategori !== 'Konsultasi Rangkaian') {
+            abort(403, 'Laporan maklumat tapak hanya dibenarkan untuk tiket Konsultasi Rangkaian.');
+        }
+
+        $adakahPIC = DB::table('tugasan_tiket')
+            ->where('id_tiket', $id_tiket)
+            ->where('no_ic', $userSemasa->no_ic)
+            ->exists();
+
+        if (!$adakahPIC) {
+            abort(403, 'Anda bukan PIC yang ditugaskan untuk tiket ini.');
+        }
+
+        if ($ticket->status_tiket !== 'Dalam Tindakan Pegawai') {
+            abort(403, 'Status tiket tidak membenarkan PIC mengisi atau menghantar laporan maklumat tapak.');
+        }
+
         $validated = $request->validate([
             'nama_lokasi_bangunan'  => ['nullable', 'string', 'max:255'],
             'jenis_premis'          => ['required', 'string'],
@@ -652,12 +672,9 @@ class TicketController extends Controller
                     'updated_at'            => now(),
                 ]);
 
-            $ticket = Tiket::where('id_tiket', $id_tiket)->firstOrFail();
-
             $this->clearTicketNotifications($id_tiket);
 
-            $hantarKeKutd = $request->boolean('hantar_ke_kutd', true);
-            if ($hantarKeKutd && in_array($ticket->status_tiket, ['Dalam Tindakan Pegawai', 'Tugasan UTD'])) {
+            if ($ticket->status_tiket === 'Dalam Tindakan Pegawai') {
                 $ticket->update([
                     'status_tiket' => 'Menunggu Pengesahan',
                     'updated_at'   => now()
