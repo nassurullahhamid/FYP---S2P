@@ -1924,13 +1924,13 @@ class TicketController extends Controller
         }
 
         $isDraft = filter_var($request->input('is_draft', $request->query('is_draft')), FILTER_VALIDATE_BOOLEAN);
-        $isKuppSahkan = filter_var($request->input('is_kupp_sahkan', $request->query('is_kupp_sahkan')), FILTER_VALIDATE_BOOLEAN) || $tindakan === 'KUPP_HANTAR_VALIDASI';
-        $isKutdHantar = filter_var($request->input('is_kutd_hantar', $request->query('is_kutd_hantar')), FILTER_VALIDATE_BOOLEAN) || $tindakan === 'KUTD_SAH_SEMAKAN';
-        $isKwSahkan = filter_var($request->input('is_kw_sahkan', $request->query('is_kw_sahkan')), FILTER_VALIDATE_BOOLEAN) || $tindakan === 'KW_VALIDASI_SELESAI';
-        $isKwPembetulan = filter_var($request->input('is_kw_pembetulan', $request->query('is_kw_pembetulan')), FILTER_VALIDATE_BOOLEAN) || $tindakan === 'KW_PEMBETULAN';
+        $isKuppSahkan     = $tindakan === 'KUPP_HANTAR_VALIDASI';
+        $isKutdHantar     = $tindakan === 'KUTD_SAH_SEMAKAN';
+        $isKwSahkan       = $tindakan === 'KW_VALIDASI_SELESAI';
+        $isKwPembetulan   = $tindakan === 'KW_PEMBETULAN';
         $isKutdPembetulan = $tindakan === 'KUTD_PEMBETULAN';
 
-        $isPengesahanSaja = $isKwSahkan || $isKwPembetulan || $isKutdPembetulan || in_array($tindakan, ['KW_VALIDASI_SELESAI', 'KW_PEMBETULAN', 'KUTD_PEMBETULAN']);
+        $isPengesahanSaja = $isKwSahkan || $isKwPembetulan || $isKutdPembetulan;
 
         $rules = [
             'gambar_tapak' => ['nullable'],
