@@ -373,6 +373,7 @@ export default function BorangLKKTransformasi({ ticket, senaraiPegawai = [], aut
                                 type="date"
                                 value={data.tarikh_lawatan}
                                 disabled={!isKUTD_Fasa2}
+                                required={isKUTD_Fasa2}
                                 onChange={e => setData('tarikh_lawatan', e.target.value)}
                                 className="w-full h-10 border-gray-200 rounded-lg text-xs disabled:bg-gray-50 text-gray-700 font-bold"
                             />
@@ -383,6 +384,7 @@ export default function BorangLKKTransformasi({ ticket, senaraiPegawai = [], aut
                                 type="time"
                                 value={data.masa_lawatan}
                                 disabled={!isKUTD_Fasa2}
+                                required={isKUTD_Fasa2}
                                 onChange={e => setData('masa_lawatan', e.target.value)}
                                 className="w-full h-10 border-gray-200 rounded-lg text-xs disabled:bg-gray-50 text-gray-700 font-bold"
                             />

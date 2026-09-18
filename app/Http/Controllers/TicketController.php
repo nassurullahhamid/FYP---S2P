@@ -1979,6 +1979,11 @@ class TicketController extends Controller
             }
         }
 
+        if ($tindakan === 'AGIH_KE_PIC') {
+            $rules['tarikh_lawatan'] = ['required', 'date'];
+            $rules['masa_lawatan'] = ['required', 'date_format:H:i'];
+        }
+
         $validated = $request->validate($rules);
 
         DB::beginTransaction();
