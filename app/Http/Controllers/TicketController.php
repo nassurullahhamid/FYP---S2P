@@ -264,6 +264,16 @@ class TicketController extends Controller
             ->where('id_tiket', $id_ticket)
             ->firstOrFail();
 
+        $user = Auth::user();
+        $peranan = strtolower(trim((string) $user->peranan));
+
+        if (
+            in_array($peranan, ['juruteknik', 'pic'], true) &&
+            !$ticket->petugas->contains('no_ic', $user->no_ic)
+        ) {
+            abort(403, 'Anda tidak mempunyai kebenaran untuk melihat tiket ini.');
+        }
+
         $previousUrl = url()->previous();
         if (str_contains($previousUrl, '/tickets/')) {
             $previousUrl = route('tickets.index');
