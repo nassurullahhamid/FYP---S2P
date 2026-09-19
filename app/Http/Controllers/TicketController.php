@@ -388,6 +388,7 @@ class TicketController extends Controller
             if ($request->input('kategori') === 'Konsultasi Rangkaian') {
                 $rules['tarikh_lawatan'] = ['required', 'date'];
                 $rules['masa_lawatan'] = ['required', 'date_format:H:i'];
+                $rules['catatan_lawatan'] = ['nullable', 'string'];
             }
         }
 
@@ -502,10 +503,10 @@ class TicketController extends Controller
                     'updated_at'   => now(),
                 ];
 
-                if (in_array($newKategori, ['Konsultasi Rangkaian', 'Transformasi Digital']) && $request->filled('tarikh_lawatan')) {
-                    $insertChildFields['tarikh_lawatan'] = $request->tarikh_lawatan;
-                    $insertChildFields['masa_lawatan']   = $request->masa_lawatan;
-                    $insertChildFields['catatan_lawatan'] = $request->catatan_lawatan;
+                if (($newKategori === 'Konsultasi Rangkaian') && $request->filled('tarikh_lawatan')) {
+                    $insertChildFields['tarikh_lawatan'] = $validated['tarikh_lawatan'];
+                    $insertChildFields['masa_lawatan'] = $validated['masa_lawatan'];
+                    $insertChildFields['catatan_lawatan'] = $validated['catatan_lawatan'] ?? null;
                 }
 
                 DB::table($newChildTable)->insert($insertChildFields);
@@ -532,10 +533,10 @@ class TicketController extends Controller
 
                 if ($childTable) {
                     $updateFields = ['sub_kategori' => $validated['sub_kategori']];
-                    if (in_array($validated['kategori'], ['Konsultasi Rangkaian', 'Transformasi Digital']) && $request->filled('tarikh_lawatan')) {
-                        $updateFields['tarikh_lawatan']  = $request->tarikh_lawatan;
-                        $updateFields['masa_lawatan']    = $request->masa_lawatan;
-                        $updateFields['catatan_lawatan'] = $request->catatan_lawatan;
+                    if (($validated['kategori'] === 'Konsultasi Rangkaian') && $request->filled('tarikh_lawatan')) {
+                        $updateFields['tarikh_lawatan'] = $validated['tarikh_lawatan'];
+                        $updateFields['masa_lawatan'] = $validated['masa_lawatan'];
+                        $updateFields['catatan_lawatan'] = $validated['catatan_lawatan'] ?? null;
                     }
 
                     if ($statusLama !== 'Menunggu Klasifikasi' && $validated['kategori'] === 'Meja Bantuan' && $validated['sub_kategori'] === 'Peminjaman Peralatan ICT') {
