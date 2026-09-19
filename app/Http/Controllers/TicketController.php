@@ -341,9 +341,16 @@ class TicketController extends Controller
         }
 
         if ($ticket->status_tiket !== 'Menunggu Klasifikasi') {
+            $subKategoriSediaAda = match ($ticket->kategori) {
+                'Meja Bantuan'         => $ticket->mejaBantuan?->sub_kategori,
+                'Konsultasi Rangkaian' => $ticket->konsultasiRangkaian?->sub_kategori,
+                'Transformasi Digital' => $ticket->transformasiDigital?->sub_kategori,
+                default                => null,
+            };
+
             $request->merge([
-                'kategori' => $ticket->kategori,
-                'sub_kategori' => $ticket->sub_kategori,
+                'kategori'        => $ticket->kategori,
+                'sub_kategori'    => $subKategoriSediaAda,
                 'tahap_keutamaan' => $ticket->tahap_keutamaan,
             ]);
         }
@@ -386,7 +393,7 @@ class TicketController extends Controller
         if (in_array($perananAktif, ['ketua_upp', 'kupp', 'ketua upp']) && in_array($ticket->status_tiket, ['Menunggu Klasifikasi', 'Menunggu Semakan Dokumen'], true)) {
             $rules['bisa_kendalikan'] = ['required', 'in:Ya,Tidak'];
 
-            $adakahPeminjaman = ($request->input('sub_kategori') === 'Peminjaman Peralatan ICT' || $ticket->sub_kategori === 'Peminjaman Peralatan ICT');
+            $adakahPeminjaman = $request->input('sub_kategori') === 'Peminjaman Peralatan ICT';
 
             if ($adakahPeminjaman) {
                 $rules['no_ic'] = ['nullable', 'string'];
@@ -417,7 +424,7 @@ class TicketController extends Controller
 
         $kategoriCek = strtolower($validated['kategori'] ?? $ticket->kategori ?? '');
         $adakahTD = str_contains($kategoriCek, 'transformasi digital');
-        $adakahPeminjaman = str_contains(strtolower($validated['sub_kategori'] ?? $ticket->sub_kategori ?? ''), 'peminjaman');
+        $adakahPeminjaman = str_contains(strtolower($validated['sub_kategori'] ?? ''), 'peminjaman');
 
 
         // Status transition logic
