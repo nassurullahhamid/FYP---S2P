@@ -2494,6 +2494,9 @@ class TicketController extends Controller
 
         $validated = $request->validate($rules);
 
+        $newUploadedPaths = [];
+        $oldPathsToDeleteAfterCommit = [];
+
         DB::beginTransaction();
         try {
             if (!$isPengesahanSaja) {
@@ -2511,13 +2514,18 @@ class TicketController extends Controller
 
                     foreach ($gambarTapakPaths as $oldPath) {
                         $cleanPath = is_string($oldPath) ? trim($oldPath, '"\'\\') : '';
-                        if ($cleanPath) Storage::disk('public')->delete($cleanPath);
+                        if ($cleanPath) {
+                            $oldPathsToDeleteAfterCommit[] = $cleanPath;
+                        }
                     }
+
                     $gambarTapakPaths = [];
 
                     foreach ($filesArray as $fileItem) {
                         if ($fileItem && $fileItem->isValid()) {
-                            $gambarTapakPaths[] = $fileItem->store('diagrams', 'public');
+                            $newPath = $fileItem->store('diagrams', 'public');
+                            $gambarTapakPaths[] = $newPath;
+                            $newUploadedPaths[] = $newPath;
                         }
                     }
                 }
@@ -2534,13 +2542,18 @@ class TicketController extends Controller
 
                     foreach ($gambarCadanganPaths as $oldPath) {
                         $cleanPath = is_string($oldPath) ? trim($oldPath, '"\'\\') : '';
-                        if ($cleanPath) Storage::disk('public')->delete($cleanPath);
+                        if ($cleanPath) {
+                            $oldPathsToDeleteAfterCommit[] = $cleanPath;
+                        }
                     }
+
                     $gambarCadanganPaths = [];
 
                     foreach ($filesArray as $fileItem) {
                         if ($fileItem && $fileItem->isValid()) {
-                            $gambarCadanganPaths[] = $fileItem->store('diagrams', 'public');
+                            $newPath = $fileItem->store('diagrams', 'public');
+                            $gambarCadanganPaths[] = $newPath;
+                            $newUploadedPaths[] = $newPath;
                         }
                     }
                 }
@@ -2691,6 +2704,21 @@ class TicketController extends Controller
 
             $ticket->update($updateTiketData);
 
+            DB::commit();
+
+            foreach (array_unique($oldPathsToDeleteAfterCommit) as $oldPath) {
+                try {
+                    Storage::disk('public')->delete($oldPath);
+                } catch (\Throwable $cleanupError) {
+                    Log::warning('Gagal memadam fail LKK lama selepas commit.', [
+                        'id_tiket' => $id_tiket,
+                        'path' => $oldPath,
+                        'error' => $cleanupError->getMessage(),
+                    ]);
+                }
+            }
+
+            try {
             if ($hasTindakan && !$isDraft) $this->clearTicketNotifications($id_tiket);
 
             if ($hasTindakan && !$isDraft) {
@@ -2808,7 +2836,6 @@ class TicketController extends Controller
                     }
                 }
             }
-
             if ($statusBaru === 'Menunggu Kelulusan') {
                 $paraPengesah = Pengguna::whereIn('peranan', ['ketua_upp', 'kupp', 'ketua upp', 'Ketua UPP', 'ketua_utd', 'kutd', 'ketua utd', 'Ketua UTD', 'ketua_wilayah', 'kw', 'ketua wilayah', 'Ketua Wilayah'])
                     ->whereNotNull('no_ic')
@@ -2820,12 +2847,33 @@ class TicketController extends Controller
                     Notification::send($paraPengesah, new PengesahanKetuaNoti($ticket, Auth::user()->nama));
                 }
             }
+            } catch (\Throwable $notificationError) {
+                Log::warning('Gagal menghantar notifikasi LKK Transformasi Digital.', [
+                    'id_tiket' => $id_tiket,
+                    'tindakan' => $tindakan,
+                    'error' => $notificationError->getMessage(),
+                ]);
+            }
 
-            DB::commit();
             return back()->with('success', 'Proses LKK Berjaya!');
 
         } catch (\Exception $e) {
-            DB::rollBack();
+            if (DB::transactionLevel() > 0) {
+                DB::rollBack();
+            }
+
+            foreach (array_unique($newUploadedPaths) as $newPath) {
+                try {
+                    Storage::disk('public')->delete($newPath);
+                } catch (\Throwable $cleanupError) {
+                    Log::warning('Gagal membersihkan fail LKK baharu selepas rollback.', [
+                        'id_tiket' => $id_tiket,
+                        'path' => $newPath,
+                        'error' => $cleanupError->getMessage(),
+                    ]);
+                }
+            }
+
             Log::error('Ralat storeLKK: ' . $e->getMessage());
             return back()->withErrors(['sistem' => $e->getMessage()]);
         }
