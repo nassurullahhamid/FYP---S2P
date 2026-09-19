@@ -1524,11 +1524,11 @@ class TicketController extends Controller
     {
         $request->validate([
             'tindakan' => 'required|in:pulang_pic,hantar_kw',
-            'ulasan'   => 'nullable|string'
+            'ulasan'   => 'required_if:tindakan,pulang_pic|nullable|string|max:2000'
         ]);
 
         $userSemasa = Auth::user();
-        $perananSemasa = strtolower(trim($userSemasa->peranan ?? '' ));
+        $perananSemasa = strtolower(trim($userSemasa->peranan ?? ''));
 
         $perananPengesah = [
             'ketua_utd',
@@ -1540,54 +1540,75 @@ class TicketController extends Controller
             abort(403, 'Anda tidak mempunyai kebenaran untuk mengesahkan tiket peminjaman.');
         }
 
-        $ticket = DB::table('tiket')->where('id_tiket', $id_tiket)->first();
-
-        if (!$ticket) {
-            abort(404, 'Tiket tidak dijumpai.');
-        }
-
-        $adakahPeminjaman = $ticket->kategori === 'Meja Bantuan'
-            && DB::table('meja_bantuan')
-                ->where('id_tiket', $id_tiket)
-                ->where('sub_kategori', 'Peminjaman Peralatan ICT')
-                ->exists();
-
-        if (!$adakahPeminjaman) {
-            abort(403, 'Tindakan ini hanya sah untuk tiket Peminjaman Peralatan ICT.');
-        }
-
-        if ($ticket->status_tiket !== 'Menunggu Pengesahan') {
-            abort(403, 'Tiket tidak berada pada status Menunggu Pengesahan.');
-        }
-
         $tindakan = $request->tindakan;
-        $ulasan   = $request->ulasan ?? 'Tiada ulasan dinyatakan.';
+        $ulasan = trim((string) ($request->ulasan ?? ''));
+
+        if ($tindakan === 'pulang_pic' && $ulasan === '') {
+            return back()->withErrors([
+                'ulasan' => 'Ulasan pembetulan wajib dinyatakan apabila tiket dikembalikan kepada PIC.'
+            ]);
+        }
+
+        if ($ulasan === '') {
+            $ulasan = 'Tiada ulasan dinyatakan.';
+        }
 
         DB::beginTransaction();
+
         try {
+            $ticket = DB::table('tiket')
+                ->where('id_tiket', $id_tiket)
+                ->lockForUpdate()
+                ->first();
+
+            if (!$ticket) {
+                DB::rollBack();
+                abort(404, 'Tiket tidak dijumpai.');
+            }
+
+            $adakahPeminjaman = $ticket->kategori === 'Meja Bantuan'
+                && DB::table('meja_bantuan')
+                    ->where('id_tiket', $id_tiket)
+                    ->where('sub_kategori', 'Peminjaman Peralatan ICT')
+                    ->exists();
+
+            if (!$adakahPeminjaman) {
+                DB::rollBack();
+                abort(403, 'Tindakan ini hanya sah untuk tiket Peminjaman Peralatan ICT.');
+            }
+
+            if ($ticket->status_tiket !== 'Menunggu Pengesahan') {
+                DB::rollBack();
+                abort(403, 'Tiket tidak berada pada status Menunggu Pengesahan.');
+            }
 
             if ($tindakan === 'pulang_pic') {
                 $statusBaru   = 'Dalam Tindakan Pegawai';
                 $aktivitiLog  = 'Tiket Dikembalikan';
                 $badgeStatus  = 'INFO';
-                $pesananAudit = 'Oleh ' . Auth::user()->nama;
+                $pesananAudit = 'Oleh ' . $userSemasa->nama;
             } else {
                 $statusBaru   = 'Menunggu Validasi';
                 $aktivitiLog  = 'Disahkan';
                 $badgeStatus  = 'LULUS';
-                $pesananAudit = 'Oleh ' . Auth::user()->nama ;
+                $pesananAudit = 'Oleh ' . $userSemasa->nama;
             }
 
-            DB::table('tiket')->where('id_tiket', $id_tiket)->update([
-                'status_tiket'   => $statusBaru,
-                'ulasan_semakan' => $ulasan,
-                'updated_at'     => now()
-            ]);
+            DB::table('tiket')
+                ->where('id_tiket', $id_tiket)
+                ->update([
+                    'status_tiket'   => $statusBaru,
+                    'ulasan_semakan' => $ulasan,
+                    'updated_at'     => now()
+                ]);
+
+            $ticket->status_tiket = $statusBaru;
+            $ticket->ulasan_semakan = $ulasan;
 
             DB::table('jejak_tiket')->insert([
                 'id_tiket'       => $id_tiket,
-                'nama_pelaku'    => Auth::user()->nama,
-                'peranan_pelaku' => Auth::user()->peranan,
+                'nama_pelaku'    => $userSemasa->nama,
+                'peranan_pelaku' => $userSemasa->peranan,
                 'aktiviti'       => $aktivitiLog,
                 'pesanan'        => $pesananAudit,
                 'status_badge'   => $badgeStatus,
@@ -1595,6 +1616,28 @@ class TicketController extends Controller
                 'updated_at'     => now()
             ]);
 
+            DB::commit();
+
+        } catch (\Symfony\Component\HttpKernel\Exception\HttpExceptionInterface $e) {
+            if (DB::transactionLevel() > 0) {
+                DB::rollBack();
+            }
+
+            throw $e;
+
+        } catch (\Exception $e) {
+            if (DB::transactionLevel() > 0) {
+                DB::rollBack();
+            }
+
+            Log::error('Ralat prosesPengesahanKutd: ' . $e->getMessage());
+
+            return back()->withErrors([
+                'sistem' => 'Keputusan verifikasi KUTD tidak dapat diproses kerana berlaku ralat sistem. Sila cuba semula.'
+            ]);
+        }
+
+        try {
             $this->clearTicketNotifications($id_tiket);
 
             if ($tindakan === 'pulang_pic') {
@@ -1606,11 +1649,13 @@ class TicketController extends Controller
                     $picUser = \App\Models\Pengguna::where('no_ic', $picRecord->no_ic)->first();
 
                     if ($picUser) {
-                        $picUser->notify(new \App\Notifications\PeminjamanPembetulanNoti(
-                            $ticket,
-                            Auth::user()->nama,
-                            $ulasan
-                        ));
+                        $picUser->notify(
+                            new \App\Notifications\PeminjamanPembetulanNoti(
+                                $ticket,
+                                $userSemasa->nama,
+                                $ulasan
+                            )
+                        );
                     }
                 }
             }
@@ -1621,24 +1666,30 @@ class TicketController extends Controller
                     'kw',
                     'ketua wilayah',
                     'Ketua Wilayah'
-                ])->get();
+                ])
+                    ->whereNotNull('no_ic')
+                    ->where('no_ic', '!=', '')
+                    ->get()
+                    ->unique('no_ic');
 
                 foreach ($senaraiKw as $kwUser) {
-                    $kwUser->notify(new \App\Notifications\ValidasiKWNoti(
-                        $ticket,
-                        Auth::user()->nama
-                    ));
+                    $kwUser->notify(
+                        new \App\Notifications\ValidasiKWNoti(
+                            $ticket,
+                            $userSemasa->nama
+                        )
+                    );
                 }
             }
 
-            DB::commit();
-            return back()->with('success', 'Keputusan verifikasi KUTD berjaya diproses!');
-
         } catch (\Exception $e) {
-            DB::rollBack();
-            Log::error('Ralat prosesPengesahanKutd: ' . $e->getMessage());
-            return back()->withErrors(['sistem' => 'Gagal memproses verifikasi KUTD: ' . $e->getMessage()]);
+            Log::error('Notifikasi prosesPengesahanKutd gagal: ' . $e->getMessage());
         }
+
+        return back()->with(
+            'success',
+            'Keputusan verifikasi KUTD berjaya diproses!'
+        );
     }
 
     /**
