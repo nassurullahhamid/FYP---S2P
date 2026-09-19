@@ -1318,78 +1318,105 @@ class TicketController extends Controller
      */
     public function hantarKeKUTD($id_tiket)
     {
-        $ticket = DB::table('tiket')->where('id_tiket', $id_tiket)->first();
+        DB::beginTransaction();
 
-        if (!$ticket) {
-            abort(404, 'Tiket tidak dijumpai.');
-        }
-
-        $adakahPeminjaman = $ticket->kategori === 'Meja Bantuan'
-            && DB::table('meja_bantuan')
+        try {
+            $ticket = DB::table('tiket')
                 ->where('id_tiket', $id_tiket)
-                ->where('sub_kategori', 'Peminjaman Peralatan ICT')
+                ->lockForUpdate()
+                ->first();
+
+            if (!$ticket) {
+                DB::rollBack();
+                abort(404, 'Tiket tidak dijumpai.');
+            }
+
+            $adakahPeminjaman = $ticket->kategori === 'Meja Bantuan'
+                && DB::table('meja_bantuan')
+                    ->where('id_tiket', $id_tiket)
+                    ->where('sub_kategori', 'Peminjaman Peralatan ICT')
+                    ->exists();
+
+            if (!$adakahPeminjaman) {
+                DB::rollBack();
+                abort(403, 'Tindakan ini hanya sah untuk tiket Peminjaman Peralatan ICT.');
+            }
+
+            if ($ticket->status_tiket !== 'Dalam Tindakan Pegawai') {
+                DB::rollBack();
+                abort(403, 'Tiket tidak berada pada status Dalam Tindakan Pegawai.');
+            }
+
+            $adakahPIC = DB::table('tugasan_tiket')
+                ->where('id_tiket', $id_tiket)
+                ->where('no_ic', Auth::user()->no_ic)
                 ->exists();
 
-        if (!$adakahPeminjaman) {
-            abort(403, 'Tindakan ini hanya sah untuk tiket Peminjaman Peralatan ICT.');
-        }
+            if (!$adakahPIC) {
+                DB::rollBack();
+                abort(403, 'Hanya PIC yang ditugaskan boleh menghantar tiket untuk pengesahan.');
+            }
 
-        if ($ticket->status_tiket !== 'Dalam Tindakan Pegawai') {
-            abort(403, 'Tiket tidak berada pada status Dalam Tindakan Pegawai.');
-        }
+            $laporan = DB::table('laporan')
+                ->where('id_tiket', $id_tiket)
+                ->lockForUpdate()
+                ->first();
 
-        $adakahPIC = DB::table('tugasan_tiket')
-            ->where('id_tiket', $id_tiket)
-            ->where('no_ic', Auth::user()->no_ic)
-            ->exists();
+            if (!$laporan || !$laporan->kos_items) {
+                DB::rollBack();
 
-        if (!$adakahPIC) {
-            abort(403, 'Hanya PIC yang ditugaskan boleh menghantar tiket untuk pengesahan.');
-        }
+                return back()->withErrors([
+                    'sistem' => 'Maklumat kelulusan peminjaman tidak dijumpai.'
+                ]);
+            }
 
-        $laporan = DB::table('laporan')
-            ->where('id_tiket', $id_tiket)
-            ->first();
+            $kosItems = json_decode($laporan->kos_items, true);
 
-        if (!$laporan || !$laporan->kos_items) {
-            return back()->withErrors([
-                'sistem' => 'Maklumat kelulusan peminjaman tidak dijumpai.'
-            ]);
-        }
+            if (!is_array($kosItems) || !is_array($kosItems['senarai_siri'] ?? null)) {
+                DB::rollBack();
+                Log::error('Struktur kos_items peminjaman tidak sah untuk tiket: ' . $id_tiket);
 
-        $kosItems = json_decode($laporan->kos_items, true);
-        $senaraiSiri = $kosItems['senarai_siri'] ?? [];
+                return back()->withErrors([
+                    'sistem' => 'Rekod peminjaman tidak sah. Sila hubungi pentadbir sistem.'
+                ]);
+            }
 
-        if (!is_array($senaraiSiri) || empty($senaraiSiri)) {
-            return back()->withErrors([
-                'sistem' => 'Senarai aset peminjaman tidak dijumpai.'
-            ]);
-        }
+            $senaraiSiri = $kosItems['senarai_siri'];
 
-        $borangBelumLengkap = collect($senaraiSiri)->contains(function ($item) {
-            $serialNo = trim((string) ($item['serial_no'] ?? $item['no_siri'] ?? ''));
-            $statusPerkakasan = trim((string) ($item['status_perkakasan'] ?? ''));
-            $modPenggunaan = trim((string) ($item['mod_penggunaan'] ?? ''));
-            $jawatanPenerima = trim((string) ($item['jawatan_penerima'] ?? ''));
+            if (empty($senaraiSiri)) {
+                DB::rollBack();
 
-            return $serialNo === ''
-                || $statusPerkakasan === ''
-                || $modPenggunaan === ''
-                || $jawatanPenerima === '';
-        });
+                return back()->withErrors([
+                    'sistem' => 'Senarai aset peminjaman tidak dijumpai.'
+                ]);
+            }
 
-        if ($borangBelumLengkap) {
-            return back()->withErrors([
-                'sistem' => 'Sila lengkapkan borang peminjaman bagi semua aset sebelum dihantar kepada KUTD.'
-            ]);
-        }
+            $borangBelumLengkap = collect($senaraiSiri)->contains(function ($item) {
+                $serialNo = trim((string) ($item['serial_no'] ?? $item['no_siri'] ?? ''));
+                $statusPerkakasan = trim((string) ($item['status_perkakasan'] ?? ''));
+                $modPenggunaan = trim((string) ($item['mod_penggunaan'] ?? ''));
+                $jawatanPenerima = trim((string) ($item['jawatan_penerima'] ?? ''));
 
-        DB::beginTransaction();
-        try {
-            DB::table('tiket')->where('id_tiket', $id_tiket)->update([
-                'status_tiket' => 'Menunggu Pengesahan',
-                'updated_at'   => now()
-            ]);
+                return $serialNo === ''
+                    || !in_array($statusPerkakasan, ['Baru', 'Terpakai'], true)
+                    || !in_array($modPenggunaan, ['Dipinjamkan', 'Diserahkan'], true)
+                    || $jawatanPenerima === '';
+            });
+
+            if ($borangBelumLengkap) {
+                DB::rollBack();
+
+                return back()->withErrors([
+                    'sistem' => 'Sila lengkapkan borang peminjaman bagi semua aset sebelum dihantar kepada KUTD.'
+                ]);
+            }
+
+            DB::table('tiket')
+                ->where('id_tiket', $id_tiket)
+                ->update([
+                    'status_tiket' => 'Menunggu Pengesahan',
+                    'updated_at'   => now()
+                ]);
 
             $ticket->status_tiket = 'Menunggu Pengesahan';
 
@@ -1437,26 +1464,57 @@ class TicketController extends Controller
                 ]);
             }
 
+            DB::commit();
+
+        } catch (\Symfony\Component\HttpKernel\Exception\HttpExceptionInterface $e) {
+            if (DB::transactionLevel() > 0) {
+                DB::rollBack();
+            }
+
+            throw $e;
+
+        } catch (\Exception $e) {
+            if (DB::transactionLevel() > 0) {
+                DB::rollBack();
+            }
+
+            Log::error('Ralat hantarKeKUTD: ' . $e->getMessage());
+
+            return back()->withErrors([
+                'sistem' => 'Tiket peminjaman tidak dapat diserahkan kerana berlaku ralat sistem. Sila cuba semula.'
+            ]);
+        }
+
+        try {
             $this->clearTicketNotifications($id_tiket);
 
-            $senaraiPengesah = \App\Models\Pengguna::whereIn('peranan', ['ketua_utd', 'kutd', 'ketua utd', 'Ketua UTD'])
+            $senaraiPengesah = \App\Models\Pengguna::whereIn(
+                'peranan',
+                ['ketua_utd', 'kutd', 'ketua utd', 'Ketua UTD']
+            )
                 ->whereNotNull('no_ic')
                 ->where('no_ic', '!=', '')
                 ->get()
                 ->unique('no_ic');
 
             foreach ($senaraiPengesah as $pengesahUser) {
-                $pengesahUser->notify(new \App\Notifications\PengesahanKetuaNoti($ticket, Auth::user()->nama, true));
+                $pengesahUser->notify(
+                    new \App\Notifications\PengesahanKetuaNoti(
+                        $ticket,
+                        Auth::user()->nama,
+                        true
+                    )
+                );
             }
 
-            DB::commit();
-            return back()->with('success', 'Tiket peminjaman peralatan berjaya diserahkan untuk pengesahan!');
-
         } catch (\Exception $e) {
-            DB::rollBack();
-            Log::error('Ralat hantarKeKUTD: ' . $e->getMessage());
-            return back()->withErrors(['sistem' => 'Gagal menyerahkan tiket: ' . $e->getMessage()]);
+            Log::error('Notifikasi hantarKeKUTD gagal: ' . $e->getMessage());
         }
+
+        return back()->with(
+            'success',
+            'Tiket peminjaman peralatan berjaya diserahkan untuk pengesahan!'
+        );
     }
 
     /**
