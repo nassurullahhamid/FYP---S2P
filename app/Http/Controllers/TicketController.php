@@ -507,8 +507,6 @@ class TicketController extends Controller
                 }
 
                 DB::table($newChildTable)->insert($insertChildFields);
-                DB::table('jejak_tiket')->where('id_tiket', $id_tiket)->update(['id_tiket' => $newIdTiket]);
-                DB::table('tugasan_tiket')->where('id_tiket', $id_tiket)->update(['id_tiket' => $newIdTiket]);
 
                 $ticket = Tiket::where('id_tiket', $newIdTiket)->firstOrFail();
                 $mesejSukses = "Kategori tiket berjaya ditukar. ID baharu dijana: {$newIdTiket}";
