@@ -1698,7 +1698,7 @@ class TicketController extends Controller
     public function sahkanTutupPeminjaman(Request $request, $id_tiket)
     {
         $request->validate([
-            'ulasan' => 'nullable|string'
+            'ulasan' => 'nullable|string|max:2000'
         ]);
 
         $userSemasa = Auth::user();
@@ -1714,37 +1714,44 @@ class TicketController extends Controller
             abort(403, 'Hanya Ketua Wilayah dibenarkan menutup tiket peminjaman.');
         }
 
-        $ticket = DB::table('tiket')
-            ->where('id_tiket', $id_tiket)
-            ->first();
-
-        if (!$ticket) {
-            abort(404, 'Tiket tidak dijumpai.');
-        }
-
-        $adakahPeminjaman = $ticket->kategori === 'Meja Bantuan'
-            && DB::table('meja_bantuan')
-                ->where('id_tiket', $id_tiket)
-                ->where('sub_kategori', 'Peminjaman Peralatan ICT')
-                ->exists();
-
-        if (!$adakahPeminjaman) {
-            abort(403, 'Tindakan ini hanya sah untuk tiket Peminjaman Peralatan ICT.');
-        }
-
-        if ($ticket->status_tiket !== 'Menunggu Validasi') {
-            abort(403, 'Tiket tidak berada pada status Menunggu Validasi.');
-        }
-
-
         DB::beginTransaction();
 
         try {
-            DB::table('tiket')->where('id_tiket', $id_tiket)->update([
-                'status_tiket' => 'Selesai',
-                'tarikh_tutup' => now(),
-                'updated_at'   => now()
-            ]);
+            $ticket = DB::table('tiket')
+                ->where('id_tiket', $id_tiket)
+                ->lockForUpdate()
+                ->first();
+
+            if (!$ticket) {
+                DB::rollBack();
+                abort(404, 'Tiket tidak dijumpai.');
+            }
+
+            $adakahPeminjaman = $ticket->kategori === 'Meja Bantuan'
+                && DB::table('meja_bantuan')
+                    ->where('id_tiket', $id_tiket)
+                    ->where('sub_kategori', 'Peminjaman Peralatan ICT')
+                    ->exists();
+
+            if (!$adakahPeminjaman) {
+                DB::rollBack();
+                abort(403, 'Tindakan ini hanya sah untuk tiket Peminjaman Peralatan ICT.');
+            }
+
+            if ($ticket->status_tiket !== 'Menunggu Validasi') {
+                DB::rollBack();
+                abort(403, 'Tiket tidak berada pada status Menunggu Validasi.');
+            }
+
+            $masaTutup = now();
+
+            DB::table('tiket')
+                ->where('id_tiket', $id_tiket)
+                ->update([
+                    'status_tiket' => 'Selesai',
+                    'tarikh_tutup' => $masaTutup,
+                    'updated_at'   => $masaTutup
+                ]);
 
             DB::table('jejak_tiket')->insert([
                 'id_tiket'       => $id_tiket,
@@ -1753,8 +1760,8 @@ class TicketController extends Controller
                 'aktiviti'       => 'Diluluskan',
                 'pesanan'        => 'Oleh ' . $userSemasa->nama,
                 'status_badge'   => 'LULUS',
-                'created_at'     => now(),
-                'updated_at'     => now()
+                'created_at'     => $masaTutup,
+                'updated_at'     => $masaTutup
             ]);
 
             DB::table('jejak_tiket')->insert([
@@ -1764,24 +1771,41 @@ class TicketController extends Controller
                 'aktiviti'       => 'Tiket Ditutup',
                 'pesanan'        => 'Oleh ' . $userSemasa->nama,
                 'status_badge'   => 'SELESAI',
-                'created_at'     => now()->addSecond(),
-                'updated_at'     => now()
+                'created_at'     => $masaTutup->copy()->addSecond(),
+                'updated_at'     => $masaTutup
             ]);
-
-            $this->clearTicketNotifications($id_tiket);
 
             DB::commit();
 
-            return back()->with('success', 'Tiket peminjaman peralatan berjaya diluluskan dan ditutup secara rasmi!');
+        } catch (\Symfony\Component\HttpKernel\Exception\HttpExceptionInterface $e) {
+            if (DB::transactionLevel() > 0) {
+                DB::rollBack();
+            }
+
+            throw $e;
 
         } catch (\Exception $e) {
-            DB::rollBack();
+            if (DB::transactionLevel() > 0) {
+                DB::rollBack();
+            }
+
             Log::error('Ralat sahkanTutupPeminjaman: ' . $e->getMessage());
 
             return back()->withErrors([
-                'sistem' => 'Gagal menutup tiket peminjaman: ' . $e->getMessage()
+                'sistem' => 'Tiket peminjaman tidak dapat ditutup kerana berlaku ralat sistem. Sila cuba semula.'
             ]);
         }
+
+        try {
+            $this->clearTicketNotifications($id_tiket);
+        } catch (\Exception $e) {
+            Log::error('Pembersihan notifikasi sahkanTutupPeminjaman gagal: ' . $e->getMessage());
+        }
+
+        return back()->with(
+            'success',
+            'Tiket peminjaman peralatan berjaya diluluskan dan ditutup secara rasmi!'
+        );
     }
     /**
      * Store and process Network Consultation LKK report (Filled by KUTD / Reviewed by KW).
