@@ -350,6 +350,23 @@ class TicketController extends Controller
 
         $perananAktif = strtolower(trim($userAktif->peranan));
 
+        // Authorize the workflow before validating request data.
+        $isKUPP = in_array($perananAktif, ['ketua_upp', 'kupp', 'ketua upp']);
+        $isKUTD = in_array($perananAktif, ['ketua_utd', 'kutd', 'ketua utd']);
+        $isPengurusanLain = in_array($perananAktif, ['ketua_utd', 'kutd', 'ketua utd', 'ketua_wilayah', 'kw', 'ketua wilayah']);
+
+        if ($ticket->status_tiket === 'Menunggu Klasifikasi' && !($isKUPP || $isPengurusanLain)) {
+            abort(403, 'Hanya KUPP, KUTD atau KW dibenarkan memproses tiket berstatus Menunggu Klasifikasi.');
+        }
+
+        if ($ticket->status_tiket === 'Tugasan UTD' && !$isKUTD) {
+            abort(403, 'Hanya KUTD dibenarkan memproses tiket berstatus Tugasan UTD.');
+        }
+
+        if ($ticket->status_tiket === 'Menunggu Semakan Dokumen' && !$isKUPP) {
+            abort(403, 'Hanya KUPP dibenarkan memproses tiket berstatus Menunggu Semakan Dokumen.');
+        }
+
         $mesejSukses = "Tiket berjaya dikemaskini.";
         $subKategoriSah = match ($request->input('kategori')) {
             'Meja Bantuan' => ['Penyelenggaraan Komputer', 'Penyelenggaraan Rangkaian', 'Sistem Aplikasi', 'Perkhidmatan E-mel', 'Perkhidmatan Lintas Langsung', 'Peminjaman Peralatan ICT'],
@@ -402,22 +419,6 @@ class TicketController extends Controller
         $adakahTD = str_contains($kategoriCek, 'transformasi digital');
         $adakahPeminjaman = str_contains(strtolower($validated['sub_kategori'] ?? $ticket->sub_kategori ?? ''), 'peminjaman');
 
-        // Check user role
-        $isKUPP = in_array($perananAktif, ['ketua_upp', 'kupp', 'ketua upp']);
-        $isKUTD = in_array($perananAktif, ['ketua_utd', 'kutd', 'ketua utd']);
-        $isPengurusanLain = in_array($perananAktif, ['ketua_utd', 'kutd', 'ketua utd', 'ketua_wilayah', 'kw', 'ketua wilayah']);
-
-        if ($ticket->status_tiket === 'Menunggu Klasifikasi' && !($isKUPP || $isPengurusanLain)) {
-            abort(403, 'Hanya KUPP, KUTD atau KW dibenarkan memproses tiket berstatus Menunggu Klasifikasi.');
-        }
-
-        if ($ticket->status_tiket === 'Tugasan UTD' && !$isKUTD) {
-            abort(403, 'Hanya KUTD dibenarkan memproses tiket berstatus Tugasan UTD.');
-        }
-
-        if ($ticket->status_tiket === 'Menunggu Semakan Dokumen' && !$isKUPP) {
-            abort(403, 'Hanya KUPP dibenarkan memproses tiket berstatus Menunggu Semakan Dokumen.');
-        }
 
         // Status transition logic
         if ($statusLama === 'Menunggu Klasifikasi') {
