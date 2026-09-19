@@ -1901,9 +1901,9 @@ class TicketController extends Controller
         $isPengesahanSaja = $isKwSahkan || $isKwPembetulan || $isKutdPembetulan;
 
         if ($isKwPembetulan || $isKutdPembetulan) {
-            $request->validate(['ulasan_ketua' => 'required|string']);
+            $request->validate(['ulasan_ketua' => 'required|string|max:2000']);
         } elseif ($isPengesahanSaja) {
-            $request->validate(['ulasan_ketua' => 'nullable|string', 'ulasan_semakan' => 'nullable|string']);
+            $request->validate(['ulasan_ketua' => 'nullable|string|max:2000', 'ulasan_semakan' => 'nullable|string|max:2000']);
         } else {
             $laporanSediaAda = DB::table('laporan')->where('id_tiket', $id_tiket)->first();
             $request->validate([
@@ -1919,20 +1919,52 @@ class TicketController extends Controller
             ]);
         }
 
+        $oldLogicalPath = null;
+        $oldPhysicalPath = null;
+        $newLogicalPath = null;
+        $newPhysicalPath = null;
+
         DB::beginTransaction();
         try {
+            $ticket = Tiket::where('id_tiket', $id_tiket)->lockForUpdate()->firstOrFail();
+            if ($ticket->kategori !== 'Konsultasi Rangkaian') {
+                abort(403, 'LKK Rangkaian hanya dibenarkan untuk tiket Konsultasi Rangkaian.');
+            }
+            $statusTerkunci = strtolower(trim((string) $ticket->status_tiket));
+
+            if ($isKutdHantar && !in_array($statusTerkunci, ['menunggu pengesahan', 'menunggu pengesahan lkk', 'menunggu semakan', 'semakan kutd', 'lkk perlu pembetulan'], true)) {
+                abort(409, 'Status tiket telah berubah dan tidak lagi membenarkan KUTD mengesahkan LKK Rangkaian.');
+            }
+
+            if (($isKwSahkan || $isKwPembetulan) && !in_array($statusTerkunci, ['menunggu validasi', 'menunggu validasi kw'], true)) {
+                abort(409, 'Status tiket telah berubah dan tidak lagi membenarkan Ketua Wilayah memproses LKK Rangkaian.');
+            }
+
+            if ($isKutdPembetulan && !in_array($statusTerkunci, ['menunggu pengesahan', 'menunggu pengesahan lkk'], true)) {
+                abort(409, 'Status tiket telah berubah dan tidak lagi membenarkan KUTD memulangkan LKK Rangkaian untuk pembetulan.');
+            }
+
+            if ($isDraft && !in_array($statusTerkunci, ['menunggu pengesahan', 'menunggu pengesahan lkk', 'menunggu semakan', 'semakan kutd', 'lkk perlu pembetulan'], true)) {
+                abort(409, 'Status tiket telah berubah dan tidak lagi membenarkan draf LKK Rangkaian disimpan.');
+            }
+
             if (!$isPengesahanSaja) {
                 $laporanSediaAda = DB::table('laporan')->where('id_tiket', $id_tiket)->first();
-                $logicalPath = $laporanSediaAda ? $laporanSediaAda->logical_diagram : null;
-                $physicalPath = $laporanSediaAda ? $laporanSediaAda->physical_diagram : null;
+
+                $oldLogicalPath = $laporanSediaAda ? $laporanSediaAda->logical_diagram : null;
+                $oldPhysicalPath = $laporanSediaAda ? $laporanSediaAda->physical_diagram : null;
+
+                $logicalPath = $oldLogicalPath;
+                $physicalPath = $oldPhysicalPath;
 
                 if ($request->hasFile('logical_diagram')) {
-                    if ($logicalPath) Storage::disk('public')->delete($logicalPath);
-                    $logicalPath = $request->file('logical_diagram')->store('diagrams', 'public');
+                    $newLogicalPath = $request->file('logical_diagram')->store('diagrams', 'public');
+                    $logicalPath = $newLogicalPath;
                 }
+
                 if ($request->hasFile('physical_diagram')) {
-                    if ($physicalPath) Storage::disk('public')->delete($physicalPath);
-                    $physicalPath = $request->file('physical_diagram')->store('diagrams', 'public');
+                    $newPhysicalPath = $request->file('physical_diagram')->store('diagrams', 'public');
+                    $physicalPath = $newPhysicalPath;
                 }
 
                 $ulasanTeknikalAsal = DB::table('konsultasi_rangkaian')->where('id_tiket', $id_tiket)->value('ulasan_teknikal');
@@ -2018,43 +2050,134 @@ class TicketController extends Controller
                 }
             }
 
-            $this->clearTicketNotifications($id_tiket);
+            DB::commit();
 
-            $hantarNotiTanpaBertindih = function($targetUsersCollection, $notificationInstance) use ($id_tiket) {
-                $penerimaSah = $targetUsersCollection->filter(function($u) use ($id_tiket) {
-                    $userKey = $u->no_ic ?? $u->id;
-                    $terimaBaruSahaja = DB::table('notifications')
-                        ->where('notifiable_id', $userKey)
-                        ->where('data', 'LIKE', "%{$id_tiket}%")
-                        ->where('created_at', '>=', now()->subSeconds(15))
-                        ->exists();
-                    return !$terimaBaruSahaja;
-                });
+            try {
+                if ($newLogicalPath && $oldLogicalPath && $oldLogicalPath !== $newLogicalPath) {
+                    Storage::disk('public')->delete($oldLogicalPath);
+                }
 
-                if ($penerimaSah->isNotEmpty()) {
-                    Notification::send($penerimaSah, $notificationInstance);
+                if ($newPhysicalPath && $oldPhysicalPath && $oldPhysicalPath !== $newPhysicalPath) {
+                    Storage::disk('public')->delete($oldPhysicalPath);
                 }
-            };
-
-            if ($isKutdHantar) {
-                $paraKW = \App\Models\Pengguna::whereIn('peranan', ['ketua_wilayah', 'kw', 'ketua wilayah', 'Ketua Wilayah'])->get();
-                if ($paraKW->isNotEmpty()) {
-                    $hantarNotiTanpaBertindih($paraKW, new ValidasiKWNoti($ticket, Auth::user()->nama));
-                }
-            } elseif ($isKwPembetulan || $isKutdPembetulan) {
-                $petugasList = $ticket->petugas;
-                if ($petugasList->isNotEmpty()) {
-                    $hantarNotiTanpaBertindih($petugasList, new LKKPembetulanNoti($ticket, Auth::user()->nama));
-                }
+            } catch (\Exception $storageCleanupError) {
+                Log::warning(
+                    'LKK Rangkaian berjaya disimpan tetapi fail diagram lama gagal dibersihkan.',
+                    [
+                        'id_tiket' => $id_tiket,
+                        'ralat' => $storageCleanupError->getMessage(),
+                    ]
+                );
             }
 
-            DB::commit();
+            try {
+                $this->clearTicketNotifications($id_tiket);
+
+                $hantarNotiTanpaBertindih = function($targetUsersCollection, $notificationInstance) use ($id_tiket) {
+                    $penerimaSah = $targetUsersCollection->filter(function($u) use ($id_tiket) {
+                        $userKey = $u->no_ic ?? $u->id;
+
+                        $terimaBaruSahaja = DB::table('notifications')
+                            ->where('notifiable_id', $userKey)
+                            ->where('data', 'LIKE', "%{$id_tiket}%")
+                            ->where('created_at', '>=', now()->subSeconds(15))
+                            ->exists();
+
+                        return !$terimaBaruSahaja;
+                    });
+
+                    if ($penerimaSah->isNotEmpty()) {
+                        Notification::send($penerimaSah, $notificationInstance);
+                    }
+                };
+
+                if ($isKutdHantar) {
+                    $paraKW = Pengguna::whereIn('peranan', ['ketua_wilayah', 'kw', 'ketua wilayah', 'Ketua Wilayah'])->get();
+
+                    if ($paraKW->isNotEmpty()) {
+                        $hantarNotiTanpaBertindih(
+                            $paraKW,
+                            new ValidasiKWNoti($ticket, Auth::user()->nama)
+                        );
+                    }
+                } elseif ($isKwPembetulan || $isKutdPembetulan) {
+                    $petugasList = $ticket->petugas;
+
+                    if ($petugasList->isNotEmpty()) {
+                        $hantarNotiTanpaBertindih(
+                            $petugasList,
+                            new LKKPembetulanNoti($ticket, Auth::user()->nama)
+                        );
+                    }
+                }
+            } catch (\Exception $notificationError) {
+                Log::warning(
+                    'LKK Rangkaian berjaya disimpan tetapi notifikasi gagal diproses.',
+                    [
+                        'id_tiket' => $id_tiket,
+                        'ralat' => $notificationError->getMessage(),
+                    ]
+                );
+            }
+
             return back()->with('success', 'Laporan LKK Rangkaian berjaya diproses!');
 
+        } catch (\Symfony\Component\HttpKernel\Exception\HttpExceptionInterface $e) {
+            if (DB::transactionLevel() > 0) {
+                DB::rollBack();
+            }
+
+            try {
+                if ($newLogicalPath) {
+                    Storage::disk('public')->delete($newLogicalPath);
+                }
+
+                if ($newPhysicalPath) {
+                    Storage::disk('public')->delete($newPhysicalPath);
+                }
+            } catch (\Exception $storageCleanupError) {
+                Log::warning(
+                    'Fail diagram baharu LKK Rangkaian gagal dibersihkan selepas transaksi dibatalkan.',
+                    [
+                        'id_tiket' => $id_tiket,
+                        'ralat' => $storageCleanupError->getMessage(),
+                    ]
+                );
+            }
+
+            throw $e;
+
         } catch (\Exception $e) {
-            DB::rollBack();
-            Log::error('Ralat storeLKKRangkaian: ' . $e->getMessage());
-            return back()->withErrors(['sistem' => 'Gagal menyimpan laporan LKK Rangkaian: ' . $e->getMessage()]);
+            if (DB::transactionLevel() > 0) {
+                DB::rollBack();
+            }
+
+            try {
+                if ($newLogicalPath) {
+                    Storage::disk('public')->delete($newLogicalPath);
+                }
+
+                if ($newPhysicalPath) {
+                    Storage::disk('public')->delete($newPhysicalPath);
+                }
+            } catch (\Exception $storageCleanupError) {
+                Log::warning(
+                    'Fail diagram baharu LKK Rangkaian gagal dibersihkan selepas transaksi gagal.',
+                    [
+                        'id_tiket' => $id_tiket,
+                        'ralat' => $storageCleanupError->getMessage(),
+                    ]
+                );
+            }
+
+            Log::error('Ralat storeLKKRangkaian: ' . $e->getMessage(), [
+                'id_tiket' => $id_tiket,
+                'exception' => get_class($e),
+            ]);
+
+            return back()->withErrors([
+                'sistem' => 'Laporan LKK Rangkaian tidak dapat diproses kerana berlaku ralat sistem. Sila cuba semula.'
+            ]);
         }
     }
 
