@@ -383,6 +383,7 @@ class TicketController extends Controller
         };
 
 
+
         $rules = [
             'kategori'        => ['required', 'string', 'in:Meja Bantuan,Konsultasi Rangkaian,Transformasi Digital'],
             'sub_kategori'    => ['required', 'string', Rule::in($subKategoriSah)],
@@ -412,7 +413,6 @@ class TicketController extends Controller
             }
         }
 
-
         $validated = $request->validate($rules);
 
         $hariSla = match ($validated['tahap_keutamaan']) {
@@ -424,13 +424,21 @@ class TicketController extends Controller
 
         $kategoriCek = strtolower($validated['kategori'] ?? $ticket->kategori ?? '');
         $adakahTD = str_contains($kategoriCek, 'transformasi digital');
+        $adakahPemodenan = $adakahTD && ($validated['sub_kategori'] ?? '') === 'Pemodenan Bilik Mesyuarat';
         $adakahPeminjaman = str_contains(strtolower($validated['sub_kategori'] ?? ''), 'peminjaman');
 
+
+        if ($statusLama === 'Menunggu Semakan Dokumen' && $adakahPemodenan) {
+            abort(403, 'Pemodenan Bilik Mesyuarat perlu disahkan melalui Laporan Kajian Keperluan menggunakan tindakan SAHKAN TIKET.');
+        }
 
         // Status transition logic
         if ($statusLama === 'Menunggu Klasifikasi') {
             if ($adakahPeminjaman) {
                 $statusBaharu = 'Menunggu Kelulusan';
+            }
+            else if ($adakahPemodenan) {
+                $statusBaharu = 'Menunggu Semakan Dokumen';
             }
             else if ($isPengurusanLain) {
                 $statusBaharu = 'Menunggu Semakan Dokumen';
@@ -2217,6 +2225,7 @@ class TicketController extends Controller
         $hasTindakan = !empty($tindakan);
 
         $tindakanSah = [
+            'SAHKAN_TIKET',
             'HANTAR_KE_KUTD',
             'AGIH_KE_PIC',
             'PIC_HANTAR_SEMAKAN',
@@ -2230,6 +2239,23 @@ class TicketController extends Controller
         if ($hasTindakan && !in_array($tindakan, $tindakanSah, true)) {
             abort(422, 'Tindakan LKK tidak sah.');
         }
+        if ($tindakan === 'SAHKAN_TIKET') {
+            if ($subKategori !== 'Pemodenan Bilik Mesyuarat') abort(403, 'Tindakan SAHKAN TIKET hanya dibenarkan untuk Pemodenan Bilik Mesyuarat.');
+            $userSemasa = $request->user();
+            $perananSemasa = strtolower(trim((string) ($userSemasa->peranan ?? '')));
+            $statusSemasa = strtolower(trim((string) $ticket->status_tiket));
+
+            $perananKupp = ['ketua_upp', 'ketua upp', 'kupp'];
+
+            if (!in_array($perananSemasa, $perananKupp, true)) {
+                abort(403, 'Hanya KUPP dibenarkan mengesahkan tiket Transformasi Digital.');
+            }
+
+            if ($statusSemasa !== 'menunggu semakan dokumen') {
+                abort(403, 'Status tiket tidak membenarkan pengesahan oleh KUPP.');
+            }
+        }
+
         if ($tindakan === 'HANTAR_KE_KUTD') {
             $userSemasa = $request->user();
             $perananSemasa = strtolower(trim((string) ($userSemasa->peranan ?? '')));
@@ -2280,6 +2306,7 @@ class TicketController extends Controller
                 abort(403, 'Status tiket tidak membenarkan LKK dikembalikan untuk pembetulan.');
             }
         }
+
 
         if ($tindakan === 'AGIH_KE_PIC') {
             $userSemasa = $request->user();
@@ -2442,6 +2469,7 @@ class TicketController extends Controller
         }
 
         $isDraft = filter_var($request->input('is_draft', $request->query('is_draft')), FILTER_VALIDATE_BOOLEAN);
+        $isSahkanTiket    = $tindakan === 'SAHKAN_TIKET';
         $isKuppSahkan     = $tindakan === 'KUPP_HANTAR_VALIDASI';
         $isKutdHantar     = $tindakan === 'KUTD_SAH_SEMAKAN';
         $isKwSahkan       = $tindakan === 'KW_VALIDASI_SELESAI';
@@ -2449,6 +2477,8 @@ class TicketController extends Controller
         $isKutdPembetulan = $tindakan === 'KUTD_PEMBETULAN';
 
         $isPengesahanSaja = $isKwSahkan || $isKwPembetulan || $isKutdPembetulan;
+
+        $laporanLama = DB::table('laporan')->where('id_tiket', $id_tiket)->first();
 
         $rules = [
             'gambar_tapak' => ['nullable', 'array'],
@@ -2487,9 +2517,32 @@ class TicketController extends Controller
             }
         }
 
+        if ($isSahkanTiket) {
+            $rules['pendahuluan'] = ['required'];
+            $rules['objektif'] = ['required'];
+            $rules['skop_kajian'] = ['required'];
+        }
+
+        if ($tindakan === 'PIC_HANTAR_SEMAKAN') {
+            $rules['keadaan_semasa'] = ['required', 'array', 'min:1'];
+            $rules['keadaan_semasa.*.aspek'] = ['required', 'string'];
+            $rules['keadaan_semasa.*.ulasan'] = ['required', 'string'];
+            $rules['kos_items'] = ['required', 'array', 'min:1'];
+            $rules['kos_items.*.item'] = ['required', 'string'];
+            $rules['kos_items.*.kuantiti'] = ['required', 'numeric', 'min:1'];
+            $rules['kos_items.*.harga_seunit'] = ['required', 'numeric', 'min:0'];
+            if (!$laporanLama || empty($laporanLama->gambar_cadangan)) {
+                $rules['gambar_cadangan'] = ['required', 'file', 'mimes:jpg,jpeg,png,pdf', 'max:5120'];
+            }
+        }
+
         if ($tindakan === 'AGIH_KE_PIC') {
             $rules['tarikh_lawatan'] = ['required', 'date'];
             $rules['masa_lawatan'] = ['required', 'date_format:H:i'];
+        }
+
+        if ($isKuppSahkan) {
+            $rules['rumusan'] = ['required', 'string'];
         }
 
         $validated = $request->validate($rules);
@@ -2500,7 +2553,6 @@ class TicketController extends Controller
         DB::beginTransaction();
         try {
             if (!$isPengesahanSaja) {
-                $laporanLama = DB::table('laporan')->where('id_tiket', $id_tiket)->first();
 
                 $gambarTapakPaths = [];
                 if ($laporanLama && !empty($laporanLama->gambar_tapak)) {
@@ -2610,9 +2662,14 @@ class TicketController extends Controller
                 $statusBaru = $ticket->status_tiket;
             }
             elseif ($hasTindakan) {
-                if ($tindakan === 'HANTAR_KE_KUTD') {
+                if ($tindakan === 'SAHKAN_TIKET') {
+                    $statusBaru = 'Tugasan UPP';
+                    $ticket->rekodLog('Disokong', 'Oleh ' . $request->user()->nama, 'FASA 1');
+
+                } elseif ($tindakan === 'HANTAR_KE_KUTD') {
                     $statusBaru = 'Tugasan UTD';
                     $ticket->rekodLog('Dihantar ke UTD', 'Oleh ' . $request->user()->nama, 'FASA 1');
+
 
                 } elseif ($tindakan === 'AGIH_KE_PIC') {
                     $statusBaru = 'Dalam Tindakan Pegawai';
@@ -2749,6 +2806,7 @@ class TicketController extends Controller
                         $hantarNotiTanpaBertindih($senaraiKUTD, new NewTicketNoti($ticket, 'tugasan_utd'));
                     }
                 }
+
                 elseif ($tindakan === 'AGIH_KE_PIC') {
                     if ($request->filled('pic_ic')) {
                         $pics = (array) $request->input('pic_ic');
@@ -2882,6 +2940,19 @@ class TicketController extends Controller
     public function cetakLKK($id_tiket)
     {
         $ticket = Tiket::with('transformasiDigital')->where('id_tiket', $id_tiket)->firstOrFail();
+        if ($ticket->kategori === 'Transformasi Digital' && ($ticket->transformasiDigital->sub_kategori ?? '') === 'Pemodenan Bilik Mesyuarat') {
+            $perananSemasa = strtolower(trim((string) (Auth::user()->peranan ?? '')));
+            $perananDibenarkan = ['ketua_upp', 'ketua upp', 'kupp', 'ketua_utd', 'ketua utd', 'kutd', 'ketua_wilayah', 'ketua wilayah', 'kw'];
+
+            if ($ticket->status_tiket !== 'Selesai') {
+                abort(403, 'LKK Pemodenan Bilik Mesyuarat hanya boleh dicetak selepas validasi akhir Ketua Wilayah.');
+            }
+
+            if (!in_array($perananSemasa, $perananDibenarkan, true)) {
+                abort(403, 'Hanya KUPP, KUTD dan Ketua Wilayah dibenarkan mencetak LKK Pemodenan Bilik Mesyuarat.');
+            }
+        }
+
         $laporan = DB::table('laporan')->where('id_tiket', $id_tiket)->first();
 
         if (!$laporan) return redirect()->back()->withErrors(['sistem' => 'Laporan LKK belum dijana.']);

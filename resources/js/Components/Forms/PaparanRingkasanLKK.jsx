@@ -234,7 +234,7 @@ export default function PaparanRingkasanLKK({ ticket, auth, senaraiPegawai }) {
                     </h2>
                 </div>
 
-                {ticket?.status_tiket === 'Selesai' && (
+                {ticket?.status_tiket === 'Selesai' && (isBilikMesyuarat === false || isKUPP || isKUTD || isKW) && (
                     <div className="flex items-center gap-4 text-[11px] font-bold text-gray-500 shrink-0 w-full lg:w-auto justify-start sm:justify-end border-t lg:border-t-0 pt-3 lg:pt-0 border-gray-100 animate-in fade-in duration-200">
                         <button
                             type="button"

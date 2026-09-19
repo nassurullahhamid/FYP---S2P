@@ -234,7 +234,7 @@ export default function InfoTiket({ auth, backUrl, ticket, senaraiPengguna, sena
 
     const tunjukBorangTindakanAm = !isSelesai && (
         (statusFormat === 'menunggu klasifikasi' && isManagerRole) ||
-        (statusFormat === 'menunggu semakan dokumen' && isKUPP && data.sub_kategori !== 'Peminjaman Peralatan ICT') ||
+        (statusFormat === 'menunggu semakan dokumen' && isKUPP && data.sub_kategori !== 'Peminjaman Peralatan ICT' && data.sub_kategori !== 'Pemodenan Bilik Mesyuarat') ||
         (statusFormat === 'tugasan utd' && isKUTD && !isTD)
     );
 

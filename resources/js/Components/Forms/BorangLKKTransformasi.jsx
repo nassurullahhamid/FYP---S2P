@@ -39,7 +39,9 @@ export default function BorangLKKTransformasi({ ticket, senaraiPegawai = [], aut
     };
 
     // Workflow phase determination logic
-    const isKUPP_Fasa1 = ['baru', 'tindakan kupp', 'tugasan upp', 'menunggu klasifikasi', ''].includes(statusFormat) && ['ketua_upp', 'ketua upp', 'kupp'].includes(currentRole);
+    const isKUPP_Fasa1 = statusFormat === 'menunggu semakan dokumen' && ['ketua_upp', 'ketua upp', 'kupp'].includes(currentRole);
+    const isKUPP_SahkanTiket = statusFormat === 'menunggu semakan dokumen' && ['ketua_upp', 'ketua upp', 'kupp'].includes(currentRole);
+    const isKUPP_TindakanUTD = statusFormat === 'tugasan upp' && ['ketua_upp', 'ketua upp', 'kupp'].includes(currentRole);
     const isKUTD_Fasa2 = (statusFormat === 'tugasan utd' || statusFormat === 'tindakan kutd (agihan)') && ['ketua_utd', 'ketua utd', 'kutd'].includes(currentRole);
 
     const petugasICList = ticket?.petugas?.map(p => p.no_ic) || [];
@@ -821,15 +823,27 @@ export default function BorangLKKTransformasi({ ticket, senaraiPegawai = [], aut
                     </button>
                 )}
 
-                {/* Butang Hantar KUPP (Fasa 1) */}
-                {isKUPP_Fasa1 && (
+                {/* Butang Sahkan Tiket KUPP (Fasa 1) */}
+                {isKUPP_SahkanTiket && (
+                    <button
+                        type="button"
+                        disabled={processing}
+                        onClick={(e) => handleSubmitWorkflow(e, 'SAHKAN_TIKET')}
+                        className="inline-flex items-center gap-2 px-6 py-3 bg-blue-600 hover:bg-blue-700 text-white rounded-xl shadow-md uppercase tracking-wider text-[11px] font-black cursor-pointer"
+                    >
+                        <CheckCircle size={14} /> Sahkan Tiket
+                    </button>
+                )}
+
+                {/* Butang Tindakan UTD selepas tiket disokong KUPP */}
+                {isKUPP_TindakanUTD && (
                     <button
                         type="button"
                         disabled={processing}
                         onClick={(e) => handleSubmitWorkflow(e, 'HANTAR_KE_KUTD')}
                         className="inline-flex items-center gap-2 px-6 py-3 bg-blue-600 hover:bg-blue-700 text-white rounded-xl shadow-md uppercase tracking-wider text-[11px] font-black cursor-pointer"
                     >
-                        <Send size={14} /> Hantar LKK
+                        <Send size={14} /> Tindakan UTD
                     </button>
                 )}
 
