@@ -36,7 +36,6 @@ class TicketController extends Controller
         $kategoriSelected    = $request->query('kategori');
         $subKategoriSelected = $request->query('sub_kategori');
         $search              = $request->query('search');
-        $statusFilter        = $request->query('status');
 
         $userAktif = Auth::user();
 
@@ -50,7 +49,7 @@ class TicketController extends Controller
             });
         }
 
-        if ($userAktif->peranan === 'juruteknik') {
+        if (in_array(strtolower((string) $userAktif->peranan), ['juruteknik', 'pic'], true)) {
             $query->whereHas('petugas', function ($subQuery) use ($userAktif) {
                 $subQuery->where('tugasan_tiket.no_ic', $userAktif->no_ic);
             });
