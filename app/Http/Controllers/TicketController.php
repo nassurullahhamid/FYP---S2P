@@ -139,8 +139,8 @@ class TicketController extends Controller
             'agensi'        => ['required', 'string'],
             'lokasi'        => ['nullable', 'string', 'max:255'],
             'daerah'        => ['required', 'string'],
-            'kategori'      => ['required', 'string'],
-            'sub_kategori'  => ['required', 'string'],
+            'kategori'      => ['required', 'string', Rule::in(['Meja Bantuan', 'Konsultasi Rangkaian', 'Transformasi Digital'])],
+            'sub_kategori'  => ['required', 'string', Rule::in(match ($request->input('kategori')) { 'Meja Bantuan' => ['Penyelenggaraan Komputer', 'Penyelenggaraan Rangkaian', 'Sistem Aplikasi', 'Perkhidmatan E-mel', 'Perkhidmatan Lintas Langsung', 'Peminjaman Peralatan ICT'], 'Konsultasi Rangkaian' => ['Pemasangan Baharu', 'Naiktaraf'], 'Transformasi Digital' => ['Pemodenan Bilik Mesyuarat', 'Pembekalan Peralatan ICT'], default => [] })],
             'lampiran'      => ['nullable', 'file', 'mimes:pdf,doc,docx,jpg,jpeg,png', 'max:5120'],
         ]);
 
@@ -161,6 +161,7 @@ class TicketController extends Controller
         $paddedSequence = str_pad($nextSequence, 3, '0', STR_PAD_LEFT);
         $generatedId    = "SDK-{$prefix}-{$currentYear}-{$paddedSequence}";
 
+        $filePath = null;
         if ($request->hasFile('lampiran')) {
             $file = $request->file('lampiran');
             $originalName = pathinfo($file->getClientOriginalName(), PATHINFO_FILENAME);
@@ -209,6 +210,16 @@ class TicketController extends Controller
             $ticket->rekodLog('Daftar Tiket', 'Oleh ' . Auth::user()->nama, 'SELESAI');
 
             DB::commit();
+        } catch (\Exception $e) {
+            DB::rollBack();
+            if ($filePath) Storage::disk('public')->delete($filePath);
+            Log::error('Ticket Insertion Failed: ' . $e->getMessage());
+            return back()->withErrors([
+                'sistem' => 'Permohonan tidak dapat didaftarkan kerana berlaku ralat sistem. Sila cuba semula.'
+            ]);
+        }
+
+        try {
 
             $senaraiPengurus = Pengguna::whereIn('peranan', ['ketua_upp', 'kupp', 'ketua upp', 'Ketua UPP', 'ketua_utd', 'kutd', 'ketua utd', 'Ketua UTD', 'ketua_wilayah', 'kw', 'ketua wilayah', 'Ketua Wilayah'])->get();
             $targetHeadsEmails = $senaraiPengurus->whereNotNull('emel')->pluck('emel')->toArray();
@@ -221,15 +232,11 @@ class TicketController extends Controller
                 Notification::send($senaraiPengurus, new NewTicketNoti($ticket, 'baru'));
             }
 
-            return redirect()->back()->with('success', "Permohonan baru berjaya didaftarkan. ID Tiket: {$generatedId}");
-
         } catch (\Exception $e) {
-            DB::rollBack();
-            Log::error('Ticket Insertion Failed: ' . $e->getMessage());
-            return back()->withErrors([
-                'sistem' => 'Pangkalan data menolak kemasukan data: ' . $e->getMessage()
-            ]);
+            Log::error('Ticket Notification Failed: ' . $e->getMessage());
         }
+
+        return redirect()->back()->with('success', "Permohonan baru berjaya didaftarkan. ID Tiket: {$generatedId}");
     }
 
     /**
