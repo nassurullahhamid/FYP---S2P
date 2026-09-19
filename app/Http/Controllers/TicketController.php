@@ -374,7 +374,7 @@ class TicketController extends Controller
             if ($adakahPeminjaman) {
                 $rules['no_ic'] = ['nullable', 'string'];
             } else {
-                $rules['no_ic'] = ['required_if:bisa_kendalikan,Ya', 'nullable', 'string', 'exists:pengguna,no_ic'];
+                $rules['no_ic'] = ['required_if:bisa_kendalikan,Ya', 'nullable', 'string', Rule::exists('pengguna', 'no_ic')->where(fn ($query) => $query->where('peranan', 'juruteknik'))];
             }
         }
 
@@ -384,7 +384,7 @@ class TicketController extends Controller
         }
         if ($ticket->status_tiket === 'Tugasan UTD') {
             $rules['senarai_pic_ic'] = ['required', 'array', 'min:1'];
-            $rules['senarai_pic_ic.*'] = ['required', 'string', 'distinct', 'exists:pengguna,no_ic'];
+            $rules['senarai_pic_ic.*'] = ['required', 'string', 'distinct', Rule::exists('pengguna', 'no_ic')->where(fn ($query) => $query->where('peranan', 'juruteknik'))];
             if ($request->input('kategori') === 'Konsultasi Rangkaian') {
                 $rules['tarikh_lawatan'] = ['required', 'date'];
                 $rules['masa_lawatan'] = ['required', 'date_format:H:i'];
@@ -570,6 +570,15 @@ class TicketController extends Controller
             }
 
             DB::commit();
+        } catch (\Exception $e) {
+            DB::rollBack();
+            Log::error('Error processAction: ' . $e->getMessage());
+            return back()->withErrors([
+                'sistem' => 'Tindakan tiket tidak dapat diproses kerana berlaku ralat sistem. Sila cuba semula.'
+            ]);
+        }
+
+        try {
 
             $this->clearTicketNotifications($id_tiket);
 
@@ -605,17 +614,15 @@ class TicketController extends Controller
                 Notification::send($jurutekniks, new NewTicketNoti($ticket));
             }
 
-            if ($oldKategori !== $newKategori) {
-                return redirect()->route('tickets.show', ['id_tiket' => $newIdTiket])->with('success', $mesejSukses);
-            }
-
-            return back()->with('success', $mesejSukses);
-
         } catch (\Exception $e) {
-            DB::rollBack();
-            Log::error('Error processAction: ' . $e->getMessage());
-            return back()->withErrors(['sistem' => $e->getMessage()]);
+            Log::error('Ticket Notification Failed in processAction: ' . $e->getMessage());
         }
+
+        if ($oldKategori !== $newKategori) {
+            return redirect()->route('tickets.show', ['id_tiket' => $newIdTiket])->with('success', $mesejSukses);
+        }
+
+        return back()->with('success', $mesejSukses);
     }
 
     /**
