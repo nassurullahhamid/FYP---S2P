@@ -2192,22 +2192,26 @@ class TicketController extends Controller
         if (!$ticket) return back()->withErrors(['sistem' => 'Tiket tidak dijumpai.']);
         $kategoriSemasa = strtolower(trim((string) $ticket->kategori));
 
-        $isPeminjaman = $kategoriSemasa === 'meja bantuan' && DB::table('meja_bantuan')
-            ->where('id_tiket', $id_tiket)
-            ->where('sub_kategori', 'Peminjaman Peralatan ICT')
-            ->exists();
-
-        if ($kategoriSemasa !== 'transformasi digital' && !$isPeminjaman) {
-            abort(403, 'Tindakan LKK tidak dibenarkan untuk kategori tiket ini.');
+        if ($kategoriSemasa !== 'transformasi digital') {
+            abort(403, 'Tindakan LKK ini hanya dibenarkan untuk tiket Transformasi Digital.');
         }
 
-        $subKategori = $isPeminjaman
-            ? 'Peminjaman Peralatan ICT'
-            : ($ticket->transformasiDigital?->sub_kategori
-                ?? $ticket->transformasi_digital?->sub_kategori
-                ?? '');
+        $subKategori = trim((string) (
+            $ticket->transformasiDigital?->sub_kategori
+            ?? $ticket->transformasi_digital?->sub_kategori
+            ?? ''
+        ));
 
-        $isPembekalan = str_contains(strtolower($subKategori), 'pembekalan');
+        $subKategoriSah = [
+            'Pemodenan Bilik Mesyuarat',
+            'Pembekalan Peralatan ICT',
+        ];
+
+        if (!in_array($subKategori, $subKategoriSah, true)) {
+            abort(403, 'Subkategori Transformasi Digital tidak sah.');
+        }
+
+        $isPembekalan = $subKategori === 'Pembekalan Peralatan ICT';
 
         $tindakan = $request->input('tindakan', $request->query('tindakan'));
         $hasTindakan = !empty($tindakan);
@@ -2216,7 +2220,6 @@ class TicketController extends Controller
             'HANTAR_KE_KUTD',
             'AGIH_KE_PIC',
             'PIC_HANTAR_SEMAKAN',
-            'SAHKAN_PEMINJAMAN_SELESAI',
             'KUTD_SAH_SEMAKAN',
             'KUPP_HANTAR_VALIDASI',
             'KW_PEMBETULAN',
@@ -2245,39 +2248,6 @@ class TicketController extends Controller
         }
 
 
-        if ($tindakan === 'SAHKAN_PEMINJAMAN_SELESAI') {
-            $userSemasa = $request->user();
-            $perananSemasa = strtolower(trim((string) ($userSemasa->peranan ?? '')));
-            $statusSemasa = strtolower(trim((string) $ticket->status_tiket));
-
-            $perananPengesah = [
-                'ketua_upp', 'ketua upp', 'kupp',
-                'ketua_utd', 'ketua utd', 'kutd',
-                'ketua_wilayah', 'ketua wilayah', 'kw',
-            ];
-
-            $statusPeminjamanSah = [
-                'menunggu pengesahan',
-                'menunggu pengesahan lkk',
-                'menunggu semakan',
-                'semakan kutd',
-                'menunggu validasi',
-                'validasi kw',
-                'menunggu validasi kw',
-            ];
-
-            if (!$isPeminjaman) {
-                abort(403, 'Tindakan ini hanya dibenarkan untuk Peminjaman Peralatan ICT.');
-            }
-
-            if (!in_array($perananSemasa, $perananPengesah, true)) {
-                abort(403, 'Anda tidak dibenarkan mengesahkan penutupan tiket peminjaman ini.');
-            }
-
-            if (!in_array($statusSemasa, $statusPeminjamanSah, true)) {
-                abort(403, 'Status tiket tidak membenarkan pengesahan penutupan peminjaman.');
-            }
-        }
 
         if ($tindakan === 'KUTD_PEMBETULAN') {
             $userSemasa = $request->user();
@@ -2286,17 +2256,6 @@ class TicketController extends Controller
 
             $perananKupp = ['ketua_upp', 'ketua upp', 'kupp'];
             $perananKutd = ['ketua_utd', 'ketua utd', 'kutd'];
-            $perananKw = ['ketua_wilayah', 'ketua wilayah', 'kw'];
-
-            $statusPeminjamanSah = [
-                'menunggu pengesahan',
-                'menunggu pengesahan lkk',
-                'menunggu semakan',
-                'semakan kutd',
-                'menunggu validasi',
-                'validasi kw',
-                'menunggu validasi kw',
-            ];
 
             $statusSemakanKutd = [
                 'menunggu semakan',
@@ -2309,17 +2268,7 @@ class TicketController extends Controller
                 'menunggu pengesahan lkk',
             ];
 
-            if ($isPeminjaman) {
-                $perananPeminjamanSah = array_merge($perananKupp, $perananKutd, $perananKw);
-
-                if (!in_array($perananSemasa, $perananPeminjamanSah, true)) {
-                    abort(403, 'Anda tidak dibenarkan mengembalikan LKK peminjaman untuk pembetulan.');
-                }
-
-                if (!in_array($statusSemasa, $statusPeminjamanSah, true)) {
-                    abort(403, 'Status tiket peminjaman tidak membenarkan LKK dikembalikan untuk pembetulan.');
-                }
-            } elseif (in_array($statusSemasa, $statusSemakanKutd, true)) {
+            if (in_array($statusSemasa, $statusSemakanKutd, true)) {
                 if (!in_array($perananSemasa, $perananKutd, true)) {
                     abort(403, 'Hanya KUTD dibenarkan mengembalikan LKK pada peringkat semakan teknikal.');
                 }
@@ -2465,9 +2414,6 @@ class TicketController extends Controller
             $perananKw = ['ketua_wilayah', 'ketua wilayah', 'kw'];
             $statusPembetulanKw = ['menunggu validasi', 'menunggu validasi kw'];
 
-            if ($isPeminjaman) {
-                abort(403, 'Tindakan pembetulan KW ini tidak dibenarkan untuk LKK peminjaman.');
-            }
 
             if (!in_array($perananSemasa, $perananKw, true)) {
                 abort(403, 'Hanya Ketua Wilayah dibenarkan mengembalikan LKK untuk pembetulan.');
@@ -2686,30 +2632,20 @@ class TicketController extends Controller
                         ->where('aktiviti', 'LIKE', '%Dihantar ke UTD%')
                         ->exists();
 
-                    if ($isPeminjaman) {
-                        $statusBaru = 'Menunggu Pengesahan';
-                        $alreadyLogged = DB::table('jejak_tiket')
-                            ->where('id_tiket', $id_tiket)
-                            ->where('aktiviti', 'Dihantar untuk Pengesahan')
-                            ->exists();
-                        if (!$alreadyLogged) {
-                            $ticket->rekodLog('Dihantar untuk Pengesahan', 'Oleh ' . $request->user()->nama, 'FASA 3');
-                        }
-                    } else {
-                        $statusBaru = $isHandedOverToUTD ? 'Menunggu Semakan' : 'Menunggu Pengesahan';
-                        $alreadyLogged = DB::table('jejak_tiket')
-                            ->where('id_tiket', $id_tiket)
-                            ->where('aktiviti', 'Pegawai Pelaksana')
-                            ->exists();
-                        if (!$alreadyLogged) {
-                            $ticket->rekodLog('Pegawai Pelaksana', 'Oleh ' . $request->user()->nama, 'FASA 3');
-                        }
-                    }
+                    $statusBaru = $isHandedOverToUTD ? 'Menunggu Semakan' : 'Menunggu Pengesahan';
 
-                } elseif ($tindakan === 'SAHKAN_PEMINJAMAN_SELESAI') {
-                    $statusBaru = 'Selesai';
-                    $ticket->rekodLog('Disahkan & Ditutup', 'Oleh ' . $request->user()->nama, 'SELESAI');
-                    $ticket->rekodLog('Tiket Ditutup', 'Oleh ' . $request->user()->nama, 'SELESAI');
+                    $alreadyLogged = DB::table('jejak_tiket')
+                        ->where('id_tiket', $id_tiket)
+                        ->where('aktiviti', 'Pegawai Pelaksana')
+                        ->exists();
+
+                    if (!$alreadyLogged) {
+                        $ticket->rekodLog(
+                            'Pegawai Pelaksana',
+                            'Oleh ' . $request->user()->nama,
+                            'FASA 3'
+                        );
+                    }
 
                 } elseif ($tindakan === 'KUTD_SAH_SEMAKAN') {
                     if ($isPembekalan) {
@@ -2806,37 +2742,25 @@ class TicketController extends Controller
                         ->where('aktiviti', 'LIKE', '%Dihantar ke UTD%')
                         ->exists();
 
-                    if ($isPeminjaman) {
-                        $paraPengesah = Pengguna::whereIn('peranan', ['ketua_upp', 'kupp', 'ketua upp', 'Ketua UPP', 'ketua_utd', 'kutd', 'ketua utd', 'Ketua UTD', 'ketua_wilayah', 'kw', 'ketua wilayah', 'Ketua Wilayah'])
+                    if ($isHandedOverToUTD) {
+                        $paraKUTD = Pengguna::whereIn('peranan', ['ketua_utd', 'kutd', 'ketua utd', 'Ketua UTD'])
                             ->whereNotNull('no_ic')
                             ->where('no_ic', '!=', '')
                             ->get()
                             ->unique('no_ic');
 
-                        if ($paraPengesah->isNotEmpty()) {
-                            $hantarNotiTanpaBertindih($paraPengesah, new PengesahanKetuaNoti($ticket, Auth::user()->nama, true));
+                        if ($paraKUTD->isNotEmpty()) {
+                            $hantarNotiTanpaBertindih($paraKUTD, new NewTicketNoti($ticket, 'semakan_kutd'));
                         }
                     } else {
-                        if ($isHandedOverToUTD) {
-                            $paraKUTD = Pengguna::whereIn('peranan', ['ketua_utd', 'kutd', 'ketua utd', 'Ketua UTD'])
-                                ->whereNotNull('no_ic')
-                                ->where('no_ic', '!=', '')
-                                ->get()
-                                ->unique('no_ic');
+                        $paraKUPP = Pengguna::whereIn('peranan', ['ketua_upp', 'kupp', 'ketua upp', 'Ketua UPP'])
+                            ->whereNotNull('no_ic')
+                            ->where('no_ic', '!=', '')
+                            ->get()
+                            ->unique('no_ic');
 
-                            if ($paraKUTD->isNotEmpty()) {
-                                $hantarNotiTanpaBertindih($paraKUTD, new NewTicketNoti($ticket, 'semakan_kutd')); // FIXED
-                            }
-                        } else {
-                            $paraKUPP = Pengguna::whereIn('peranan', ['ketua_upp', 'kupp', 'ketua upp', 'Ketua UPP'])
-                                ->whereNotNull('no_ic')
-                                ->where('no_ic', '!=', '')
-                                ->get()
-                                ->unique('no_ic');
-
-                            if ($paraKUPP->isNotEmpty()) {
-                                $hantarNotiTanpaBertindih($paraKUPP, new PengesahanKetuaNoti($ticket, Auth::user()->nama));
-                            }
+                        if ($paraKUPP->isNotEmpty()) {
+                            $hantarNotiTanpaBertindih($paraKUPP, new PengesahanKetuaNoti($ticket, Auth::user()->nama));
                         }
                     }
                 }
