@@ -862,7 +862,7 @@ class TicketController extends Controller
     public function janaSenaraiAset(Request $request, $id_tiket)
     {
         $request->validate([
-            'id_aset'        => 'required',
+            'id_aset'        => 'required|string|exists:aset,nama_aset',
             'kuantiti_lulus' => 'required|integer|min:1',
         ]);
 
@@ -925,7 +925,7 @@ class TicketController extends Controller
         $request->validate([
             'id_aset'                  => 'required|string',
             'kuantiti_lulus'           => 'required|integer|min:1',
-            'pic_ic'                   => 'required|string|exists:pengguna,no_ic',
+            'pic_ic'                   => ['required', 'string', Rule::exists('pengguna', 'no_ic')->where(fn ($query) => $query->where('peranan', 'juruteknik'))],
             'senarai_aset'             => 'required|array|min:1',
             'senarai_aset.*.serial_no' => 'required|string|distinct',
         ]);
@@ -1068,6 +1068,17 @@ class TicketController extends Controller
                 'updated_at'     => now()
             ]);
 
+            DB::commit();
+
+        } catch (\Exception $e) {
+            DB::rollBack();
+            Log::error('Ralat Peminjaman: ' . $e->getMessage());
+            return back()->withErrors([
+                'sistem' => 'Kelulusan peminjaman tidak dapat diproses kerana berlaku ralat sistem. Sila cuba semula.'
+            ]);
+        }
+
+        try {
             $this->clearTicketNotifications($id_tiket);
 
             $picUser = \App\Models\Pengguna::where('no_ic', $request->pic_ic)->first();
@@ -1079,15 +1090,11 @@ class TicketController extends Controller
                     Auth::user()->nama
                 ));
             }
-
-            DB::commit();
-            return back()->with('success', 'Kelulusan peminjaman berjaya dihantar kepada pegawai!');
-
         } catch (\Exception $e) {
-            DB::rollBack();
-            Log::error('Ralat Peminjaman: ' . $e->getMessage());
-            return back()->withErrors(['sistem' => 'Gagal memproses kelulusan: ' . $e->getMessage()]);
+            Log::error('Notifikasi Peminjaman Gagal: ' . $e->getMessage());
         }
+
+        return back()->with('success', 'Kelulusan peminjaman berjaya dihantar kepada pegawai!');
     }
 
     /**
