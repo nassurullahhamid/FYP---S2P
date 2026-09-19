@@ -1105,8 +1105,8 @@ class TicketController extends Controller
         $request->validate([
             'serial_no'         => 'required|string',
             'no_harta'          => 'nullable|string',
-            'status_perkakasan' => 'required|string',
-            'mod_penggunaan'    => 'required|string',
+            'status_perkakasan' => ['required', 'string', Rule::in(['Baru', 'Terpakai'])],
+            'mod_penggunaan'    => ['required', 'string', Rule::in(['Dipinjamkan', 'Diserahkan'])],
             'jawatan_penerima'  => 'required|string',
             'catatan'           => 'nullable|string',
         ]);
@@ -1144,35 +1144,60 @@ class TicketController extends Controller
 
         $serial_no = $request->serial_no;
 
-        $laporan = DB::table('laporan')->where('id_tiket', $id_tiket)->first();
+        DB::beginTransaction();
 
-        if ($laporan && $laporan->kos_items) {
+        try {
+            $laporan = DB::table('laporan')
+                ->where('id_tiket', $id_tiket)
+                ->lockForUpdate()
+                ->first();
+
+            if (!$laporan || !$laporan->kos_items) {
+                DB::rollBack();
+                return back()->withErrors(['sistem' => 'Rekod kelulusan tidak dijumpai.']);
+            }
+
             $kosItems = json_decode($laporan->kos_items, true);
+
+            if (!is_array($kosItems) || !is_array($kosItems['senarai_siri'] ?? null)) {
+                DB::rollBack();
+                Log::error('Struktur kos_items peminjaman tidak sah untuk tiket: ' . $id_tiket);
+                return back()->withErrors([
+                    'sistem' => 'Rekod peminjaman tidak sah. Sila hubungi pentadbir sistem.'
+                ]);
+            }
 
             $itemDitemui = false;
 
-            if (isset($kosItems['senarai_siri'])) {
-                foreach ($kosItems['senarai_siri'] as &$item) {
-                    $siriSemasa = $item['serial_no'] ?? $item['no_siri'] ?? null;
-                    if ($siriSemasa === $serial_no) {
-                        $itemDitemui = true;
-                        $item['no_pendaftaran_harta'] = $request->no_harta;
-                        $item['status_perkakasan']     = $request->status_perkakasan;
-                        $item['mod_penggunaan']        = $request->mod_penggunaan;
-                        $item['jawatan_penerima']      = $request->jawatan_penerima;
-                        $item['catatan']               = $request->catatan;
-                    }
+            foreach ($kosItems['senarai_siri'] as &$item) {
+                $siriSemasa = $item['serial_no'] ?? $item['no_siri'] ?? null;
+
+                if ((string) $siriSemasa === (string) $serial_no) {
+                    $itemDitemui = true;
+                    $item['no_pendaftaran_harta'] = $request->no_harta;
+                    $item['status_perkakasan']     = $request->status_perkakasan;
+                    $item['mod_penggunaan']        = $request->mod_penggunaan;
+                    $item['jawatan_penerima']      = $request->jawatan_penerima;
+                    $item['catatan']               = $request->catatan;
+                    break;
                 }
             }
 
+            unset($item);
+
             if (!$itemDitemui) {
-                return back()->withErrors(['sistem' => 'Nombor siri aset tidak ditemui dalam rekod peminjaman tiket ini.']);
+                DB::rollBack();
+                return back()->withErrors([
+                    'sistem' => 'Nombor siri aset tidak ditemui dalam rekod peminjaman tiket ini.'
+                ]);
             }
 
-            DB::table('laporan')->where('id_tiket', $id_tiket)->update([
-                'kos_items'  => json_encode($kosItems),
-                'updated_at' => now()
-            ]);
+            DB::table('laporan')
+                ->where('id_tiket', $id_tiket)
+                ->update([
+                    'kos_items'  => json_encode($kosItems),
+                    'updated_at' => now()
+                ]);
 
             $idPemulanganTerakhir = DB::table('jejak_tiket')
                 ->where('id_tiket', $id_tiket)
@@ -1200,10 +1225,18 @@ class TicketController extends Controller
                 }
             }
 
-            return back()->with('success', 'Maklumat borang peminjaman berjaya disimpan!');
-        }
+            DB::commit();
 
-        return back()->withErrors(['sistem' => 'Rekod kelulusan tidak dijumpai.']);
+            return back()->with('success', 'Maklumat borang peminjaman berjaya disimpan!');
+
+        } catch (\Exception $e) {
+            DB::rollBack();
+            Log::error('Ralat Simpan Borang Peminjaman: ' . $e->getMessage());
+
+            return back()->withErrors([
+                'sistem' => 'Maklumat borang peminjaman tidak dapat disimpan kerana berlaku ralat sistem. Sila cuba semula.'
+            ]);
+        }
     }
 
     /**
