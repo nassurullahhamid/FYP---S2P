@@ -378,10 +378,6 @@ class TicketController extends Controller
             }
         }
 
-        if ($request->input('sub_kategori') === 'Peminjaman Peralatan ICT' && $ticket->status_tiket !== 'Menunggu Klasifikasi') {
-            $rules['serial_no'] = ['required', 'string'];
-            $rules['kuantiti_dipinjam'] = ['required', 'integer', 'min:1'];
-        }
         if ($ticket->status_tiket === 'Tugasan UTD') {
             $rules['senarai_pic_ic'] = ['required', 'array', 'min:1'];
             $rules['senarai_pic_ic.*'] = ['required', 'string', 'distinct', Rule::exists('pengguna', 'no_ic')->where(fn ($query) => $query->where('peranan', 'juruteknik'))];
@@ -539,9 +535,6 @@ class TicketController extends Controller
                         $updateFields['catatan_lawatan'] = $validated['catatan_lawatan'] ?? null;
                     }
 
-                    if ($statusLama !== 'Menunggu Klasifikasi' && $validated['kategori'] === 'Meja Bantuan' && $validated['sub_kategori'] === 'Peminjaman Peralatan ICT') {
-                        $updateFields['kuantiti_dipinjam'] = $validated['kuantiti_dipinjam'];
-                    }
                     DB::table($childTable)->updateOrInsert(['id_tiket' => $id_tiket], array_merge($updateFields, ['updated_at' => now()]));
                 }
             }
