@@ -8,6 +8,15 @@ return [
         false
     ),
 
+    /*
+     * Pelaksanaan berperingkat: hanya tiket Rangkaian baharu
+     * menggunakan workflow semasa apabila flag ini diaktifkan.
+     */
+    'enable_network_new_tickets' => env(
+        'S2P_WORKFLOW_V2_NETWORK_TICKETS',
+        false
+    ),
+
     'roles' => [
         'admin' => 'Admin',
         'ketua_upp' => 'KUPP',
