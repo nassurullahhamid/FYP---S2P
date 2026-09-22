@@ -20,7 +20,7 @@ import Sidebar from '@/Components/Sidebar';
 import Topbar from '@/Components/Topbar';
 
 const ROLE_OPTIONS = [
-    { value: 'admin', label: 'Pentadbir Sistem' },
+    { value: 'admin', label: 'Admin' },
     { value: 'ketua_upp', label: 'Ketua UPP' },
     { value: 'ketua_utd', label: 'Ketua UTD' },
     { value: 'juruteknik', label: 'Juruteknik' },
@@ -28,6 +28,18 @@ const ROLE_OPTIONS = [
 ];
 
 const STATUS_OPTIONS = ['Aktif', 'Tidak Aktif'];
+const JAWATAN_OPTIONS = [
+    'Pegawai Teknologi Maklumat',
+    'Penolong Pegawai Teknologi Maklumat',
+    'Juruteknik Komputer',
+    'Pembantu Tadbir',
+    'Pembantu Khidmat Am',
+];
+
+const GRED_OPTIONS = [
+    'F12', 'F10', 'F9', 'F7', 'F6', 'F5',
+    'FT2', 'FT1', 'N2', 'N1', 'H1',
+];
 
 const EMPTY_FORM = {
     no_ic: '',
@@ -582,7 +594,7 @@ export default function PengurusanPengguna({ users = [] }) {
                                     createForm.setData('nama', event.target.value)
                                 }
                                 className={inputClass}
-                                placeholder="Nama penuh pengguna"
+                                placeholder="Contoh: ALI BIN ABU"
                             />
                         </FormField>
 
@@ -598,7 +610,7 @@ export default function PengurusanPengguna({ users = [] }) {
                                     createForm.setData('emel', event.target.value)
                                 }
                                 className={inputClass}
-                                placeholder="nama@contoh.com"
+                                placeholder="Contoh : ali.abu@sabah.gov.my"
                             />
                         </FormField>
 
@@ -623,15 +635,23 @@ export default function PengurusanPengguna({ users = [] }) {
                             error={createForm.errors.jawatan}
                             required
                         >
-                            <input
-                                type="text"
+                            <select
+                                required
                                 value={createForm.data.jawatan}
                                 onChange={(event) =>
                                     createForm.setData('jawatan', event.target.value)
                                 }
                                 className={inputClass}
-                                placeholder="Contoh: Penolong Pegawai Teknologi Maklumat"
-                            />
+                            >
+                                <option value="" disabled>
+                                    -- Pilih Jawatan --
+                                </option>
+                                {JAWATAN_OPTIONS.map((jawatan) => (
+                                    <option key={jawatan} value={jawatan}>
+                                        {jawatan}
+                                    </option>
+                                ))}
+                            </select>
                         </FormField>
 
                         <FormField
@@ -639,16 +659,23 @@ export default function PengurusanPengguna({ users = [] }) {
                             error={createForm.errors.gred}
                             required
                         >
-                            <input
-                                type="text"
-                                maxLength={10}
+                            <select
+                                required
                                 value={createForm.data.gred}
                                 onChange={(event) =>
                                     createForm.setData('gred', event.target.value)
                                 }
                                 className={inputClass}
-                                placeholder="Contoh: FA5"
-                            />
+                            >
+                                <option value="" disabled>
+                                    -- Pilih Gred --
+                                </option>
+                                {GRED_OPTIONS.map((gred) => (
+                                    <option key={gred} value={gred}>
+                                        {gred}
+                                    </option>
+                                ))}
+                            </select>
                         </FormField>
 
                         <FormField
@@ -710,7 +737,7 @@ export default function PengurusanPengguna({ users = [] }) {
                                         )
                                     }
                                     className={`${inputClass} pr-12`}
-                                    placeholder="Minimum 8 aksara"
+                                    placeholder="Minimum 12 aksara: A-Z, a-z, nombor dan simbol"
                                 />
 
                                 <button

@@ -15,10 +15,16 @@ export default function BorangLKKRangkaian({ ticket, senaraiKosSelamat, existing
     const isKW = perananSemasa === 'ketua_wilayah' || perananSemasa === 'kw';
 
     const statusFormat = String(ticket.status_tiket || '').trim().toLowerCase();
+    const isWorkflowV2 = Number(ticket.workflow_version) === 2;
     const isSelesai = statusFormat === 'selesai';
     const isMenungguKW = ['menunggu validasi kw', 'menunggu validasi', 'validasi kw'].includes(statusFormat);
     const isDalamTindakan = statusFormat === 'dalam tindakan pegawai';
-    const isPembetulan = statusFormat === 'lkk perlu pembetulan';
+    const isPembetulan =
+        statusFormat === 'lkk perlu pembetulan'
+        || (
+            isWorkflowV2
+            && statusFormat === 'pembetulan ketua'
+        );
 
     // Form read-only lock state (Only editable by KUTD before it hits KW)
     const isBorangLocked = isSelesai || isMenungguKW || !isKUTD;
@@ -173,47 +179,116 @@ export default function BorangLKKRangkaian({ ticket, senaraiKosSelamat, existing
     // Form submission handlers via Router Post
     const handleSubmitLKK = (e) => {
         e.preventDefault();
-        if (isBorangLocked) return;
+        if (isBorangLocked || isSubmitting) return;
 
         if (!data.disediakan_oleh || !data.disemak_oleh) {
             alert("Sila pilih nama pegawai untuk ruangan 'Disediakan Oleh' dan 'Disemak Oleh' di bahagian pengesahan terlebih dahulu.");
             return;
         }
 
-        setIsSubmitting(true);
-        router.post(route('tickets.storeLKKRangkaian', ticket.id_tiket), {
-            ...data,
-            is_draft: false,
-            is_kutd_hantar: true,
-            tindakan: 'KUTD_SAH_SEMAKAN'
-        }, {
-            preserveScroll: true,
-            forceFormData: true,
-            onFinish: () => setIsSubmitting(false),
-            onSuccess: () => {
-                alert("Laporan LKK berjaya dihantar untuk pengesahan Ketua Wilayah!");
-            },
-            onError: (err) => {
-                console.error("Error Details:", err);
-                alert("Gagal hantar laporan: Sila lengkapkan ruang yang ditanda merah.");
+        const submissionRoute = isWorkflowV2
+            ? route(
+                'tickets.workflow.saveNetworkLkk',
+                ticket.id_tiket
+            )
+            : route(
+                'tickets.storeLKKRangkaian',
+                ticket.id_tiket
+            );
+
+        const submissionData = isWorkflowV2
+            ? {
+                ...data,
+                is_draft: false,
             }
-        });
+            : {
+                ...data,
+                is_draft: false,
+                is_kutd_hantar: true,
+                tindakan: 'KUTD_SAH_SEMAKAN',
+            };
+
+        setIsSubmitting(true);
+
+        router.post(
+            submissionRoute,
+            submissionData,
+            {
+                preserveScroll: true,
+                forceFormData: true,
+                onFinish: () => setIsSubmitting(false),
+                onSuccess: () => {
+                    alert(
+                        isWorkflowV2
+                            ? 'LKK berjaya dihantar untuk validasi Ketua Wilayah!'
+                            : 'Laporan LKK berjaya dihantar untuk pengesahan Ketua Wilayah!'
+                    );
+                },
+                onError: (submissionErrors) => {
+                    console.error(
+                        'Error Details:',
+                        submissionErrors
+                    );
+
+                    const messages = Object.values(
+                        submissionErrors
+                    ).flat();
+
+                    alert(
+                        messages.length > 0
+                            ? messages.join('\n')
+                            : 'Gagal menghantar LKK. Sila lengkapkan ruang yang ditanda merah.'
+                    );
+                },
+            }
+        );
     };
 
     const handleSaveDraft = (e) => {
         e.preventDefault();
-        if (isBorangLocked) return;
+        if (isBorangLocked || isSubmitting) return;
+
+        const submissionRoute = isWorkflowV2
+            ? route(
+                'tickets.workflow.saveNetworkLkk',
+                ticket.id_tiket
+            )
+            : route(
+                'tickets.storeLKKRangkaian',
+                ticket.id_tiket
+            );
 
         setIsSubmitting(true);
-        router.post(route('tickets.storeLKKRangkaian', ticket.id_tiket), {
-            ...data,
-            is_draft: true
-        }, {
-            preserveScroll: true,
-            forceFormData: true,
-            onFinish: () => setIsSubmitting(false),
-            onSuccess: () => alert("Draf laporan LKK telah berjaya disimpan!"),
-        });
+
+        router.post(
+            submissionRoute,
+            {
+                ...data,
+                is_draft: true,
+            },
+            {
+                preserveScroll: true,
+                forceFormData: true,
+                onFinish: () => setIsSubmitting(false),
+                onSuccess: () => alert(
+                    'Draf laporan LKK telah berjaya disimpan!'
+                ),
+                onError: (draftErrors) => {
+                    console.error(
+                        'Draft Error Details:',
+                        draftErrors
+                    );
+
+                    const messages = Object.values(
+                        draftErrors
+                    ).flat();
+
+                    if (messages.length > 0) {
+                        alert(messages.join('\n'));
+                    }
+                },
+            }
+        );
     };
 
     // Summary view for review and completion stages

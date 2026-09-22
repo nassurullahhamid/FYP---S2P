@@ -2,6 +2,7 @@
 
 namespace App\Http\Middleware;
 
+use App\Models\Tiket;
 use Illuminate\Http\Request;
 use Inertia\Middleware;
 
@@ -22,35 +23,35 @@ class HandleInertiaRequests extends Middleware
         $user = $request->user();
 
         $notiCounts = [
-            'penyelenggaraan_komputer'      => 0,
-            'penyelenggaraan_rangkaian'     => 0,
-            'sistem_aplikasi'               => 0,
-            'perkhidmatan_emel'            => 0,
-            'perkhidmatan_lintas_langsung'  => 0,
-            'peminjaman_ict'                => 0,
-            'pemasangan_baharu'            => 0,
-            'naiktaraf'                     => 0,
-            'pemodenan_bilik_mesyuarat'    => 0,
-            'pembekalan_peralatan_ict'      => 0,
+            'penyelenggaraan_komputer' => 0,
+            'penyelenggaraan_rangkaian' => 0,
+            'sistem_aplikasi' => 0,
+            'perkhidmatan_emel' => 0,
+            'perkhidmatan_lintas_langsung' => 0,
+            'peminjaman_ict' => 0,
+            'pemasangan_baharu' => 0,
+            'naiktaraf' => 0,
+            'pemodenan_bilik_mesyuarat' => 0,
+            'pembekalan_peralatan_ict' => 0,
         ];
 
         $petaSubKategori = [
             'Meja Bantuan' => [
-                'Penyelenggaraan Komputer'        => 'penyelenggaraan_komputer',
-                'Penyelenggaraan Rangkaian'       => 'penyelenggaraan_rangkaian',
-                'Sistem Aplikasi'                 => 'sistem_aplikasi',
-                'Perkhidmatan E-mel'               => 'perkhidmatan_emel',
-                'Perkhidmatan Lintas Langsung'     => 'perkhidmatan_lintas_langsung',
-                'Peminjaman Peralatan ICT'        => 'peminjaman_ict',
+                'Penyelenggaraan Komputer' => 'penyelenggaraan_komputer',
+                'Penyelenggaraan Rangkaian' => 'penyelenggaraan_rangkaian',
+                'Sistem Aplikasi' => 'sistem_aplikasi',
+                'Perkhidmatan E-mel' => 'perkhidmatan_emel',
+                'Perkhidmatan Lintas Langsung' => 'perkhidmatan_lintas_langsung',
+                'Peminjaman Peralatan ICT' => 'peminjaman_ict',
             ],
             'Konsultasi Rangkaian' => [
-                'Pemasangan Baharu'               => 'pemasangan_baharu',
-                'Naiktaraf'                        => 'naiktaraf',
+                'Pemasangan Baharu' => 'pemasangan_baharu',
+                'Naiktaraf' => 'naiktaraf',
             ],
             'Transformasi Digital' => [
-                'Pemodenan Bilik Mesyuarat'       => 'pemodenan_bilik_mesyuarat',
-                'Pembekalan Peralatan ICT'        => 'pembekalan_peralatan_ict',
-            ]
+                'Pemodenan Bilik Mesyuarat' => 'pemodenan_bilik_mesyuarat',
+                'Pembekalan Peralatan ICT' => 'pembekalan_peralatan_ict',
+            ],
         ];
 
         if ($user) {
@@ -64,13 +65,13 @@ class HandleInertiaRequests extends Middleware
             foreach ($petaSubKategori as $kategoriUtama => $senaraiSub) {
 
                 $relasiJadualAnak = match ($kategoriUtama) {
-                    'Meja Bantuan'          => 'mejaBantuan',
-                    'Konsultasi Rangkaian'  => 'konsultasiRangkaian',
-                    'Transformasi Digital'  => 'transformasiDigital',
+                    'Meja Bantuan' => 'mejaBantuan',
+                    'Konsultasi Rangkaian' => 'konsultasiRangkaian',
+                    'Transformasi Digital' => 'transformasiDigital',
                 };
 
                 foreach ($senaraiSub as $namaSubDalamDb => $keySidebar) {
-                    $notiCounts[$keySidebar] = \App\Models\Tiket::where('kategori', $kategoriUtama)
+                    $notiCounts[$keySidebar] = Tiket::where('kategori', $kategoriUtama)
                         ->whereHas($relasiJadualAnak, function ($query) use ($namaSubDalamDb) {
                             $query->where('sub_kategori', $namaSubDalamDb);
                         })
@@ -80,7 +81,7 @@ class HandleInertiaRequests extends Middleware
                                 'Menunggu Semakan Dokumen',
                                 'Tugasan UPP',
                                 'Menunggu Pengesahan',
-                                'Menunggu Kelulusan'
+                                'Menunggu Kelulusan',
                             ]);
                         })
                         ->when($isKUTD, function ($query) {
@@ -90,27 +91,29 @@ class HandleInertiaRequests extends Middleware
                                 'Tugasan UTD',
                                 'Menunggu Semakan',
                                 'Menunggu Pengesahan',
-                                'Menunggu Kelulusan'
+                                'Menunggu Kelulusan',
+                                'Menunggu Semakan Laporan',
+                                'Sedia Diverifikasi',
+                                'Pembetulan Ketua',
                             ]);
                         })
                         ->when($isKW, function ($query) {
                             $query->whereIn('status_tiket', [
                                 'Menunggu Klasifikasi',
                                 'Menunggu Validasi',
-                                'Menunggu Kelulusan'
+                                'Menunggu Kelulusan',
                             ]);
                         })
-                        ->when($isJuruteknik, function ($query) use ($user, $kategoriUtama) {
-                            $query->whereIn('status_tiket', ['Dalam Tindakan Pegawai', 'LKK Perlu Pembetulan'])
+                        ->when($isJuruteknik, function ($query) use ($user) {
+                            $query->whereIn('status_tiket', [
+                                'Dalam Tindakan Pegawai',
+                                'LKK Perlu Pembetulan',
+                                'Dalam Tindakan',
+                                'Laporan Perlu Pembetulan',
+                            ])
                                 ->whereHas('petugas', function ($subQuery) use ($user) {
                                     $subQuery->where('tugasan_tiket.no_ic', $user->no_ic);
                                 });
-
-                            if ($kategoriUtama === 'Konsultasi Rangkaian') {
-                                $query->whereHas('konsultasiRangkaian', function ($q) {
-                                    $q->whereNull('jenis_premis');
-                                });
-                            }
                         })
                         ->count();
                 }

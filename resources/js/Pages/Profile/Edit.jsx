@@ -1,6 +1,5 @@
 import React, { useState } from 'react';
 import { Head } from '@inertiajs/react';
-import DeleteUserForm from './Partials/DeleteUserForm';
 import UpdatePasswordForm from './Partials/UpdatePasswordForm';
 import UpdateProfileInformationForm from './Partials/UpdateProfileInformationForm';
 import Sidebar from '@/Components/Sidebar';
@@ -39,7 +38,9 @@ export default function Edit({ auth, mustVerifyEmail, status }) {
                         </div>
 
                         <div className="bg-white p-6 shadow-sm border border-gray-100 sm:rounded-[2.5rem] sm:p-10">
-                            <DeleteUserForm className="max-w-xl" />
+                            <p className="text-sm text-gray-600">
+                                Untuk penutupan akaun, sila hubungi Admin.
+                            </p>
                         </div>
 
                     </div>

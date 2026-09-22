@@ -31,7 +31,7 @@ export default function DaftarPermohonan() {
         'MAHKAMAH ANAK NEGERI',
         'MAJLIS PERBANDARAN SANDAKAN',
         'PERPUSTAKAAN NEGERI SABAH',
-        'PUSAT ZAKAT',
+        'PEJABAT DAERAH',
         'UNIT PEMIMPIN PEMBANGUNAN MASYARAKAT (UPPM)',
         'SEKOLAH AGAMA NEGERI (SAN)',
     ];
@@ -65,7 +65,7 @@ export default function DaftarPermohonan() {
             preserveScroll: true,
             onSuccess: () => {
                 reset();
-                alert("Tiket telah berjaya dicipta dan telah dihantar untuk pengesahan klasifikasi.");
+                alert("Tiket telah berjaya didaftarkan");
             },
             onError: (err) => console.error(err)
         });
@@ -89,8 +89,8 @@ export default function DaftarPermohonan() {
                         <div className="bg-white p-6 rounded-3xl border border-gray-100 shadow-sm flex items-center gap-4">
                             <div className="p-3 bg-blue-50 rounded-2xl text-blue-700"><FilePlus2 size={24} /></div>
                             <div>
-                                <h2 className="text-lg font-black text-blue-900 uppercase">Pendaftaran Tiket Baharu</h2>
-                                <p className="text-[10px] font-bold text-gray-400 uppercase tracking-widest">Sila isi maklumat permohonan.</p>
+                                <h2 className="text-lg font-black text-blue-900 uppercase">Pendaftaran Tiket</h2>
+                                <p className="text-[10px] font-bold text-gray-400 uppercase tracking-widest">Sila isi butiran permohonan.</p>
                             </div>
                         </div>
 
@@ -105,17 +105,17 @@ export default function DaftarPermohonan() {
                                 <div className="grid grid-cols-1 md:grid-cols-2 gap-6">
                                     <div>
                                         <label className="block text-[10px] font-black uppercase text-gray-400 mb-2">Nama Pemohon <span className="text-red-500 font-bold ml-1">*</span></label>
-                                        <input type="text" value={data.nama_pemohon} onChange={e => setData('nama_pemohon', e.target.value)} className="w-full h-11 rounded-xl border-gray-200 bg-gray-50 text-sm focus:outline-none focus:border-blue-500" placeholder="Masukkan nama penuh" required />
+                                        <input type="text" value={data.nama_pemohon} onChange={e => setData('nama_pemohon', e.target.value)} className="w-full h-11 rounded-xl border-gray-200 bg-gray-50 text-sm focus:outline-none focus:border-blue-500" placeholder="Nama Penuh" required />
                                         {errors.nama_pemohon && <p className="text-red-500 text-xs mt-1 font-bold">{errors.nama_pemohon}</p>}
                                     </div>
                                     <div>
                                         <label className="block text-[10px] font-black uppercase text-gray-400 mb-2">No. Telefon Pemohon <span className="text-red-500 font-bold ml-1">*</span></label>
-                                        <input type="text" value={data.notel_pemohon} onChange={e => setData('notel_pemohon', e.target.value)} className="w-full h-11 rounded-xl border-gray-200 bg-gray-50 text-sm focus:outline-none focus:border-blue-500" placeholder="Masukkan no. telefon" required />
+                                        <input type="text" value={data.notel_pemohon} onChange={e => setData('notel_pemohon', e.target.value)} className="w-full h-11 rounded-xl border-gray-200 bg-gray-50 text-sm focus:outline-none focus:border-blue-500" placeholder="No. Telefon" required />
                                         {errors.notel_pemohon && <p className="text-red-500 text-xs mt-1 font-bold">{errors.notel_pemohon}</p>}
                                     </div>
                                     <div>
                                         <label className="block text-[10px] font-black uppercase text-gray-400 mb-2">Alamat Emel Pemohon <span className="text-red-500 font-bold ml-1">*</span></label>
-                                        <input type="email" value={data.emel_pemohon} onChange={e => setData('emel_pemohon', e.target.value)} className="w-full h-11 rounded-xl border-gray-200 bg-gray-50 text-sm focus:outline-none focus:border-blue-500" placeholder="Masukkan alamat emel" required />
+                                        <input type="email" value={data.emel_pemohon} onChange={e => setData('emel_pemohon', e.target.value)} className="w-full h-11 rounded-xl border-gray-200 bg-gray-50 text-sm focus:outline-none focus:border-blue-500" placeholder="Emel" required />
                                         {errors.emel_pemohon && <p className="text-red-500 text-xs mt-1 font-bold">{errors.emel_pemohon}</p>}
                                     </div>
                                     <div>
@@ -198,7 +198,7 @@ export default function DaftarPermohonan() {
                                     </div>
                                     <div>
                                         <label className="block text-[10px] font-black uppercase text-gray-400 mb-2">Lokasi </label>
-                                        <input type="text" value={data.lokasi} onChange={e => setData('lokasi', e.target.value)} className="w-full h-11 rounded-xl border-gray-200 bg-gray-50 text-sm focus:outline-none focus:border-blue-500" placeholder="Masukkan lokasi spesifik" />
+                                        <input type="text" value={data.lokasi} onChange={e => setData('lokasi', e.target.value)} className="w-full h-11 rounded-xl border-gray-200 bg-gray-50 text-sm focus:outline-none focus:border-blue-500" placeholder="lokasi spesifik (Jika Ada)" />
                                         {errors.lokasi && <p className="text-red-500 text-xs mt-1 font-bold">{errors.lokasi}</p>}
                                     </div>
                                     <div>
@@ -221,7 +221,7 @@ export default function DaftarPermohonan() {
                                 <div className="space-y-5">
                                     <div>
                                         <label className="block text-[10px] font-black uppercase text-gray-400 mb-2">Perkara <span className="text-red-500 font-bold ml-1">*</span></label>
-                                        <textarea value={data.perkara} onChange={e => setData('perkara', e.target.value)} className="w-full h-24 rounded-xl border-gray-200 bg-gray-50 text-sm p-3 focus:outline-none focus:border-blue-500 resize-none" placeholder="Terangkan perkara aduan..." required />
+                                        <textarea value={data.perkara} onChange={e => setData('perkara', e.target.value)} className="w-full h-24 rounded-xl border-gray-200 bg-gray-50 text-sm p-3 focus:outline-none focus:border-blue-500 resize-none" placeholder="Penerangan Permohonan..." required />
                                         {errors.perkara && <p className="text-red-500 text-xs mt-1 font-bold">{errors.perkara}</p>}
                                     </div>
 
@@ -245,9 +245,9 @@ export default function DaftarPermohonan() {
                                     </div>
 
                                     <div>
-                                        <label className="block text-[10px] font-black uppercase text-gray-400 mb-2">Saluran Terima <span className="text-red-500 font-bold ml-1">*</span></label>
+                                        <label className="block text-[10px] font-black uppercase text-gray-400 mb-2">Saluran <span className="text-red-500 font-bold ml-1">*</span></label>
                                         <select value={data.saluran} onChange={e => setData('saluran', e.target.value)} className="w-full h-11 rounded-xl border-gray-200 bg-gray-50 text-sm cursor-pointer focus:outline-none focus:border-blue-500" required>
-                                            <option value="">Pilih saluran terima</option>
+                                            <option value="">Pilih saluran</option>
                                             {senaraiSaluran.map(s => <option key={s} value={s}>{s}</option>)}
                                         </select>
                                         {errors.saluran && <p className="text-red-500 text-xs mt-1 font-bold">{errors.saluran}</p>}
@@ -267,7 +267,7 @@ export default function DaftarPermohonan() {
                                                 </p>
                                             ) : (
                                                 <>
-                                                    <p className="text-xs font-bold text-gray-600">Klik untuk muat naik dokumen (PDF, Word, atau imej)</p>
+                                                    <p className="text-xs font-bold text-gray-600">Muat Turun Dokumen (PDF, Word, atau imej)</p>
 
                                                 </>
                                             )}

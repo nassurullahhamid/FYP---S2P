@@ -1,16 +1,15 @@
 <?php
 
-use App\Http\Controllers\ProfileController;
-use App\Http\Controllers\DashboardController;
-use App\Http\Controllers\TicketController;
-use App\Http\Controllers\Admin\PengurusanPenggunaController;
 use App\Http\Controllers\Admin\AsetController;
-use Illuminate\Foundation\Application;
-use Illuminate\Support\Facades\Route;
-use Illuminate\Support\Facades\Auth;
-use Inertia\Inertia;
-use App\Models\Tiket;
+use App\Http\Controllers\Admin\PengurusanPenggunaController;
+use App\Http\Controllers\DashboardController;
+use App\Http\Controllers\ProfileController;
+use App\Http\Controllers\TicketController;
+use App\Http\Controllers\TicketWorkflowController;
 use App\Models\Pengguna;
+use Illuminate\Support\Facades\Auth;
+use Illuminate\Support\Facades\Route;
+use Inertia\Inertia;
 
 // Redirect root to login
 Route::get('/', function () {
@@ -27,36 +26,93 @@ Route::middleware('auth')->group(function () {
 
     // Notification API
     Route::get('/api/notifications', function () {
-        $user = \App\Models\Pengguna::find(Auth::id());
+        $user = Pengguna::find(Auth::id());
+
         return response()->json($user ? $user->unreadNotifications : []);
     })->name('api.notifications');
 
     Route::post('/api/notifications/{id}/read', function ($id) {
-        $user = \App\Models\Pengguna::find(Auth::id());
+        $user = Pengguna::find(Auth::id());
         if ($user) {
             $notification = $user->notifications()->find($id);
             if ($notification) {
                 $notification->markAsRead();
             }
         }
+
         return response()->json(['success' => true]);
     })->name('api.notifications.read');
-
 
     // Profile Management
     Route::get('/profile', [ProfileController::class, 'edit'])->name('profile.edit');
     Route::patch('/profile', [ProfileController::class, 'update'])->name('profile.update');
     Route::delete('/profile', [ProfileController::class, 'destroy'])->name('profile.destroy');
 
-
     // Ticket Management
     Route::get('/tickets/create', function () {
         return Inertia::render('Tickets/DaftarPermohonan');
-    })->name('tickets.create');
+    })->middleware('role:admin')->name('tickets.create');
 
-    Route::post('/tickets', [TicketController::class, 'store'])->name('tickets.store');
+    Route::post('/tickets', [TicketController::class, 'store'])->middleware('role:admin')->name('tickets.store');
     Route::get('/tickets', [TicketController::class, 'index'])->name('tickets.index');
     Route::get('/senarai-tiket', [TicketController::class, 'index'])->name('tickets.senarai');
+    Route::post(
+        '/tickets/{id_tiket}/workflow/classify',
+        [TicketWorkflowController::class, 'classify']
+    )->name('tickets.workflow.classify');
+    Route::post(
+        '/tickets/{id_tiket}/workflow/generate-loan-assets',
+        [TicketWorkflowController::class, 'generateLoanAssets']
+    )->name('tickets.workflow.generateLoanAssets');
+    Route::post(
+        '/tickets/{id_tiket}/workflow/review-network',
+        [TicketWorkflowController::class, 'reviewNetwork']
+    )->name('tickets.workflow.reviewNetwork');
+    Route::post(
+        '/tickets/{id_tiket}/workflow/validate-network-lkk',
+        [TicketWorkflowController::class, 'validateNetworkLkk']
+    )->name('tickets.workflow.validateNetworkLkk');
+    Route::post(
+        '/tickets/{id_tiket}/workflow/save-network-lkk',
+        [TicketWorkflowController::class, 'saveNetworkLkk']
+    )->name('tickets.workflow.saveNetworkLkk');
+    Route::post(
+        '/tickets/{id_tiket}/workflow/review-network-site-report',
+        [TicketWorkflowController::class, 'reviewNetworkSiteReport']
+    )->name('tickets.workflow.reviewNetworkSiteReport');
+    Route::post(
+        '/tickets/{id_tiket}/workflow/submit-network-site-report',
+        [TicketWorkflowController::class, 'submitNetworkSiteReport']
+    )->name('tickets.workflow.submitNetworkSiteReport');
+    Route::post(
+        '/tickets/{id_tiket}/workflow/review-helpdesk',
+        [TicketWorkflowController::class, 'reviewHelpdesk']
+    )->name('tickets.workflow.reviewHelpdesk');
+    Route::post(
+        '/tickets/{id_tiket}/workflow/review-loan',
+        [TicketWorkflowController::class, 'reviewLoan']
+    )->name('tickets.workflow.reviewLoan');
+    Route::post(
+        '/tickets/{id_tiket}/workflow/confirm-helpdesk',
+        [TicketWorkflowController::class, 'confirmHelpdesk']
+    )->name('tickets.workflow.confirmHelpdesk');
+    Route::post(
+        '/tickets/{id_tiket}/workflow/confirm-loan',
+        [TicketWorkflowController::class, 'confirmLoan']
+    )->name('tickets.workflow.confirmLoan');
+    Route::post(
+        '/tickets/{id_tiket}/workflow/save-loan-form',
+        [TicketWorkflowController::class, 'saveLoanForm']
+    )->name('tickets.workflow.saveLoanForm');
+
+    Route::post(
+        '/tickets/{id_tiket}/workflow/submit-helpdesk',
+        [TicketWorkflowController::class, 'submitHelpdeskByPic']
+    )->name('tickets.workflow.submitHelpdesk');
+    Route::post(
+        '/tickets/{id_tiket}/workflow/submit-loan',
+        [TicketWorkflowController::class, 'submitLoanByPic']
+    )->name('tickets.workflow.submitLoan');
     Route::get('/tickets/{id_tiket}', [TicketController::class, 'show'])->name('tickets.show');
     Route::post('/tickets/{ticket}/processAction', [TicketController::class, 'processAction'])->name('tickets.processAction');
     Route::post('/tickets/{ticket}/pic-update', [TicketController::class, 'picUpdate'])->name('tickets.picUpdate');
@@ -86,10 +142,10 @@ Route::middleware('auth')->group(function () {
     Route::get('/tickets/{id_tiket}/cetak-tapak', [TicketController::class, 'cetakMaklumatTapak'])->name('tickets.cetakMaklumatTapak');
 
     // User Management
-    Route::get('/pengurusan-pengguna', [PengurusanPenggunaController::class, 'index'])->name('users.index');
-    Route::post('/pengurusan-pengguna', [PengurusanPenggunaController::class, 'store'])->name('users.store');
-    Route::patch('/pengurusan-pengguna/{no_ic}', [PengurusanPenggunaController::class, 'update'])->name('users.update');
-    Route::delete('/pengurusan-pengguna/{no_ic}', [PengurusanPenggunaController::class, 'destroy'])->name('users.destroy');
+    Route::get('/pengurusan-pengguna', [PengurusanPenggunaController::class, 'index'])->middleware('role:admin')->name('users.index');
+    Route::post('/pengurusan-pengguna', [PengurusanPenggunaController::class, 'store'])->middleware('role:admin')->name('users.store');
+    Route::patch('/pengurusan-pengguna/{no_ic}', [PengurusanPenggunaController::class, 'update'])->middleware('role:admin')->name('users.update');
+    Route::delete('/pengurusan-pengguna/{no_ic}', [PengurusanPenggunaController::class, 'destroy'])->middleware('role:admin')->name('users.destroy');
 
     // Asset Management
     Route::get('/pengurusan-aset', [AsetController::class, 'index'])->name('assets.index');

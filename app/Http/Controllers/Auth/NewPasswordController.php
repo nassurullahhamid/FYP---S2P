@@ -3,13 +3,15 @@
 namespace App\Http\Controllers\Auth;
 
 use App\Http\Controllers\Controller;
+use App\Models\Pengguna;
+use App\Rules\S2PPassword;
 use Illuminate\Auth\Events\PasswordReset;
 use Illuminate\Http\RedirectResponse;
 use Illuminate\Http\Request;
-use Illuminate\Support\Facades\Hash;
 use Illuminate\Support\Facades\DB;
+use Illuminate\Support\Facades\Hash;
+use Illuminate\Support\Facades\Password;
 use Illuminate\Support\Str;
-use Illuminate\Validation\Rules;
 use Illuminate\Validation\ValidationException;
 use Inertia\Inertia;
 use Inertia\Response;
@@ -26,39 +28,61 @@ class NewPasswordController extends Controller
 
     public function store(Request $request): RedirectResponse
     {
-        $request->validate([
-            'token' => 'required',
-            'emel' => 'required|email',
-            'kata_laluan' => ['required', 'confirmed', Rules\Password::defaults()],
+        $validated = $request->validate([
+            'token' => ['required', 'string'],
+            'emel' => ['required', 'string', 'email'],
+            'kata_laluan' => [
+                'required',
+                'string',
+                'confirmed',
+                new S2PPassword,
+            ],
+        ], [
+            'kata_laluan.confirmed' => 'Pengesahan kata laluan baharu tidak sepadan.',
         ]);
 
-        $record = DB::table('password_reset_tokens')
-                    ->where('email', $request->emel)
-                    ->first();
+        $resetUser = null;
 
-        if (! $record || ! Hash::check($request->token, $record->token)) {
+        $status = DB::transaction(function () use (
+            $validated,
+            &$resetUser
+        ) {
+            $user = Pengguna::where('emel', $validated['emel'])
+                ->lockForUpdate()
+                ->first();
+
+            if (! $user) {
+                return Password::INVALID_USER;
+            }
+
+            return Password::broker()->reset(
+                [
+                    'emel' => $validated['emel'],
+                    'token' => $validated['token'],
+                    'password' => $validated['kata_laluan'],
+                ],
+                function (Pengguna $user, string $password) use (&$resetUser) {
+                    $user->forceFill([
+                        'kata_laluan' => Hash::make($password),
+                        'remember_token' => Str::random(60),
+                    ])->save();
+
+                    $resetUser = $user;
+                }
+            );
+        }, 3);
+
+        if ($status !== Password::PASSWORD_RESET) {
             throw ValidationException::withMessages([
-                'kata_laluan' => ['Token ini tidak sah atau telah luput. Sila minta pautan baru.'],
+                'kata_laluan' => 'Pautan reset tidak sah, telah luput atau telah digunakan. Sila minta pautan baharu.',
             ]);
         }
 
-        $user = \App\Models\Pengguna::where('emel', $request->emel)->first();
+        event(new PasswordReset($resetUser));
 
-        if ($user) {
-            $user->forceFill([
-                'kata_laluan' => Hash::make($request->kata_laluan),
-                'remember_token' => Str::random(60),
-            ])->save();
-
-            event(new PasswordReset($user));
-
-            DB::table('password_reset_tokens')->where('email', $request->emel)->delete();
-
-            return redirect()->route('login')->with('status', 'Kata laluan berjaya dikemaskini!');
-        }
-
-        throw ValidationException::withMessages([
-            'emel' => ['Pengguna tidak dijumpai.'],
-        ]);
+        return redirect()->route('login')->with(
+            'status',
+            'Kata laluan berjaya dikemaskini. Sila log masuk.'
+        );
     }
 }

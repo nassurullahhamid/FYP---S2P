@@ -35,6 +35,7 @@ export default function BorangPeminjamanPeralatan({ ticket, senaraiAset, senarai
     const currentUser = auth?.user || {};
     const currentRole = String(currentUser?.peranan || currentUser?.role || '').trim().toLowerCase();
     const statusFormat = String(ticket?.status_tiket || '').trim().toLowerCase();
+    const isWorkflowV2 = Number(ticket?.workflow_version) === 2;
 
     const isKUPP = ['ketua_upp', 'ketua upp', 'kupp'].includes(currentRole);
     const isKUTD = ['ketua_utd', 'ketua utd', 'kutd'].includes(currentRole);
@@ -72,7 +73,11 @@ export default function BorangPeminjamanPeralatan({ ticket, senaraiAset, senarai
             if (idAset && kuantitiLulus > 0 && kuantitiLulus <= stokSemasa) {
                 setLoading(true);
                 try {
-                    const response = await axios.post(route('tickets.janaSenaraiAset', ticket.id_tiket), {
+                    const generateAssetsRoute = isWorkflowV2
+                        ? route('tickets.workflow.generateLoanAssets', ticket.id_tiket)
+                        : route('tickets.janaSenaraiAset', ticket.id_tiket);
+
+                    const response = await axios.post(generateAssetsRoute, {
                         id_aset: idAset,
                         kuantiti_lulus: kuantitiLulus
                     });
@@ -90,7 +95,12 @@ export default function BorangPeminjamanPeralatan({ ticket, senaraiAset, senarai
 
         const timer = setTimeout(janaSenaraiAset, 500);
         return () => clearTimeout(timer);
-    }, [idAset, kuantitiLulus]);
+    }, [
+        idAset,
+        kuantitiLulus,
+        isWorkflowV2,
+        ticket.id_tiket
+    ]);
 
     // Handle equipment selection
     const handlePilihAset = (val) => {
@@ -116,7 +126,11 @@ export default function BorangPeminjamanPeralatan({ ticket, senaraiAset, senarai
             senarai_aset: asetDijana
         };
 
-        router.post(route('tickets.storePeminjaman', ticket.id_tiket), payload, {
+        const reviewLoanRoute = isWorkflowV2
+            ? route('tickets.workflow.reviewLoan', ticket.id_tiket)
+            : route('tickets.storePeminjaman', ticket.id_tiket);
+
+        router.post(reviewLoanRoute, payload, {
             preserveScroll: true,
             onSuccess: () => alert("Berjaya! Peminjaman diluluskan."),
         });
@@ -126,9 +140,22 @@ export default function BorangPeminjamanPeralatan({ ticket, senaraiAset, senarai
     const handleHantarSemuaKeKUTD = () => {
         if (!confirm("Adakah anda pasti untuk menghantar borang peminjaman untuk pengesahan?")) return;
 
-        router.post(route('tickets.hantarKeKUTD', ticket.id_tiket), {}, {
+        const submitLoanRoute = isWorkflowV2
+            ? route('tickets.workflow.submitLoan', ticket.id_tiket)
+            : route('tickets.hantarKeKUTD', ticket.id_tiket);
+
+        router.post(submitLoanRoute, {}, {
             preserveScroll: true,
             onSuccess: () => alert("Tiket peminjaman berjaya dihantar untuk pengesahan!"),
+            onError: (errors) => {
+                alert(
+                    "Tiket tidak dapat dihantar.\nSebab: "
+                    + (
+                        errors.sistem
+                        || Object.values(errors).join('\n')
+                    )
+                );
+            },
         });
     };
 
@@ -173,6 +200,45 @@ export default function BorangPeminjamanPeralatan({ ticket, senaraiAset, senarai
                 alert("Gagal menghantar tiket kepada Ketua Wilayah: " + (errors.sistem || Object.values(errors).join('\n')));
             }
         });
+    };
+
+    // KUTD confirmation handler for workflow v2
+    const handlePengesahanPeminjamanV2 = () => {
+        if (
+            !confirm(
+                "Adakah anda pasti untuk mengesahkan dan menutup tiket peminjaman ini?"
+            )
+        ) {
+            return;
+        }
+
+        router.post(
+            route(
+                'tickets.workflow.confirmLoan',
+                ticket.id_tiket
+            ),
+            {
+                ulasan: ulasanPengesahan
+            },
+            {
+                preserveScroll: true,
+                onSuccess: () => {
+                    alert(
+                        "Tiket peminjaman berjaya disahkan dan ditutup!"
+                    );
+                    setUlasanPengesahan('');
+                },
+                onError: (errors) => {
+                    alert(
+                        "Tiket tidak dapat disahkan.\nSebab: "
+                        + (
+                            errors.sistem
+                            || Object.values(errors).join('\n')
+                        )
+                    );
+                }
+            }
+        );
     };
 
     // Manager action handler (Approve and Close Ticket instantly)
@@ -221,7 +287,11 @@ export default function BorangPeminjamanPeralatan({ ticket, senaraiAset, senarai
 
                 const serialAset = asetDiurus.serial_no || asetDiurus.no_siri;
 
-                router.post(route('tickets.simpanBorangPeminjaman', ticket.id_tiket), {
+                const saveLoanFormRoute = isWorkflowV2
+                    ? route('tickets.workflow.saveLoanForm', ticket.id_tiket)
+                    : route('tickets.simpanBorangPeminjaman', ticket.id_tiket);
+
+                router.post(saveLoanFormRoute, {
                     serial_no: serialAset,
                     no_harta: formManual.no_pendaftaran_harta || '',
                     status_perkakasan: formManual.status_perkakasan,
@@ -613,7 +683,13 @@ export default function BorangPeminjamanPeralatan({ ticket, senaraiAset, senarai
                     </div>
 
                     {/* Submit to Manager button for PIC */}
-                    {isCurrentUserPIC && statusFormat === 'dalam tindakan pegawai' && (
+                    {isCurrentUserPIC && (
+                        statusFormat === 'dalam tindakan pegawai'
+                        || (
+                            isWorkflowV2
+                            && statusFormat === 'dalam tindakan'
+                        )
+                    ) && (
                         <div className="flex justify-end pt-5 border-t border-gray-100 mt-5">
                             <button
                                 type="button"
@@ -621,13 +697,58 @@ export default function BorangPeminjamanPeralatan({ ticket, senaraiAset, senarai
                                 className="inline-flex items-center justify-center gap-2 px-5 py-2.5 bg-[#002b66] hover:bg-[#001f4d] text-white font-black text-xs uppercase rounded-xl shadow-sm transition-all active:scale-95 cursor-pointer"
                             >
                                 <Send size={14} className="shrink-0" />
-                                <span>Sahkan Kemaskini Tiket</span>
+                                <span>KEMASKINI TIKET</span>
                             </button>
                         </div>
                     )}
 
+                    {/* KUTD final confirmation for workflow v2 */}
+                    {isWorkflowV2 && isMenungguPengesahan && isKUTD && (
+                        <div className="bg-emerald-50/60 p-5 rounded-2xl border border-emerald-200/80 shadow-sm space-y-4 mt-6 animate-in fade-in slide-in-from-bottom-3 duration-200">
+                            <div className="flex items-center gap-2">
+                                <div className="p-1.5 bg-emerald-100 text-emerald-700 rounded-lg">
+                                    <CheckCircle2 size={14} />
+                                </div>
+
+                                <h4 className="text-xs font-black text-emerald-900 uppercase tracking-wider">
+                                    Pengesahan Akhir Peminjaman
+                                </h4>
+                            </div>
+
+                            <p className="text-xs font-medium text-emerald-900/80 leading-relaxed">
+                                Semak maklumat peralatan dan borang peminjaman sebelum mengesahkan penutupan tiket.
+                            </p>
+
+                            <div className="space-y-2">
+                                <label className="text-[10px] uppercase font-black text-slate-500 tracking-wide block">
+                                    Ulasan Pengesahan:
+                                </label>
+
+                                <textarea
+                                    value={ulasanPengesahan}
+                                    onChange={(e) => setUlasanPengesahan(e.target.value)}
+                                    placeholder="Masukkan ulasan sekiranya perlu..."
+                                    maxLength={2000}
+                                    className="w-full p-3 bg-white border border-gray-200 rounded-xl text-xs font-medium text-slate-800 focus:ring-2 focus:ring-emerald-500/20 focus:outline-none"
+                                    rows={3}
+                                />
+                            </div>
+
+                            <div className="flex justify-end pt-3 border-t border-emerald-200/40">
+                                <button
+                                    type="button"
+                                    onClick={handlePengesahanPeminjamanV2}
+                                    className="inline-flex items-center justify-center gap-2 px-5 py-2.5 bg-emerald-600 hover:bg-emerald-700 text-white font-black text-xs uppercase rounded-xl shadow-sm transition-all active:scale-95 cursor-pointer"
+                                >
+                                    <CheckCircle2 size={14} className="shrink-0" />
+                                    <span>Sahkan & Tutup Tiket</span>
+                                </button>
+                            </div>
+                        </div>
+                    )}
+
                     {/* Unified Manager (KUPP/KUTD/KW) validation block */}
-                    {isMenungguPengesahan && isKUTD && (
+                    {isMenungguPengesahan && isKUTD && !isWorkflowV2 && (
                         <div className="bg-emerald-50/60 p-5 rounded-2xl border border-emerald-200/80 shadow-sm space-y-4 mt-6 animate-in fade-in slide-in-from-bottom-3 duration-200">
                             <div className="flex items-center gap-2">
                                 <div className="p-1.5 bg-emerald-100 text-emerald-700 rounded-lg">
@@ -711,6 +832,18 @@ export default function BorangPeminjamanPeralatan({ ticket, senaraiAset, senarai
                         </div>
                     )}
                 </div>
+            </div>
+        );
+    }
+
+    if (
+        isWorkflowV2
+        && statusFormat === 'menunggu semakan'
+        && !isKUPP
+    ) {
+        return (
+            <div className="mt-4 rounded-xl border border-blue-200 bg-blue-50 p-5 text-sm font-semibold text-blue-800">
+                Tiket peminjaman ini sedang menunggu semakan KUPP.
             </div>
         );
     }
@@ -827,7 +960,7 @@ export default function BorangPeminjamanPeralatan({ ticket, senaraiAset, senarai
                     <div className="bg-[#002b66] text-white w-7 h-7 flex items-center justify-center rounded font-bold text-xs">
                         C.
                     </div>
-                    <h3 className="text-sm font-black text-[#002b66] uppercase tracking-wider">Lantikan Pegawai</h3>
+                    <h3 className="text-sm font-black text-[#002b66] uppercase tracking-wider">Lantik Petugas</h3>
                 </div>
 
                 <div className="w-full md:w-1/2 space-y-2">
@@ -855,7 +988,7 @@ export default function BorangPeminjamanPeralatan({ ticket, senaraiAset, senarai
                     className="inline-flex items-center justify-center gap-2 px-5 py-2.5 bg-[#002b66] hover:bg-[#001f4d] text-white font-black text-xs uppercase rounded-xl shadow-sm transition-all active:scale-95 cursor-pointer"
                 >
                     <Send size={14} className="shrink-0" />
-                    <span>Sahkan Kemaskini Tiket</span>
+                    <span>KEMASKINI TIKET</span>
                 </button>
             </div>
 

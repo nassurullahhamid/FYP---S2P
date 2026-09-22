@@ -12,7 +12,6 @@ use Inertia\Response;
 
 class PasswordResetLinkController extends Controller
 {
-    // Display the password reset link request view
     public function create(): Response
     {
         return Inertia::render('Auth/ForgotPassword', [
@@ -20,24 +19,32 @@ class PasswordResetLinkController extends Controller
         ]);
     }
 
-   // Handle an incoming password reset link request
     public function store(Request $request): RedirectResponse
     {
-
-        $request->validate([
-            'emel' => 'required|email',
+        $validated = $request->validate([
+            'emel' => ['required', 'string', 'email'],
+        ], [
+            'emel.required' => 'Sila masukkan alamat e-mel.',
+            'emel.email' => 'Sila masukkan alamat e-mel yang sah.',
         ]);
 
-        $credentials = ['emel' => $request->emel];
+        $status = Password::broker()->sendResetLink([
+            'emel' => $validated['emel'],
+        ]);
 
-        $status = Password::sendResetLink($credentials);
-
-        if ($status == Password::RESET_LINK_SENT) {
-            return back()->with('status', __($status));
+        if (in_array($status, [
+            Password::RESET_LINK_SENT,
+            Password::INVALID_USER,
+            Password::RESET_THROTTLED,
+        ], true)) {
+            return back()->with(
+                'status',
+                'Jika e-mel berdaftar, pautan reset akan dihantar. Semak peti masuk atau folder spam. Jika baru meminta pautan, sila tunggu sebelum mencuba lagi.'
+            );
         }
 
         throw ValidationException::withMessages([
-            'emel' => [trans($status)],
+            'emel' => 'Permintaan reset tidak dapat diproses. Sila cuba lagi.',
         ]);
     }
 }

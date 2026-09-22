@@ -3,6 +3,7 @@
 namespace App\Http\Controllers\Auth;
 
 use App\Http\Controllers\Controller;
+use App\Rules\S2PPassword;
 use Illuminate\Http\RedirectResponse;
 use Illuminate\Http\Request;
 use Illuminate\Support\Facades\Hash;
@@ -16,7 +17,7 @@ class PasswordController extends Controller
 
         $validated = $request->validate([
             'current_password' => ['required', 'current_password'],
-            'password' => ['required', Password::defaults(), 'confirmed'],
+            'password' => ['required', 'string', new S2PPassword, 'confirmed'],
         ], [
             'current_password.current_password' => 'Kata laluan semasa yang anda masukkan adalah salah.',
             'password.confirmed' => 'Pengesahan kata laluan baharu tidak sepadan.',

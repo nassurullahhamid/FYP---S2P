@@ -99,6 +99,7 @@ export default function PaparanRingkasanLKK({ ticket, auth, senaraiPegawai }) {
 
     const perananUser = String(auth?.user?.peranan || auth?.user?.role || '').trim().toLowerCase();
     const statusFormat = String(ticket.status_tiket || '').trim().toLowerCase();
+    const isWorkflowV2 = Number(ticket.workflow_version) === 2;
 
     const isKUTD = ['ketua_utd', 'ketua utd', 'kutd'].includes(perananUser);
     const isKUPP = ['ketua_upp', 'ketua upp', 'kupp'].includes(perananUser);
@@ -107,6 +108,12 @@ export default function PaparanRingkasanLKK({ ticket, auth, senaraiPegawai }) {
     const isPenilaiFasa1 = (isKR && isKUTD) || (isTD && isKUPP);
     const isBolehPengesahPeminjaman = isPeminjaman && (isKUPP || isKUTD || isKW);
     const labelPenyemak = isKR ? 'KUTD' : 'KUPP';
+
+    const isNetworkValidationV2 =
+        isWorkflowV2
+        && isKR
+        && statusFormat === 'menunggu validasi'
+        && isKW;
 
     const isStatusPeminjamanSah = [
         'menunggu pengesahan',
@@ -135,9 +142,20 @@ export default function PaparanRingkasanLKK({ ticket, auth, senaraiPegawai }) {
 
         if (!confirm("Adakah anda pasti dengan tindakan ini?")) return;
 
-        const targetRoute = isKR
-            ? route('tickets.storeLKKRangkaian', ticket.id_tiket)
-            : route('tickets.lkk.storeTD', ticket.id_tiket);
+        const targetRoute = isNetworkValidationV2
+            ? route(
+                'tickets.workflow.validateNetworkLkk',
+                ticket.id_tiket
+            )
+            : isKR
+                ? route(
+                    'tickets.storeLKKRangkaian',
+                    ticket.id_tiket
+                )
+                : route(
+                    'tickets.lkk.storeTD',
+                    ticket.id_tiket
+                );
 
         let namaTindakan = jenisAksi;
         if (jenisAksi === 'kw_sahkan' || jenisAksi === 'lulus_tutup') {
@@ -154,7 +172,7 @@ export default function PaparanRingkasanLKK({ ticket, auth, senaraiPegawai }) {
             namaTindakan = 'KUPP_HANTAR_VALIDASI';
         }
 
-        const payload = {
+        const legacyPayload = {
             _method: 'POST',
             is_draft: false,
             tindakan: namaTindakan,
@@ -176,11 +194,33 @@ export default function PaparanRingkasanLKK({ ticket, auth, senaraiPegawai }) {
             cadangan_penambahbaikan: laporan.cadangan_penambahbaikan || 'n/a'
         };
 
+        const payload = isNetworkValidationV2
+            ? {
+                tindakan:
+                    jenisAksi === 'pulang_semak'
+                        ? 'PEMBETULAN'
+                        : 'LULUS',
+                ulasan:
+                    jenisAksi === 'pulang_semak'
+                        ? ulasanKetua.trim()
+                        : null,
+            }
+            : legacyPayload;
+
         router.post(targetRoute, payload, {
             preserveScroll: true,
             forceFormData: true,
             onSuccess: () => {
-                alert("Tindakan berjaya diproses!");
+                if (isNetworkValidationV2) {
+                    alert(
+                        jenisAksi === 'pulang_semak'
+                            ? 'LKK telah dipulangkan kepada KUTD untuk pembetulan.'
+                            : 'LKK berjaya divalidasi dan tiket telah ditutup.'
+                    );
+                } else {
+                    alert('Tindakan berjaya diproses!');
+                }
+
                 setUlasanKetua('');
             },
             onError: (err) => {

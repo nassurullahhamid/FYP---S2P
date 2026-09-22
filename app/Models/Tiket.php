@@ -11,10 +11,16 @@ use Illuminate\Support\Facades\DB;
 
 class Tiket extends Model
 {
+    public const WORKFLOW_VERSION_LEGACY = 1;
+
+    public const WORKFLOW_VERSION_CURRENT = 2;
+
     protected $table = 'tiket';
+
     protected $primaryKey = 'id_tiket';
 
     public $incrementing = false;
+
     protected $keyType = 'string';
 
     protected $fillable = [
@@ -39,7 +45,76 @@ class Tiket extends Model
         'pengguna_ic',
         'catatan_penutupan',
         'bukti_penutupan',
+        'disahkan_oleh_ic',
+        'disemak_oleh_ic',
+        'tarikh_semakan',
+        'workflow_version',
     ];
+
+    protected $casts = [
+        'workflow_version' => 'integer',
+        'tarikh_terima' => 'datetime',
+        'tarikh_tutup' => 'datetime',
+        'tarikh_semakan' => 'datetime',
+    ];
+
+    public function usesCurrentWorkflow(): bool
+    {
+        return $this->workflow_version === self::WORKFLOW_VERSION_CURRENT;
+    }
+
+    public function workflowKey(): ?string
+    {
+        $subKategori = $this->subKategori();
+
+        foreach (config('s2p_workflow.flows', []) as $key => $flow) {
+            if (($flow['kategori'] ?? null) !== $this->kategori) {
+                continue;
+            }
+
+            if (in_array($subKategori, $flow['sub_kategori'] ?? [], true)) {
+                return $key;
+            }
+        }
+
+        return null;
+    }
+
+    /**
+     * @return array<string, mixed>|null
+     */
+    public function workflowDefinition(): ?array
+    {
+        $key = $this->workflowKey();
+
+        if ($key === null) {
+            return null;
+        }
+
+        $definition = config("s2p_workflow.flows.{$key}");
+
+        return is_array($definition) ? $definition : null;
+    }
+
+    public function workflowRole(string $action): ?string
+    {
+        $definition = $this->workflowDefinition();
+        $role = $definition[$action] ?? null;
+
+        return is_string($role) && $role !== '' ? $role : null;
+    }
+
+    public function subKategori(): ?string
+    {
+        $value = match ($this->kategori) {
+            'Meja Bantuan' => $this->mejaBantuan?->sub_kategori,
+            'Konsultasi Rangkaian' => $this->konsultasiRangkaian?->sub_kategori,
+            'Transformasi Digital' => $this->transformasiDigital?->sub_kategori,
+            default => null,
+        };
+
+        return is_string($value) && $value !== '' ? $value : null;
+    }
 
     public function pengguna(): BelongsTo
     {
@@ -58,29 +133,29 @@ class Tiket extends Model
 
     // audit trail
     public function rekodLog($aktiviti, $pesanan, $statusBadge = 'DALAM PROSES')
-{
-    $user = Auth::user();
+    {
+        $user = Auth::user();
 
-    DB::table('jejak_tiket')->insert([
-        'id_tiket'       => $this->id_tiket,
-        'nama_pelaku'    => $user ? $user->nama : 'Sistem',
-        'peranan_pelaku' => $user ? $user->peranan : 'system',
-        'aktiviti'       => $aktiviti,
-        'pesanan'        => $pesanan,
-        'status_badge'   => $statusBadge,
-        'created_at'     => now(),
-        'updated_at'     => now(),
-    ]);
-}
+        DB::table('jejak_tiket')->insert([
+            'id_tiket' => $this->id_tiket,
+            'nama_pelaku' => $user ? $user->nama : 'Sistem',
+            'peranan_pelaku' => $user ? $user->peranan : 'system',
+            'aktiviti' => $aktiviti,
+            'pesanan' => $pesanan,
+            'status_badge' => $statusBadge,
+            'created_at' => now(),
+            'updated_at' => now(),
+        ]);
+    }
 
-protected static function boot()
-{
-    parent::boot();
+    protected static function boot()
+    {
+        parent::boot();
 
-    static::deleting(function ($ticket) {
-        DB::table('jejak_tiket')->where('id_tiket', $ticket->id_tiket)->delete();
-    });
-}
+        static::deleting(function ($ticket) {
+            DB::table('jejak_tiket')->where('id_tiket', $ticket->id_tiket)->delete();
+        });
+    }
 
     public function mejaBantuan(): HasOne
     {

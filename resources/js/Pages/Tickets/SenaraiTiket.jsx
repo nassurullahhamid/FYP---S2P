@@ -76,6 +76,11 @@ export default function SenaraiTiket({ auth, tickets, selectedKategori, selected
         'Menunggu Validasi': 'bg-teal-50 text-teal-700 border-teal-200',
         'Menunggu Semakan': 'bg-pink-50 text-pink-700 border-pink-200',
         'Menunggu Kelulusan': 'bg-cyan-50 text-cyan-700 border-cyan-200',
+        'Dalam Tindakan': 'bg-indigo-50 text-indigo-700 border-indigo-200',
+        'Menunggu Semakan Laporan': 'bg-blue-50 text-blue-700 border-blue-200',
+        'Laporan Perlu Pembetulan': 'bg-rose-50 text-rose-700 border-rose-200',
+        'Sedia Diverifikasi': 'bg-violet-50 text-violet-700 border-violet-200',
+        'Pembetulan Ketua': 'bg-amber-50 text-amber-700 border-amber-200',
     };
 
     // Calculate real-time ticket statistics from current data array
@@ -92,10 +97,19 @@ export default function SenaraiTiket({ auth, tickets, selectedKategori, selected
                 t.status_tiket === 'Dokumen Tidak Lengkap'
             ).length,
 
-            proses: ticketArray.filter(t =>
-                t.status_tiket === 'Dalam Tindakan Pegawai' ||
-                t.status_tiket === 'Tugasan UTD'
-            ).length,
+            proses: ticketArray.filter(t => [
+                'Dalam Tindakan Pegawai',
+                'Tugasan UTD',
+                'Menunggu Pengesahan',
+                'LKK Perlu Pembetulan',
+                'Menunggu Validasi',
+                'Menunggu Semakan',
+                'Dalam Tindakan',
+                'Menunggu Semakan Laporan',
+                'Laporan Perlu Pembetulan',
+                'Sedia Diverifikasi',
+                'Pembetulan Ketua',
+            ].includes(t.status_tiket)).length,
 
             siap: ticketArray.filter(t =>
                 t.status_tiket === 'Selesai'

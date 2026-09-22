@@ -57,7 +57,7 @@ export default function UpdatePasswordForm({ className = '' }) {
                 </h2>
 
                 <p className="mt-1 text-sm text-gray-600">
-                Pastikan akaun anda menggunakan kata laluan yang panjang dan rawak untuk kekal selamat.
+                Gunakan sekurang-kurangnya 12 aksara dengan huruf besar A-Z, huruf kecil a-z, nombor dan simbol.
                 </p>
             </header>
 

@@ -2,12 +2,12 @@
 
 namespace App\Http\Requests\Auth;
 
+use App\Models\Pengguna;
 use Illuminate\Auth\Events\Lockout;
-use Illuminate\Contracts\Validation\ValidationRule;
 use Illuminate\Foundation\Http\FormRequest;
 use Illuminate\Support\Facades\Auth;
+use Illuminate\Support\Facades\Hash;
 use Illuminate\Support\Facades\RateLimiter;
-use Illuminate\Support\Str;
 use Illuminate\Validation\ValidationException;
 
 class LoginRequest extends FormRequest
@@ -32,17 +32,35 @@ class LoginRequest extends FormRequest
     {
         $this->ensureIsNotRateLimited();
 
-
         $credentials = [
-            'no_ic' => $this->no_ic,
-            'password' => $this->password,
+            'no_ic' => $this->input('no_ic'),
+            'password' => $this->input('password'),
+            'status_pengguna' => 'Aktif',
         ];
 
         if (! Auth::attempt($credentials, $this->boolean('remember'))) {
-            RateLimiter::hit($this->throttleKey());
+            RateLimiter::hit($this->throttleKey(), 60);
 
             throw ValidationException::withMessages([
-                'no_ic' => __('auth.failed'),
+                'no_ic' => (function () {
+                    $pengguna = Pengguna::where(
+                        'no_ic',
+                        $this->input('no_ic')
+                    )->first();
+
+                    if (
+                        $pengguna &&
+                        $pengguna->status_pengguna !== 'Aktif' &&
+                        Hash::check(
+                            (string) $this->input('password'),
+                            $pengguna->kata_laluan
+                        )
+                    ) {
+                        return 'Akaun anda tidak aktif.';
+                    }
+
+                    return 'No. kad pengenalan atau kata laluan tidak sah.';
+                })(),
             ]);
         }
 
@@ -61,7 +79,7 @@ class LoginRequest extends FormRequest
         $seconds = RateLimiter::availableIn($this->throttleKey());
 
         throw ValidationException::withMessages([
-            'email' => trans('auth.throttle', [
+            'no_ic' => trans('auth.throttle', [
                 'seconds' => $seconds,
                 'minutes' => ceil($seconds / 60),
             ]),
@@ -71,6 +89,6 @@ class LoginRequest extends FormRequest
     // Get the rate limiting throttle key for the request
     public function throttleKey(): string
     {
-        return Str::transliterate(Str::lower($this->string('emel')).'|'.$this->ip());
+        return 'login:'.hash('sha256', trim((string) $this->input('no_ic')).'|'.$this->ip());
     }
 }

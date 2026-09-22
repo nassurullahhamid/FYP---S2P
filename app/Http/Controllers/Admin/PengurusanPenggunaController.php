@@ -4,11 +4,13 @@ namespace App\Http\Controllers\Admin;
 
 use App\Http\Controllers\Controller;
 use App\Models\Pengguna;
+use App\Rules\S2PPassword;
 use Illuminate\Http\Request;
 use Illuminate\Support\Facades\DB;
 use Illuminate\Support\Facades\Hash;
 use Illuminate\Support\Facades\Redirect;
 use Illuminate\Validation\Rule;
+use Illuminate\Validation\ValidationException;
 use Inertia\Inertia;
 
 class PengurusanPenggunaController extends Controller
@@ -20,7 +22,7 @@ class PengurusanPenggunaController extends Controller
         $users = Pengguna::latest()->get();
 
         return Inertia::render('Admin/PengurusanPengguna', [
-            'users' => $users
+            'users' => $users,
         ]);
     }
 
@@ -29,15 +31,24 @@ class PengurusanPenggunaController extends Controller
     {
         // Validate form fields using standard input keys
         $validated = $request->validate([
-            'no_ic'           => ['required', 'string', 'digits:12', 'unique:pengguna,no_ic'],
-            'nama'            => ['required', 'string', 'max:255'],
-            'emel'            => ['required', 'string', 'email', 'max:255', 'unique:pengguna,emel'],
-            'no_telefon'      => ['required', 'string', 'max:20'],
-            'jawatan'         => ['required', 'string', 'max:255'],
-            'gred'            => ['required', 'string', 'max:10'],
-            'peranan'         => ['required', 'string', Rule::in(['admin', 'ketua_upp', 'ketua_utd', 'juruteknik', 'ketua_wilayah'])],
+            'no_ic' => ['required', 'string', 'digits:12', 'unique:pengguna,no_ic'],
+            'nama' => ['required', 'string', 'max:255'],
+            'emel' => ['required', 'string', 'email', 'max:255', 'unique:pengguna,emel'],
+            'no_telefon' => ['required', 'string', 'max:20'],
+            'jawatan' => ['required', 'string', Rule::in([
+                'Pegawai Teknologi Maklumat',
+                'Penolong Pegawai Teknologi Maklumat',
+                'Juruteknik Komputer',
+                'Pembantu Tadbir',
+                'Pembantu Khidmat Am',
+            ])],
+            'gred' => ['required', 'string', Rule::in([
+                'F12', 'F10', 'F9', 'F7', 'F6', 'F5',
+                'FT2', 'FT1', 'N2', 'N1', 'H1',
+            ])],
+            'peranan' => ['required', 'string', Rule::in(['admin', 'ketua_upp', 'ketua_utd', 'juruteknik', 'ketua_wilayah'])],
             'status_pengguna' => ['required', 'string', Rule::in(['Aktif', 'Tidak Aktif'])],
-            'password'        => ['required', 'string', 'min:8', 'confirmed'],
+            'password' => ['required', 'string', new S2PPassword, 'confirmed'],
         ]);
 
         // Encrypt the plain-text credentials using safe bcrypt hashing mechanisms
@@ -58,14 +69,14 @@ class PengurusanPenggunaController extends Controller
         $user = Pengguna::where('no_ic', $no_ic)->firstOrFail();
 
         $validated = $request->validate([
-            'nama'            => ['required', 'string', 'max:255'],
-            'emel'            => ['required', 'string', 'email', 'max:255', Rule::unique('pengguna', 'emel')->ignore($user->no_ic, 'no_ic')],
-            'no_telefon'      => ['required', 'string', 'max:20'],
-            'jawatan'         => ['required', 'string', 'max:255'],
-            'gred'            => ['required', 'string', 'max:10'],
-            'peranan'         => ['required', 'string', Rule::in(['admin', 'ketua_upp', 'ketua_utd', 'juruteknik', 'ketua_wilayah'])],
+            'nama' => ['required', 'string', 'max:255'],
+            'emel' => ['required', 'string', 'email', 'max:255', Rule::unique('pengguna', 'emel')->ignore($user->no_ic, 'no_ic')],
+            'no_telefon' => ['required', 'string', 'max:20'],
+            'jawatan' => ['required', 'string', 'max:255'],
+            'gred' => ['required', 'string', 'max:10'],
+            'peranan' => ['required', 'string', Rule::in(['admin', 'ketua_upp', 'ketua_utd', 'juruteknik', 'ketua_wilayah'])],
             'status_pengguna' => ['required', 'string', Rule::in(['Aktif', 'Tidak Aktif'])],
-            'password'        => ['nullable', 'string', 'min:8', 'confirmed'],
+            'password' => ['nullable', 'string', new S2PPassword, 'confirmed'],
         ]);
 
         // Evaluate whether to re-encrypt and update password rows dynamically
@@ -75,7 +86,69 @@ class PengurusanPenggunaController extends Controller
 
         unset($validated['password']);
 
-        $user->update($validated);
+        // S2P: perlindungan Admin semasa kemas kini.
+        DB::transaction(function () use ($request, $no_ic, $validated) {
+            // Kunci rekod dalam urutan sama untuk perubahan serentak.
+            $users = Pengguna::query()
+                ->orderBy('no_ic')
+                ->lockForUpdate()
+                ->get();
+
+            $actor = $users->first(
+                fn ($item) => (string) $item->no_ic ===
+                    (string) $request->user()->no_ic
+            );
+
+            abort_unless(
+                $actor &&
+                $actor->peranan === 'admin' &&
+                $actor->status_pengguna === 'Aktif',
+                403,
+                'Hanya Admin aktif boleh mengemaskini pengguna.'
+            );
+
+            $target = $users->first(
+                fn ($item) => (string) $item->no_ic === (string) $no_ic
+            );
+
+            abort_unless($target, 404);
+
+            $isSelf = (string) $actor->no_ic === (string) $target->no_ic;
+
+            if ($isSelf && $validated['peranan'] !== 'admin') {
+                throw ValidationException::withMessages([
+                    'peranan' => 'Anda tidak boleh menukar peranan Admin sendiri.',
+                ]);
+            }
+
+            if ($isSelf && $validated['status_pengguna'] !== 'Aktif') {
+                throw ValidationException::withMessages([
+                    'status_pengguna' => 'Anda tidak boleh menyahaktifkan akaun sendiri.',
+                ]);
+            }
+
+            $activeAdmins = $users->filter(
+                fn ($item) => $item->peranan === 'admin' &&
+                    $item->status_pengguna === 'Aktif'
+            )->count();
+
+            $wasActiveAdmin =
+                $target->peranan === 'admin' &&
+                $target->status_pengguna === 'Aktif';
+
+            $willBeActiveAdmin =
+                $validated['peranan'] === 'admin' &&
+                $validated['status_pengguna'] === 'Aktif';
+
+            if ($wasActiveAdmin && ! $willBeActiveAdmin && $activeAdmins <= 1) {
+                throw ValidationException::withMessages([
+                    'peranan' => 'Sistem mesti mempunyai sekurang-kurangnya seorang Admin aktif.',
+                    'status_pengguna' => 'Admin aktif terakhir tidak boleh dinyahaktifkan.',
+                ]);
+            }
+
+            $target->update($validated);
+        }, 3);
 
         return Redirect::route('users.index')->with('success', 'Maklumat pengguna berjaya dikemaskini.');
     }
@@ -86,10 +159,17 @@ class PengurusanPenggunaController extends Controller
         // Search the personnel database index
         $user = Pengguna::where('no_ic', $no_ic)->firstOrFail();
 
+        // S2P: akaun Admin tidak boleh dipadam terus.
+        if ($user->peranan === 'admin') {
+            return back()->withErrors([
+                'sistem' => 'Akaun Admin tidak boleh dipadam terus. Minta Admin lain menukar peranan akaun ini terlebih dahulu.',
+            ]);
+        }
+
         // Pull down explicit class typing definitions directly from request pipeline wrappers
         if ($request->user()->no_ic === $user->no_ic) {
             return back()->withErrors([
-                'sistem' => 'Anda tidak dibenarkan memadam akaun anda sendiri yang sedang digunakan.'
+                'sistem' => 'Anda tidak dibenarkan memadam akaun anda sendiri yang sedang digunakan.',
             ]);
         }
 
@@ -105,11 +185,11 @@ class PengurusanPenggunaController extends Controller
 
         if ($mempunyaiSejarah) {
             return back()->withErrors([
-                'sistem' => 'Akaun ini mempunyai sejarah operasi dan tidak boleh dipadamkan. Tukar status pengguna kepada Tidak Aktif untuk mengekalkan rekod audit sistem.'
+                'sistem' => 'Akaun ini mempunyai sejarah operasi dan tidak boleh dipadamkan. Tukar status pengguna kepada Tidak Aktif untuk mengekalkan rekod audit sistem.',
             ]);
         }
 
-        $user->delete();
+        DB::transaction(fn () => $user->delete());
 
         return Redirect::route('users.index')->with('success', 'Akaun pengguna berjaya dipadamkan.');
     }

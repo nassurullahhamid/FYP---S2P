@@ -25,7 +25,18 @@ export default function KetuaUTDDashboard({ auth, stats, recentTickets }) {
             icon: <AlertCircle className="text-amber-600" />,
             bg: 'bg-amber-50',
             border: 'border-amber-100',
-            url: route('tickets.index', { status: ['Menunggu Klasifikasi', 'Menunggu Semakan Dokumen', 'Tugasan UTD' , 'Tugasan UPP' ,  'Menunggu Pengesahan',  'Menunggu Semakan' , 'Menunggu Kelulusan'] })
+            url: route('tickets.index', {
+                status: [
+                    'Menunggu Klasifikasi',
+                    'Menunggu Semakan Dokumen',
+                    'Tugasan UTD',
+                    'Tugasan UPP',
+                    'Menunggu Pengesahan',
+                    'Menunggu Semakan',
+                    'Menunggu Semakan Laporan',
+                    'Menunggu Kelulusan',
+                ],
+            })
         },
         {
             title: 'Tiket Dalam Tindakan',
@@ -33,7 +44,17 @@ export default function KetuaUTDDashboard({ auth, stats, recentTickets }) {
             icon: <Clock className="text-blue-600" />,
             bg: 'bg-blue-50',
             border: 'border-blue-100',
-            url: route('tickets.index', { status: ['Dalam Tindakan Pegawai' , 'LKK Perlu Pembetulan', 'Menunggu Validasi'] })
+            url: route('tickets.index', {
+                status: [
+                    'Dalam Tindakan Pegawai',
+                    'LKK Perlu Pembetulan',
+                    'Dalam Tindakan',
+                    'Laporan Perlu Pembetulan',
+                    'Sedia Diverifikasi',
+                    'Pembetulan Ketua',
+                    'Menunggu Validasi',
+                ],
+            })
         },
         {
             title: 'Tiket Selesai',
@@ -52,7 +73,13 @@ export default function KetuaUTDDashboard({ auth, stats, recentTickets }) {
         'Dalam Tindakan Pegawai': 'bg-indigo-50 border-indigo-200 text-indigo-700',
         'Dokumen Tidak Lengkap': 'bg-red-50 border-red-200 text-red-700',
         'Tugasan UTD': 'bg-purple-50 border-purple-200 text-purple-700',
-        'Selesai': 'bg-emerald-50 border-emerald-200 text-emerald-700'
+        'Selesai': 'bg-emerald-50 border-emerald-200 text-emerald-700',
+        'Dalam Tindakan': 'bg-indigo-50 border-indigo-200 text-indigo-700',
+        'Menunggu Semakan Laporan': 'bg-blue-50 border-blue-200 text-blue-700',
+        'Laporan Perlu Pembetulan': 'bg-rose-50 border-rose-200 text-rose-700',
+        'Sedia Diverifikasi': 'bg-violet-50 border-violet-200 text-violet-700',
+        'Pembetulan Ketua': 'bg-amber-50 border-amber-200 text-amber-700',
+        'Menunggu Validasi': 'bg-teal-50 border-teal-200 text-teal-700',
     };
 
     return (
@@ -105,7 +132,18 @@ export default function KetuaUTDDashboard({ auth, stats, recentTickets }) {
                                         <div className="space-y-3">
                                             {/* Belum Diambil Tindakan */}
                                             <Link
-                                                href={route('tickets.index', { kategori: namaModul, status: ['Menunggu Klasifikasi', 'Menunggu Semakan Dokumen', 'Tugasan UTD' , 'Tugasan UPP', 'Menunggu Pengesahan',  'Menunggu Semakan' ] })}
+                                                href={route('tickets.index', {
+                                                    kategori: namaModul,
+                                                    status: [
+                                                        'Menunggu Klasifikasi',
+                                                        'Menunggu Semakan Dokumen',
+                                                        'Tugasan UTD',
+                                                        'Tugasan UPP',
+                                                        'Menunggu Pengesahan',
+                                                        'Menunggu Semakan',
+                                                        'Menunggu Semakan Laporan',
+                                                    ],
+                                                })}
                                                 className="flex items-center justify-between p-4 bg-amber-50/50 rounded-2xl border border-amber-100 hover:bg-amber-100/50 transition-colors group"
                                             >
                                                 <div className="flex items-center gap-4">
@@ -120,7 +158,18 @@ export default function KetuaUTDDashboard({ auth, stats, recentTickets }) {
 
                                             {/* Dalam Tindakan */}
                                             <Link
-                                                href={route('tickets.index', { kategori: namaModul, status: ['Dalam Tindakan Pegawai'  , 'LKK Perlu Pembetulan', 'Menunggu Validasi '] })}
+                                                href={route('tickets.index', {
+                                                    kategori: namaModul,
+                                                    status: [
+                                                        'Dalam Tindakan Pegawai',
+                                                        'LKK Perlu Pembetulan',
+                                                        'Dalam Tindakan',
+                                                        'Laporan Perlu Pembetulan',
+                                                        'Sedia Diverifikasi',
+                                                        'Pembetulan Ketua',
+                                                        'Menunggu Validasi',
+                                                    ],
+                                                })}
                                                 className="flex items-center justify-between p-4 bg-blue-50/50 rounded-2xl border border-blue-100 hover:bg-blue-100/50 transition-colors group"
                                             >
                                                 <div className="flex items-center gap-4">

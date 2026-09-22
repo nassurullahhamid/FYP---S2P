@@ -49,7 +49,17 @@ export default function KetuaWilayahDashboard({ auth, kpiUmum, statsKategori, re
             icon: <FileText className="text-blue-600" />,
             bg: 'bg-blue-50',
             border: 'border-blue-100',
-            url: route('tickets.index', { status: ['Dalam Tindakan Pegawai', 'Menunggu Pengesahan',  'Menunggu Semakan' ,'LKK Perlu Pembetulan'] })
+            url: route('tickets.index', { status: [
+                    'Dalam Tindakan Pegawai',
+                    'Menunggu Pengesahan',
+                    'Menunggu Semakan',
+                    'LKK Perlu Pembetulan',
+                    'Dalam Tindakan',
+                    'Menunggu Semakan Laporan',
+                    'Laporan Perlu Pembetulan',
+                    'Sedia Diverifikasi',
+                    'Pembetulan Ketua',
+                ] })
         },
         {
             title: 'Tiket Selesai',
@@ -145,7 +155,17 @@ export default function KetuaWilayahDashboard({ auth, kpiUmum, statsKategori, re
 
                                     {/*  DALAM TINDAKAN */}
                                     <Link
-                                        href={route('tickets.index', { kategori: namaModul, status: ['Dalam Tindakan Pegawai', 'Menunggu Pengesahan',  'Menunggu Semakan' ,'LKK Perlu Pembetulan'] })}
+                                        href={route('tickets.index', { kategori: namaModul, status: [
+                    'Dalam Tindakan Pegawai',
+                    'Menunggu Pengesahan',
+                    'Menunggu Semakan',
+                    'LKK Perlu Pembetulan',
+                    'Dalam Tindakan',
+                    'Menunggu Semakan Laporan',
+                    'Laporan Perlu Pembetulan',
+                    'Sedia Diverifikasi',
+                    'Pembetulan Ketua',
+                ] })}
                                         className="flex items-center justify-between p-2.5 bg-blue-50/50 rounded-xl border border-blue-100 hover:bg-blue-100/50 transition-colors group"
                                     >
                                         <div className="flex items-center gap-3">

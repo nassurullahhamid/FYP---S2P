@@ -2,15 +2,14 @@
 
 namespace App\Models;
 
+use App\Notifications\CustomResetPassword;
+use Illuminate\Database\Eloquent\Relations\BelongsToMany;
+use Illuminate\Database\Eloquent\Relations\HasMany;
 use Illuminate\Foundation\Auth\User as Authenticatable;
 use Illuminate\Notifications\Notifiable;
-use App\Notifications\CustomResetPassword;
-use Illuminate\Database\Eloquent\Relations\HasMany;
-use Illuminate\Database\Eloquent\Relations\BelongsToMany;
 
 class Pengguna extends Authenticatable
 {
-
     use Notifiable;
 
     //  connects to the 'pengguna' table
@@ -21,6 +20,7 @@ class Pengguna extends Authenticatable
 
     // primary key is NOT an incrementing integer
     public $incrementing = false;
+
     protected $keyType = 'string';
 
     // Mass assignable attributes
@@ -33,7 +33,7 @@ class Pengguna extends Authenticatable
         'remember_token',
     ];
 
-    //reset password
+    // reset password
     public function getEmailForPasswordReset()
     {
         return $this->emel;
@@ -49,10 +49,14 @@ class Pengguna extends Authenticatable
         return $this->emel;
     }
 
-
     public function getAuthPassword()
     {
         return $this->kata_laluan;
+    }
+
+    public function getAuthPasswordName()
+    {
+        return 'kata_laluan';
     }
 
     // Relationship: One Pengguna can own many Assets
@@ -83,5 +87,4 @@ class Pengguna extends Authenticatable
     {
         return $this->hasMany(Laporan::class, 'pengguna_ic', 'no_ic');
     }
-
 }

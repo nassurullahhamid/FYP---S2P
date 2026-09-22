@@ -24,8 +24,9 @@ export default function InfoTiket({ auth, backUrl, ticket, senaraiPengguna, sena
     const [activeTab, setActiveTab] = useState('butiran');
     const [q1Lantik, setQ1Lantik] = useState('Ya');
     const [q2Serah, setQ2Serah] = useState('Tidak');
+    const [networkReviewProcessing, setNetworkReviewProcessing] = useState(false);
 
-    const { data, setData, post, processing, errors } = useForm({
+    const { data, setData, post, processing, errors, transform } = useForm({
         kategori: ticket.kategori || '',
         sub_kategori: ticket.sub_kategori || '',
         tahap_keutamaan: ticket.tahap_keutamaan || '',
@@ -34,6 +35,7 @@ export default function InfoTiket({ auth, backUrl, ticket, senaraiPengguna, sena
         senarai_pic_ic: [],
         status_pelaksanaan: 'Dalam Proses',
         catatan_penutupan: ticket.catatan_penutupan || '',
+        ulasan: ticket.ulasan_semakan || '',
         tarikh_lawatan: '',
         masa_lawatan: '',
         catatan_lawatan: '',
@@ -67,6 +69,7 @@ export default function InfoTiket({ auth, backUrl, ticket, senaraiPengguna, sena
     const isManagerRole = isKUPP || isKUTD || isKW;
 
     const isAlreadyClassified = ticket.status_tiket !== 'Menunggu Klasifikasi';
+    const isWorkflowV2 = Number(ticket.workflow_version) === 2;
 
     const assignedPetugasIC = ticket?.petugas?.map(p => p.no_ic).filter(Boolean) || [];
 
@@ -81,15 +84,45 @@ export default function InfoTiket({ auth, backUrl, ticket, senaraiPengguna, sena
     const isPembekalanICT = String(ticket.transformasi_digital?.sub_kategori || ticket.sub_kategori || '').toLowerCase().includes('pembekalan');
 
     const statusFormat = String(ticket.status_tiket || '').trim().toLowerCase();
-    const isDalamTindakan = statusFormat === 'dalam tindakan pegawai' || statusFormat === 'tindakan pic';
+    const isDalamTindakan =
+        statusFormat === 'dalam tindakan pegawai'
+        || statusFormat === 'tindakan pic'
+        || (
+            isWorkflowV2
+            && [
+                'dalam tindakan',
+                'laporan perlu pembetulan',
+            ].includes(statusFormat)
+        );
     const isSelesai = statusFormat === 'selesai';
     const isValidasiPhase = statusFormat.includes('validasi');
 
     const isAwalPhaseKR = ['menunggu klasifikasi', 'menunggu semakan dokumen', 'tugasan upp', 'tugasan utd'].includes(statusFormat);
-    const isLepasTindakanKR = ['menunggu pengesahan', 'menunggu pengesahan lkk', 'menunggu semakan', 'semakan kutd', 'lkk perlu pembetulan', 'menunggu validasi', 'menunggu validasi kw', 'validasi kw', 'selesai'].includes(statusFormat);
+    const isLepasTindakanKR = [
+        'menunggu pengesahan',
+        'menunggu pengesahan lkk',
+        'menunggu semakan',
+        'semakan kutd',
+        'menunggu semakan laporan',
+        'sedia diverifikasi',
+        'lkk perlu pembetulan',
+        'pembetulan ketua',
+        'menunggu validasi',
+        'menunggu validasi kw',
+        'validasi kw',
+        'selesai',
+    ].includes(statusFormat);
 
     const isAuthorizedToEdit =
-        (isKR && isKUTD && ['menunggu pengesahan', 'menunggu pengesahan lkk', 'menunggu semakan', 'semakan kutd', 'lkk perlu pembetulan'].includes(statusFormat))
+        (isKR && isKUTD && [
+            'menunggu pengesahan',
+            'menunggu pengesahan lkk',
+            'menunggu semakan',
+            'semakan kutd',
+            'sedia diverifikasi',
+            'lkk perlu pembetulan',
+            'pembetulan ketua',
+        ].includes(statusFormat))
         ||
         (isTD && !isPembekalanICT && (
             (isKUPP && ['tugasan upp', 'menunggu pengesahan'].includes(statusFormat)) ||
@@ -160,29 +193,204 @@ export default function InfoTiket({ auth, backUrl, ticket, senaraiPengguna, sena
     const handleSubmitAction = (e) => {
         e.preventDefault();
 
-        if (isTD) {
-            data.bisa_kendalikan = 'Ya';
-            data.no_ic = user?.no_ic || '';
-        } else {
-            data.bisa_kendalikan = q2Serah === 'Ya' ? 'Tidak' : 'Ya';
+        if (processing) return;
+
+        const klasifikasi = statusFormat === 'menunggu klasifikasi';
+        const semakanHelpdeskV2 =
+            isWorkflowV2
+            && statusFormat === 'menunggu semakan'
+            && isMB
+            && !isPeminjaman;
+
+        const semakanNetworkV2 =
+            isWorkflowV2
+            && statusFormat === 'menunggu semakan'
+            && isKR;
+
+        if (klasifikasi && !isManagerRole) {
+            alert('Hanya KUPP, KUTD atau KW boleh mengklasifikasikan tiket.');
+            return;
         }
 
-        post(route('tickets.processAction', ticket.id_tiket), {
+        if (semakanHelpdeskV2 && !isKUTD) {
+            alert('Hanya KUTD boleh menyemak tiket Meja Bantuan ini.');
+            return;
+        }
+
+        if (semakanNetworkV2 && !isKUTD) {
+            alert('Hanya KUTD boleh menyemak tiket Rangkaian ini.');
+            return;
+        }
+
+        transform((values) => {
+            if (klasifikasi) {
+                return {
+                    kategori: values.kategori,
+                    sub_kategori: values.sub_kategori,
+                    tahap_keutamaan: values.tahap_keutamaan,
+                };
+            }
+
+            if (semakanHelpdeskV2) {
+                return {
+                    pic_ic: values.no_ic,
+                };
+            }
+
+            if (semakanNetworkV2) {
+                return {
+                    senarai_pic_ic: (
+                        Array.isArray(values.senarai_pic_ic)
+                            ? values.senarai_pic_ic
+                            : []
+                    ).filter(Boolean),
+                    tarikh_lawatan: values.tarikh_lawatan,
+                    masa_lawatan: values.masa_lawatan,
+                    catatan_lawatan: values.catatan_lawatan,
+                };
+            }
+
+            // Kekalkan payload proses lama tanpa mengubah state terus.
+            return {
+                ...values,
+                bisa_kendalikan: isTD
+                    ? 'Ya'
+                    : (q2Serah === 'Ya' ? 'Tidak' : 'Ya'),
+                no_ic: isTD ? (user?.no_ic || '') : values.no_ic,
+            };
+        });
+
+        const submissionRoute = klasifikasi && isWorkflowV2
+            ? route('tickets.workflow.classify', ticket.id_tiket)
+            : semakanNetworkV2
+                ? route(
+                    'tickets.workflow.reviewNetwork',
+                    ticket.id_tiket
+                )
+                : semakanHelpdeskV2
+                    ? route(
+                        'tickets.workflow.reviewHelpdesk',
+                        ticket.id_tiket
+                    )
+                    : route(
+                        'tickets.processAction',
+                        ticket.id_tiket
+                    );
+
+        post(submissionRoute, {
             preserveScroll: true,
-            onSuccess: () => alert("Tiket telah berjaya dikemaskini!"),
-            onError: (err) => console.error('Ralat:', err)
+            onSuccess: () => alert(
+                klasifikasi
+                    ? 'Klasifikasi berjaya. Tiket kini Menunggu Semakan.'
+                    : semakanNetworkV2
+                        ? 'Tiket Rangkaian berjaya disemak, lawatan dijadualkan dan Juruteknik telah dilantik.'
+                        : semakanHelpdeskV2
+                            ? 'Tiket berjaya disemak dan petugas telah dilantik.'
+                            : 'Tiket telah berjaya dikemaskini!'
+            ),
+            onError: () => {
+                alert('Tindakan tidak berjaya. Sila semak mesej ralat pada borang.');
+            },
+            onFinish: () => transform((values) => values),
         });
     };
 
     const handlePicSubmit = (e) => {
         e.preventDefault();
-        post(route('tickets.hantarLaporanMB', ticket.id_tiket), {
+
+        if (processing) return;
+
+        const submissionRoute = isWorkflowV2
+            ? route(
+                'tickets.workflow.submitHelpdesk',
+                ticket.id_tiket
+            )
+            : route(
+                'tickets.hantarLaporanMB',
+                ticket.id_tiket
+            );
+
+        transform((values) => ({
+            catatan_penutupan: values.catatan_penutupan,
+        }));
+
+        post(submissionRoute, {
             preserveScroll: true,
-            onSuccess: () => alert("Catatan penutupan kerja berjaya dihantar untuk pengesahan!"),
-            onError: (err) => Object.values(err).forEach(message => alert(message))
+            onSuccess: () => alert(
+                'Catatan tindakan berjaya dihantar untuk pengesahan!'
+            ),
+            onError: (err) => {
+                Object.values(err).forEach(
+                    message => alert(message)
+                );
+            },
+            onFinish: () => transform((values) => values),
         });
     };
 
+    const handleNetworkSiteReview = (action) => {
+        if (networkReviewProcessing) return;
+
+        const isCorrection = action === 'PEMBETULAN';
+        const reviewComment = String(data.ulasan || '').trim();
+
+        if (isCorrection && !reviewComment) {
+            alert(
+                'Sila masukkan ulasan pembetulan terlebih dahulu.'
+            );
+            return;
+        }
+
+        const confirmationMessage = isCorrection
+            ? 'Adakah anda pasti mahu memulangkan laporan ini kepada Juruteknik untuk pembetulan?'
+            : 'Adakah anda pasti laporan tapak ini lengkap dan boleh diteruskan kepada penyediaan LKK?';
+
+        if (!confirm(confirmationMessage)) return;
+
+        setNetworkReviewProcessing(true);
+
+        router.post(
+            route(
+                'tickets.workflow.reviewNetworkSiteReport',
+                ticket.id_tiket
+            ),
+            {
+                tindakan: action,
+                ulasan: isCorrection
+                    ? reviewComment
+                    : null,
+            },
+            {
+                preserveScroll: true,
+                onSuccess: () => {
+                    alert(
+                        isCorrection
+                            ? 'Laporan dipulangkan kepada Juruteknik untuk pembetulan.'
+                            : 'Laporan tapak diterima. Penyediaan LKK boleh diteruskan.'
+                    );
+                },
+                onError: (reviewErrors) => {
+                    const messages = Object.values(
+                        reviewErrors
+                    ).flat();
+
+                    if (messages.length === 0) {
+                        alert(
+                            'Tindakan semakan laporan tidak berjaya.'
+                        );
+                        return;
+                    }
+
+                    messages.forEach(
+                        message => alert(message)
+                    );
+                },
+                onFinish: () => {
+                    setNetworkReviewProcessing(false);
+                },
+            }
+        );
+    };
     const handleCheckboxChange = (picIc) => {
         if (data.senarai_pic_ic.includes(picIc)) {
             setData('senarai_pic_ic', data.senarai_pic_ic.filter(ic => ic !== picIc));
@@ -191,8 +399,20 @@ export default function InfoTiket({ auth, backUrl, ticket, senaraiPengguna, sena
         }
     };
 
-    const validUsers = senaraiPengguna?.filter(p => p.no_ic && p.nama) || [];
-    const filteredUsers = validUsers.filter(p => p.nama.toLowerCase().includes(searchTerm.toLowerCase()));
+    const validUsers = senaraiPengguna?.filter(
+        p => p.no_ic && p.nama
+    ) || [];
+
+    const filteredUsers = validUsers.filter(
+        p => p.nama.toLowerCase().includes(
+            searchTerm.toLowerCase()
+        )
+    );
+
+    const activeTechnicians = validUsers.filter(
+        p => String(p.peranan || '').toLowerCase() === 'juruteknik'
+            && String(p.status_pengguna || '').toLowerCase() === 'aktif'
+    );
 
     const formatTarikh = (dateString) => {
         if (!dateString) return 'Belum Ditetapkan';
@@ -234,6 +454,8 @@ export default function InfoTiket({ auth, backUrl, ticket, senaraiPengguna, sena
 
     const tunjukBorangTindakanAm = !isSelesai && (
         (statusFormat === 'menunggu klasifikasi' && isManagerRole) ||
+        (isWorkflowV2 && statusFormat === 'menunggu semakan' && isKUTD && isKR) ||
+        (isWorkflowV2 && statusFormat === 'menunggu semakan' && isKUTD && isMB && !isPeminjaman) ||
         (statusFormat === 'menunggu semakan dokumen' && isKUPP && data.sub_kategori !== 'Peminjaman Peralatan ICT' && data.sub_kategori !== 'Pemodenan Bilik Mesyuarat') ||
         (statusFormat === 'tugasan utd' && isKUTD && !isTD)
     );
@@ -300,7 +522,7 @@ export default function InfoTiket({ auth, backUrl, ticket, senaraiPengguna, sena
                                                 activeTab === 'peminjaman' ? 'bg-blue-600 text-white shadow-md' : 'text-gray-500 hover:text-gray-800'
                                             }`}
                                         >
-                                            <Package2 size={14} /> Peminjaman Peralatan ICT
+                                            <Package2 size={14} /> MAKLUMAT PERALATAN
                                         </button>
                                     )}
 
@@ -332,7 +554,7 @@ export default function InfoTiket({ auth, backUrl, ticket, senaraiPengguna, sena
                                 <div className="space-y-5 animate-in fade-in duration-200">
                                     <div className="bg-white rounded-2xl border border-gray-200/80 shadow-sm overflow-hidden w-full">
                                         <div className="px-5 py-3.5 bg-[#001f4d] text-white">
-                                            <h4 className="text-[10px] font-black uppercase tracking-wider">Butiran Utama Aduan</h4>
+                                            <h4 className="text-[10px] font-black uppercase tracking-wider">Butiran Tiket</h4>
                                         </div>
 
                                         <div className="p-6 space-y-6">
@@ -343,8 +565,8 @@ export default function InfoTiket({ auth, backUrl, ticket, senaraiPengguna, sena
                                                     <div className="grid grid-cols-3"><span className="text-gray-400 font-medium">Email</span><span className="col-span-2 text-gray-600 font-medium pl-2">: &nbsp; {ticket.emel_pemohon}</span></div>
                                                     <div className="grid grid-cols-3"><span className="text-gray-400 font-medium">No. Telefon</span><span className="col-span-2 text-gray-800 pl-2">: &nbsp; {ticket.notel_pemohon || '012-3456789'}</span></div>
                                                     <div className="grid grid-cols-3"><span className="text-gray-400 font-medium">Agensi</span><span className="col-span-2 text-gray-800 uppercase pl-2">: &nbsp; {ticket.agensi}</span></div>
-                                                    <div className="grid grid-cols-3"><span className="text-gray-400 font-medium">Lokasi</span><span className="col-span-2 text-gray-800 uppercase pl-2">: &nbsp; {ticket.lokasi || 'Tiada Nyataan'}</span></div>
-                                                    <div className="grid grid-cols-3"><span className="text-gray-400 font-medium">Daerah</span><span className="col-span-2 text-gray-800 uppercase pl-2">: &nbsp; {ticket.daerah || 'Tiada Nyataan'}</span></div>
+                                                    <div className="grid grid-cols-3"><span className="text-gray-400 font-medium">Lokasi</span><span className="col-span-2 text-gray-800 uppercase pl-2">: &nbsp; {ticket.lokasi || '-'}</span></div>
+                                                    <div className="grid grid-cols-3"><span className="text-gray-400 font-medium">Daerah</span><span className="col-span-2 text-gray-800 uppercase pl-2">: &nbsp; {ticket.daerah || '-'}</span></div>
                                                 </div>
                                             </div>
 
@@ -399,7 +621,7 @@ export default function InfoTiket({ auth, backUrl, ticket, senaraiPengguna, sena
                                     </div>
 
                                     <div className="p-5 bg-white border border-gray-200/80 rounded-2xl shadow-sm">
-                                        <span className="block text-[10px] uppercase text-gray-400 font-black tracking-wider mb-2">Lampiran Dokumen</span>
+                                        <span className="block text-[10px] uppercase text-gray-400 font-black tracking-wider mb-2">Dokumen Lampiran</span>
                                         {ticket.lampiran ? (
                                             <div className="flex items-center justify-between p-3 bg-gray-50 border border-gray-200 rounded-xl group hover:bg-gray-100/70 transition-colors w-full">
                                                 <div className="flex items-center gap-2 min-w-0">
@@ -411,9 +633,17 @@ export default function InfoTiket({ auth, backUrl, ticket, senaraiPengguna, sena
                                         ) : <p className="text-xs text-gray-400 font-bold italic">Tiada lampiran fail dimuat naik.</p>}
                                     </div>
 
-                                    {tunjukBorangTindakanAm && (
+                                    {(statusFormat === 'menunggu klasifikasi' ? isManagerRole : tunjukBorangTindakanAm) && (
                                         <form onSubmit={handleSubmitAction} className="space-y-5 w-full">
                                             {errors.sistem && <div className="p-3 bg-red-50 border border-red-200 rounded-xl text-xs font-bold text-red-600">{errors.sistem}</div>}
+                                            {/* Ralat klasifikasi */}
+                                            {['kategori', 'sub_kategori', 'tahap_keutamaan'].map((field) => (
+                                                errors[field] ? (
+                                                    <p key={field} role="alert" className="text-xs font-bold text-red-600">
+                                                        {errors[field]}
+                                                    </p>
+                                                ) : null
+                                            ))}
 
                                             {statusFormat === 'menunggu klasifikasi' && (
                                                 <div className="bg-white p-6 rounded-2xl border border-gray-200/80 shadow-sm space-y-4">
@@ -455,8 +685,228 @@ export default function InfoTiket({ auth, backUrl, ticket, senaraiPengguna, sena
 
 
 
+                                            {isWorkflowV2 &&
+                                            statusFormat === 'menunggu semakan' &&
+                                            isKUTD &&
+                                            isKR && (
+                                                <div className="bg-white p-6 rounded-2xl border border-gray-200/80 shadow-sm space-y-5 animate-in fade-in duration-200">
+                                                    <div className="flex items-center gap-3 text-blue-900 border-b pb-3">
+                                                        <div className="p-2 bg-blue-50 rounded-xl text-blue-700">
+                                                            <Users size={18} />
+                                                        </div>
+
+                                                        <h4 className="font-black text-xs uppercase tracking-wider">
+                                                            Semakan, Jadual Lawatan dan Pelantikan Juruteknik
+                                                        </h4>
+                                                    </div>
+
+                                                    {errors.sistem && (
+                                                        <p
+                                                            role="alert"
+                                                            className="text-xs font-bold text-red-600"
+                                                        >
+                                                            {errors.sistem}
+                                                        </p>
+                                                    )}
+
+                                                    <div className="grid grid-cols-1 sm:grid-cols-2 gap-4">
+                                                        <div className="space-y-2">
+                                                            <label className="block text-[10px] font-black text-gray-500 uppercase tracking-wide">
+                                                                Tarikh Lawatan
+                                                                <span className="text-red-500 ml-1">*</span>
+                                                            </label>
+
+                                                            <input
+                                                                type="date"
+                                                                value={data.tarikh_lawatan}
+                                                                min={new Date().toISOString().split('T')[0]}
+                                                                onChange={e => setData('tarikh_lawatan', e.target.value)}
+                                                                className="w-full h-11 text-xs font-bold bg-white border border-gray-200 rounded-xl px-4 focus:outline-none focus:border-blue-500 shadow-sm"
+                                                                required
+                                                            />
+
+                                                            {errors.tarikh_lawatan && (
+                                                                <p role="alert" className="text-xs font-bold text-red-600">
+                                                                    {errors.tarikh_lawatan}
+                                                                </p>
+                                                            )}
+                                                        </div>
+
+                                                        <div className="space-y-2">
+                                                            <label className="block text-[10px] font-black text-gray-500 uppercase tracking-wide">
+                                                                Masa Lawatan
+                                                                <span className="text-red-500 ml-1">*</span>
+                                                            </label>
+
+                                                            <input
+                                                                type="time"
+                                                                value={data.masa_lawatan}
+                                                                onChange={e => setData('masa_lawatan', e.target.value)}
+                                                                className="w-full h-11 text-xs font-bold bg-white border border-gray-200 rounded-xl px-4 focus:outline-none focus:border-blue-500 shadow-sm"
+                                                                required
+                                                            />
+
+                                                            {errors.masa_lawatan && (
+                                                                <p role="alert" className="text-xs font-bold text-red-600">
+                                                                    {errors.masa_lawatan}
+                                                                </p>
+                                                            )}
+                                                        </div>
+                                                    </div>
+
+                                                    <div className="space-y-2">
+                                                        <label className="block text-[10px] font-black text-gray-500 uppercase tracking-wide">
+                                                            Catatan Lawatan
+                                                        </label>
+
+                                                        <textarea
+                                                            value={data.catatan_lawatan}
+                                                            onChange={e => setData('catatan_lawatan', e.target.value)}
+                                                            maxLength={2000}
+                                                            rows={3}
+                                                            placeholder="Masukkan catatan atau arahan lawatan sekiranya perlu..."
+                                                            className="w-full p-3 bg-white border border-gray-200 rounded-xl text-xs font-medium text-slate-800 focus:ring-2 focus:ring-blue-500/20 focus:outline-none"
+                                                        />
+
+                                                        {errors.catatan_lawatan && (
+                                                            <p role="alert" className="text-xs font-bold text-red-600">
+                                                                {errors.catatan_lawatan}
+                                                            </p>
+                                                        )}
+                                                    </div>
+
+                                                    <div className="space-y-3">
+                                                        <label className="block text-[10px] font-black text-gray-500 uppercase tracking-wide">
+                                                            Juruteknik
+                                                            <span className="text-red-500 ml-1">*</span>
+                                                        </label>
+
+                                                        {errors.senarai_pic_ic && (
+                                                            <p role="alert" className="text-xs font-bold text-red-600">
+                                                                {errors.senarai_pic_ic}
+                                                            </p>
+                                                        )}
+
+                                                        {(Array.isArray(data.senarai_pic_ic) && data.senarai_pic_ic.length > 0
+                                                            ? data.senarai_pic_ic
+                                                            : ['']
+                                                        ).map((selectedIc, index) => (
+                                                            <div key={index} className="flex items-center gap-2">
+                                                                <select
+                                                                    value={selectedIc}
+                                                                    onChange={e => handleUpdatePic(index, e.target.value)}
+                                                                    className="w-full h-11 text-xs font-bold bg-white border border-gray-200 rounded-xl px-4 focus:outline-none focus:border-blue-500 shadow-sm cursor-pointer uppercase text-gray-700"
+                                                                    required
+                                                                >
+                                                                    <option value="">
+                                                                        Pilih Juruteknik
+                                                                    </option>
+
+                                                                    {activeTechnicians.map(pegawai => {
+                                                                        const selectedTechnicians = Array.isArray(data.senarai_pic_ic)
+                                                                            ? data.senarai_pic_ic
+                                                                            : [];
+
+                                                                        const alreadySelected =
+                                                                            selectedTechnicians.includes(pegawai.no_ic)
+                                                                            && pegawai.no_ic !== selectedIc;
+
+                                                                        return (
+                                                                            <option
+                                                                                key={pegawai.no_ic}
+                                                                                value={pegawai.no_ic}
+                                                                                disabled={alreadySelected}
+                                                                            >
+                                                                                {pegawai.nama}
+                                                                                {alreadySelected ? ' (Telah Dipilih)' : ''}
+                                                                            </option>
+                                                                        );
+                                                                    })}
+                                                                </select>
+
+                                                                {(Array.isArray(data.senarai_pic_ic)
+                                                                    ? data.senarai_pic_ic.length
+                                                                    : 1
+                                                                ) > 1 && (
+                                                                    <button
+                                                                        type="button"
+                                                                        onClick={() => handleRemovePic(index)}
+                                                                        className="text-red-500 hover:text-red-700 p-2.5 hover:bg-red-50 rounded-xl border border-red-100 transition-colors"
+                                                                        title="Padam Juruteknik"
+                                                                    >
+                                                                        <Trash2 size={16} />
+                                                                    </button>
+                                                                )}
+                                                            </div>
+                                                        ))}
+
+                                                        <button
+                                                            type="button"
+                                                            onClick={handleAddPic}
+                                                            className="inline-flex items-center gap-1.5 px-3.5 py-2 text-blue-600 bg-blue-50 hover:bg-blue-100 border border-blue-200/60 rounded-xl transition-colors text-[10px] uppercase font-black shadow-sm"
+                                                        >
+                                                            <Plus size={13} />
+                                                            Tambah Juruteknik
+                                                        </button>
+                                                    </div>
+                                                </div>
+                                            )}
+                                            {isWorkflowV2 &&
+                                            statusFormat === 'menunggu semakan' &&
+                                            isKUTD &&
+                                            isMB &&
+                                            !isPeminjaman && (
+                                                <div className="bg-white p-6 rounded-2xl border border-gray-200/80 shadow-sm space-y-5 animate-in fade-in duration-200">
+                                                    <div className="flex items-center gap-3 text-blue-900 border-b pb-3">
+                                                        <div className="p-2 bg-blue-50 rounded-xl text-blue-700">
+                                                            <Users size={18} />
+                                                        </div>
+
+                                                        <h4 className="font-black text-xs uppercase tracking-wider">
+                                                            Semakan dan Pelantikan Petugas
+                                                        </h4>
+                                                    </div>
+
+                                                    {errors.pic_ic && (
+                                                        <p
+                                                            role="alert"
+                                                            className="text-xs font-bold text-red-600"
+                                                        >
+                                                            {errors.pic_ic}
+                                                        </p>
+                                                    )}
+
+                                                    <div className="space-y-2">
+                                                        <label className="block text-[10px] font-black text-gray-500 uppercase tracking-wide">
+                                                            Juruteknik/Petugas
+                                                            <span className="text-red-500 ml-1">*</span>
+                                                        </label>
+
+                                                        <select
+                                                            value={data.no_ic}
+                                                            onChange={e => setData('no_ic', e.target.value)}
+                                                            className="w-full h-11 text-xs font-bold bg-white border border-gray-200 rounded-xl px-4 focus:outline-none focus:border-blue-500 shadow-sm cursor-pointer uppercase text-gray-700"
+                                                            required
+                                                        >
+                                                            <option value="">
+                                                                Pilih Juruteknik
+                                                            </option>
+
+                                                            {activeTechnicians.map(pegawai => (
+                                                                <option
+                                                                    key={pegawai.no_ic}
+                                                                    value={pegawai.no_ic}
+                                                                >
+                                                                    {pegawai.nama}
+                                                                </option>
+                                                            ))}
+                                                        </select>
+                                                    </div>
+                                                </div>
+                                            )}
+
                                             {isKUPP &&
-                                            (statusFormat === 'menunggu klasifikasi' || statusFormat === 'menunggu semakan dokumen') &&
+                                            (statusFormat === 'menunggu semakan dokumen') &&
                                             data.sub_kategori !== 'Peminjaman Peralatan ICT' &&
                                             !isTD && (
                                                 <div className="space-y-4 w-full">
@@ -591,7 +1041,7 @@ export default function InfoTiket({ auth, backUrl, ticket, senaraiPengguna, sena
 
                                             <div className="flex justify-end items-center pt-3 border-t border-gray-100">
                                                 <button type="submit" disabled={processing} className="inline-flex items-center gap-2 px-5 py-3 bg-blue-600 hover:bg-blue-700 disabled:bg-gray-300 text-white font-black text-xs uppercase tracking-wider rounded-xl shadow-md w-full sm:w-auto justify-center cursor-pointer">
-                                                    <Send size={13} /> {processing ? 'Memproses...' : 'Sahkan Kemaskini Tiket'}
+                                                    <Send size={13} /> {processing ? 'Memproses...' : 'KEMASKINI TIKET'}
                                                 </button>
                                             </div>
                                         </form>
@@ -601,9 +1051,26 @@ export default function InfoTiket({ auth, backUrl, ticket, senaraiPengguna, sena
                                         <div className="bg-white rounded-2xl border border-gray-200 shadow-sm overflow-hidden">
                                             <div className="px-5 py-3.5 bg-[#002b66] text-white"><h4 className="text-[10px] font-black uppercase">Catatan Penutupan <span className="text-red-500 font-bold ml-1">*</span></h4></div>
                                             <form onSubmit={handlePicSubmit} className="p-5 space-y-4 text-xs font-bold">
-                                                <textarea value={data.catatan_penutupan} onChange={e => setData('catatan_penutupan', e.target.value)} placeholder="Sila nyatakan catatan penutupan..." className="w-full text-xs border rounded-xl p-3 min-h-[120px]" required />
+                                                <textarea
+                                                    value={data.catatan_penutupan}
+                                                    onChange={e => setData('catatan_penutupan', e.target.value)}
+                                                    placeholder="Sila nyatakan catatan tindakan..."
+                                                    minLength={isWorkflowV2 ? 10 : undefined}
+                                                    maxLength={2000}
+                                                    className="w-full text-xs border rounded-xl p-3 min-h-[120px]"
+                                                    required
+                                                />
                                                 <div className="flex justify-end">
-                                                    <button type="submit" className="inline-flex items-center justify-center gap-2 px-5 py-2.5 bg-blue-600 hover:bg-blue-700 text-white font-black text-xs uppercase rounded-xl shadow-sm transition-all active:scale-95 cursor-pointer"><Send size={14} className="shrink-0" /><span>Sahkan Kemaskini Tiket</span></button>
+                                                    <button
+                                                        type="submit"
+                                                        disabled={processing}
+                                                        className="inline-flex items-center justify-center gap-2 px-5 py-2.5 bg-blue-600 hover:bg-blue-700 disabled:bg-gray-300 text-white font-black text-xs uppercase rounded-xl shadow-sm transition-all active:scale-95 cursor-pointer"
+                                                    >
+                                                        <Send size={14} className="shrink-0" />
+                                                        <span>
+                                                            {processing ? 'Memproses...' : 'Hantar untuk Pengesahan'}
+                                                        </span>
+                                                    </button>
                                                 </div>
                                             </form>
                                         </div>
@@ -619,12 +1086,40 @@ export default function InfoTiket({ auth, backUrl, ticket, senaraiPengguna, sena
                                                     {ticket.catatan_penutupan || 'Tiada catatan penutupan.'}
                                                 </div>
 
+                                                {isWorkflowV2 && isKUTD && (
+                                                    <div className="space-y-2">
+                                                        <label className="block text-[10px] font-black text-gray-500 uppercase tracking-wide">
+                                                            Ulasan Pengesahan
+                                                        </label>
+
+                                                        <textarea
+                                                            value={data.ulasan}
+                                                            onChange={e => setData('ulasan', e.target.value)}
+                                                            placeholder="Masukkan ulasan sekiranya perlu..."
+                                                            maxLength={2000}
+                                                            rows={3}
+                                                            className="w-full p-3 bg-white border border-gray-200 rounded-xl text-xs font-medium text-slate-800 focus:ring-2 focus:ring-emerald-500/20 focus:outline-none"
+                                                        />
+
+                                                        {errors.ulasan && (
+                                                            <p
+                                                                role="alert"
+                                                                className="text-xs font-bold text-red-600"
+                                                            >
+                                                                {errors.ulasan}
+                                                            </p>
+                                                        )}
+                                                    </div>
+                                                )}
+
                                                 {(() => {
                                                     const wasHandedOverToUTD = auditTrail.some(log =>
                                                         String(log.aktiviti).toLowerCase().includes('dihantar ke utd')
                                                     );
 
-                                                    const isAuthorizedManager = wasHandedOverToUTD ? isKUTD : isKUPP;
+                                                    const isAuthorizedManager = isWorkflowV2
+                                                        ? isKUTD
+                                                        : (wasHandedOverToUTD ? isKUTD : isKUPP);
 
                                                     if (!isAuthorizedManager) return null;
 
@@ -634,9 +1129,37 @@ export default function InfoTiket({ auth, backUrl, ticket, senaraiPengguna, sena
                                                                 type="button"
                                                                 onClick={() => {
                                                                     if (confirm("Adakah anda pasti untuk mengesahkan laporan dan menutup tiket?")) {
-                                                                        router.post(route('tickets.sahkanTutupMB', ticket.id_tiket), {}, {
-                                                                            onSuccess: () => alert("Tiket telah berjaya ditutup!")
-                                                                        });
+                                                                        const confirmationRoute = isWorkflowV2
+                                                                            ? route(
+                                                                                'tickets.workflow.confirmHelpdesk',
+                                                                                ticket.id_tiket
+                                                                            )
+                                                                            : route(
+                                                                                'tickets.sahkanTutupMB',
+                                                                                ticket.id_tiket
+                                                                            );
+
+                                                                        const confirmationData = isWorkflowV2
+                                                                            ? { ulasan: data.ulasan }
+                                                                            : {};
+
+                                                                        router.post(
+                                                                            confirmationRoute,
+                                                                            confirmationData,
+                                                                            {
+                                                                                preserveScroll: true,
+                                                                                onSuccess: () => alert(
+                                                                                    "Tiket telah berjaya ditutup!"
+                                                                                ),
+                                                                                onError: (confirmationErrors) => {
+                                                                                    Object.values(
+                                                                                        confirmationErrors
+                                                                                    ).forEach(
+                                                                                        message => alert(message)
+                                                                                    );
+                                                                                }
+                                                                            }
+                                                                        );
                                                                     }
                                                                 }}
                                                                 className="inline-flex items-center justify-center gap-2 px-5 py-2.5 bg-emerald-600 hover:bg-emerald-700 text-white font-black text-xs uppercase rounded-xl shadow-sm transition-all active:scale-95 cursor-pointer"
@@ -681,6 +1204,78 @@ export default function InfoTiket({ auth, backUrl, ticket, senaraiPengguna, sena
                                         auth={auth}
                                         senaraiPengguna={senaraiPengguna}
                                     />
+
+                                    {isWorkflowV2 &&
+                                    statusFormat === 'menunggu semakan laporan' &&
+                                    isKUTD && (
+                                        <div className="bg-white rounded-2xl border border-gray-200 shadow-sm overflow-hidden animate-in fade-in duration-200">
+                                            <div className="px-5 py-3.5 bg-[#002b66] text-white">
+                                                <h4 className="text-[10px] font-black uppercase tracking-wider">
+                                                    Semakan Laporan Tapak
+                                                </h4>
+                                            </div>
+
+                                            <div className="p-5 space-y-4">
+                                                <div className="p-4 bg-blue-50 border border-blue-100 rounded-xl text-xs font-semibold text-blue-900 leading-relaxed">
+                                                    Semak semua maklumat tapak di atas. Terima laporan untuk meneruskan penyediaan LKK atau pulangkan kepada Juruteknik jika pembetulan diperlukan.
+                                                </div>
+
+                                                <div className="space-y-2">
+                                                    <label className="block text-[10px] font-black text-gray-500 uppercase tracking-wide">
+                                                        Ulasan Pembetulan
+                                                    </label>
+
+                                                    <textarea
+                                                        value={data.ulasan}
+                                                        onChange={e => setData('ulasan', e.target.value)}
+                                                        maxLength={2000}
+                                                        rows={4}
+                                                        placeholder="Wajib diisi jika laporan dipulangkan untuk pembetulan..."
+                                                        className="w-full p-3 bg-white border border-gray-200 rounded-xl text-xs font-medium text-slate-800 focus:ring-2 focus:ring-blue-500/20 focus:outline-none"
+                                                    />
+
+                                                    {errors.ulasan && (
+                                                        <p
+                                                            role="alert"
+                                                            className="text-xs font-bold text-red-600"
+                                                        >
+                                                            {errors.ulasan}
+                                                        </p>
+                                                    )}
+                                                </div>
+
+                                                <div className="flex flex-col-reverse sm:flex-row justify-end gap-3 pt-3 border-t border-gray-100">
+                                                    <button
+                                                        type="button"
+                                                        disabled={networkReviewProcessing}
+                                                        onClick={() => handleNetworkSiteReview('PEMBETULAN')}
+                                                        className="inline-flex items-center justify-center gap-2 px-5 py-2.5 bg-amber-500 hover:bg-amber-600 disabled:bg-gray-300 text-white font-black text-xs uppercase rounded-xl shadow-sm transition-all active:scale-95 cursor-pointer"
+                                                    >
+                                                        <XCircle size={14} />
+                                                        <span>
+                                                            {networkReviewProcessing
+                                                                ? 'Memproses...'
+                                                                : 'Pulangkan untuk Pembetulan'}
+                                                        </span>
+                                                    </button>
+
+                                                    <button
+                                                        type="button"
+                                                        disabled={networkReviewProcessing}
+                                                        onClick={() => handleNetworkSiteReview('TERIMA')}
+                                                        className="inline-flex items-center justify-center gap-2 px-5 py-2.5 bg-emerald-600 hover:bg-emerald-700 disabled:bg-gray-300 text-white font-black text-xs uppercase rounded-xl shadow-sm transition-all active:scale-95 cursor-pointer"
+                                                    >
+                                                        <CheckCircle2 size={14} />
+                                                        <span>
+                                                            {networkReviewProcessing
+                                                                ? 'Memproses...'
+                                                                : 'Terima dan Sediakan LKK'}
+                                                        </span>
+                                                    </button>
+                                                </div>
+                                            </div>
+                                        </div>
+                                    )}
                                 </div>
                             )}
 

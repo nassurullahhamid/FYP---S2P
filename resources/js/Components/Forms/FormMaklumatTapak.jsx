@@ -10,9 +10,14 @@ export default function FormMaklumatTapak({ ticket, auth, senaraiPengguna }) {
 
     const statusFormat = String(ticket.status_tiket || '').trim().toLowerCase();
     const isCurrentUserPIC = user?.no_ic && assignedPetugasIC.includes(user.no_ic);
+    const isWorkflowV2 = Number(ticket.workflow_version) === 2;
 
-    // Only allow editing for the assigned PIC while ticket is in active action
-    const bolehEditTapak = isCurrentUserPIC && statusFormat === 'dalam tindakan pegawai';
+    const isActiveSiteReportStatus = isWorkflowV2
+        ? ['dalam tindakan', 'laporan perlu pembetulan'].includes(statusFormat)
+        : statusFormat === 'dalam tindakan pegawai';
+
+    // Hanya Juruteknik yang dilantik boleh mengisi atau membetulkan laporan tapak.
+    const bolehEditTapak = isCurrentUserPIC && isActiveSiteReportStatus;
 
     // Toggle edit mode strictly for PIC when details are not filled yet
     const [isEditing, setIsEditing] = useState(bolehEditTapak && !dataTapak.jenis_premis);
@@ -72,16 +77,48 @@ export default function FormMaklumatTapak({ ticket, auth, senaraiPengguna }) {
         setData('ulasan_teknikal', arrayBaru);
     };
 
-    // Submit site visit form and send to KUTD
+    // Hantar laporan tapak melalui route yang sepadan dengan versi workflow.
     const handleHantarTapak = (e) => {
         e.preventDefault();
-        post(route('tickets.storeLaporanTapak', ticket.id_tiket), {
+
+        if (processing) return;
+
+        const submissionRoute = isWorkflowV2
+            ? route(
+                'tickets.workflow.submitNetworkSiteReport',
+                ticket.id_tiket
+            )
+            : route(
+                'tickets.storeLaporanTapak',
+                ticket.id_tiket
+            );
+
+        post(submissionRoute, {
             preserveScroll: true,
             onSuccess: () => {
-                alert('Maklumat tapak berjaya disimpan dan dihantar ke KUTD!');
+                alert(
+                    isWorkflowV2
+                        ? 'Laporan tapak berjaya dihantar untuk semakan KUTD!'
+                        : 'Maklumat tapak berjaya disimpan dan dihantar ke KUTD!'
+                );
                 setIsEditing(false);
             },
-            onError: (err) => console.error(err)
+            onError: (submissionErrors) => {
+                const messages = Object.values(
+                    submissionErrors
+                ).flat();
+
+                if (messages.length === 0) {
+                    alert(
+                        'Laporan tapak tidak berjaya dihantar.'
+                    );
+                    return;
+                }
+
+                messages.forEach(
+                    message => alert(message)
+                );
+            },
         });
     };
 

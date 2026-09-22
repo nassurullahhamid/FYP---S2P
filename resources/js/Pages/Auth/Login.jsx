@@ -143,12 +143,7 @@ export default function Login({ status, canResetPassword }) {
                     <div className="flex-1 border-t border-white/5"></div>
                     <p className="mx-4 text-xs text-white/40 font-medium tracking-wide">
                         Belum ada akaun?{' '}
-                        <Link
-                            href={route('register')}
-                            className="font-bold text-blue-400 hover:text-blue-300 hover:underline transition-colors ml-0.5"
-                        >
-                            Daftar Sekarang
-                        </Link>
+                        <span>Untuk akaun baharu, sila hubungi ADMIN.</span>
                     </p>
                     <div className="flex-1 border-t border-white/5"></div>
                 </div>
