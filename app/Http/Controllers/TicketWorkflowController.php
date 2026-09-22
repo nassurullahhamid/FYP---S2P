@@ -291,6 +291,21 @@ class TicketWorkflowController extends Controller
                         'updated_at' => now(),
                     ]);
 
+                Laporan::query()->updateOrCreate(
+                    [
+                        'id_tiket' => $id_tiket,
+                    ],
+                    [
+                        'pendahuluan' => $validated['pendahuluan'],
+                        'objektif' => json_encode(
+                            $validated['objektif'],
+                            JSON_THROW_ON_ERROR
+                            | JSON_UNESCAPED_UNICODE
+                        ),
+                        'pengguna_ic' => $reviewer->no_ic,
+                    ]
+                );
+
                 DB::table('tugasan_tiket')
                     ->where('id_tiket', $id_tiket)
                     ->delete();
@@ -968,6 +983,10 @@ class TicketWorkflowController extends Controller
                         'PEMBETULAN'
                     );
                 } else {
+                    $report->update([
+                        'disemak_oleh' => $validator->nama,
+                    ]);
+
                     $ticket->update([
                         'status_tiket' => config(
                             's2p_workflow.statuses.completed',
@@ -1238,10 +1257,8 @@ class TicketWorkflowController extends Controller
                             ?? '',
                         'logical_diagram' => $logicalPath,
                         'physical_diagram' => $physicalPath,
-                        'disediakan_oleh' => $validated['disediakan_oleh']
-                            ?? '',
-                        'disemak_oleh' => $validated['disemak_oleh']
-                            ?? '',
+                        'disediakan_oleh' => $reviewer->nama,
+                        'disemak_oleh' => $existingReport?->disemak_oleh,
                         'pengguna_ic' => $reviewer->no_ic,
                     ];
 
@@ -1257,15 +1274,16 @@ class TicketWorkflowController extends Controller
                                 'Menunggu Validasi'
                             ),
                             'ulasan_semakan' => null,
+                            'disahkan_oleh_ic' => $reviewer->no_ic,
                         ]);
 
                         $ticket->rekodLog(
                             config(
-                                's2p_workflow.trail_events.confirmed',
-                                'DISAHKAN'
+                                's2p_workflow.trail_events.verified',
+                                'DIVERIFIKASI'
                             ),
                             'Oleh '.$reviewer->nama,
-                            'DISAHKAN'
+                            'DIVERIFIKASI'
                         );
 
                         DB::table('notifications')
@@ -1544,8 +1562,8 @@ class TicketWorkflowController extends Controller
                             'PEMBETULAN DIMINTA'
                         )
                         : config(
-                            's2p_workflow.trail_events.verified',
-                            'DIVERIFIKASI'
+                            's2p_workflow.trail_events.confirmed',
+                            'DISAHKAN'
                         ),
                     'Oleh '.$reviewer->nama,
                     $isCorrection
@@ -1627,172 +1645,291 @@ class TicketWorkflowController extends Controller
         $validated = $request->validated();
         $technician = $request->user();
 
-        [$ticket, $subCategory] = DB::transaction(
-            function () use (
-                $id_tiket,
-                $technician,
-                $validated
-            ): array {
-                $ticket = Tiket::query()
-                    ->where('id_tiket', $id_tiket)
-                    ->lockForUpdate()
-                    ->firstOrFail();
+        $newLogicalPath = null;
+        $newPhysicalPath = null;
+        $oldLogicalPath = null;
+        $oldPhysicalPath = null;
 
-                if (! $ticket->usesCurrentWorkflow()) {
-                    throw ValidationException::withMessages([
-                        'sistem' => 'Tiket ini masih menggunakan workflow lama.',
-                    ]);
-                }
+        try {
+            if ($request->hasFile('logical_diagram')) {
+                $newLogicalPath = $request
+                    ->file('logical_diagram')
+                    ->store('diagrams', 'public');
+            }
 
-                if (
-                    $ticket->kategori
-                    !== 'Konsultasi Rangkaian'
-                ) {
-                    throw ValidationException::withMessages([
-                        'sistem' => 'Tindakan ini hanya dibenarkan untuk tiket Konsultasi Rangkaian.',
-                    ]);
-                }
+            if ($request->hasFile('physical_diagram')) {
+                $newPhysicalPath = $request
+                    ->file('physical_diagram')
+                    ->store('diagrams', 'public');
+            }
 
-                $allowedStatuses = [
-                    config(
-                        's2p_workflow.statuses.in_progress',
-                        'Dalam Tindakan'
-                    ),
-                    config(
-                        's2p_workflow.statuses.pic_correction',
-                        'Laporan Perlu Pembetulan'
-                    ),
-                ];
+            [
+                $ticket,
+                $subCategory,
+                $oldLogicalPath,
+                $oldPhysicalPath,
+            ] = DB::transaction(
+                function () use (
+                    $id_tiket,
+                    $technician,
+                    $validated,
+                    $newLogicalPath,
+                    $newPhysicalPath
+                ): array {
+                    $ticket = Tiket::query()
+                        ->where('id_tiket', $id_tiket)
+                        ->lockForUpdate()
+                        ->firstOrFail();
 
-                if (
-                    ! in_array(
-                        $ticket->status_tiket,
-                        $allowedStatuses,
-                        true
+                    if (! $ticket->usesCurrentWorkflow()) {
+                        throw ValidationException::withMessages([
+                            'sistem' => 'Tiket ini masih menggunakan workflow lama.',
+                        ]);
+                    }
+
+                    if (
+                        $ticket->kategori
+                        !== 'Konsultasi Rangkaian'
+                    ) {
+                        throw ValidationException::withMessages([
+                            'sistem' => 'Tindakan ini hanya dibenarkan untuk tiket Konsultasi Rangkaian.',
+                        ]);
+                    }
+
+                    $allowedStatuses = [
+                        config(
+                            's2p_workflow.statuses.in_progress',
+                            'Dalam Tindakan'
+                        ),
+                        config(
+                            's2p_workflow.statuses.pic_correction',
+                            'Laporan Perlu Pembetulan'
+                        ),
+                    ];
+
+                    if (
+                        ! in_array(
+                            $ticket->status_tiket,
+                            $allowedStatuses,
+                            true
+                        )
+                    ) {
+                        throw ValidationException::withMessages([
+                            'sistem' => 'Status tiket tidak membenarkan laporan tapak dihantar.',
+                        ]);
+                    }
+
+                    $isAssigned = DB::table('tugasan_tiket')
+                        ->where('id_tiket', $id_tiket)
+                        ->where('no_ic', $technician->no_ic)
+                        ->lockForUpdate()
+                        ->exists();
+
+                    if (! $isAssigned) {
+                        throw ValidationException::withMessages([
+                            'sistem' => 'Anda bukan Juruteknik yang dilantik untuk tiket ini.',
+                        ]);
+                    }
+
+                    $networkRecord = DB::table(
+                        'konsultasi_rangkaian'
                     )
-                ) {
-                    throw ValidationException::withMessages([
-                        'sistem' => 'Status tiket tidak membenarkan laporan tapak dihantar.',
+                        ->where('id_tiket', $id_tiket)
+                        ->lockForUpdate()
+                        ->first();
+
+                    if ($networkRecord === null) {
+                        throw ValidationException::withMessages([
+                            'sistem' => 'Rekod Konsultasi Rangkaian tidak ditemui.',
+                        ]);
+                    }
+
+                    $subCategory = trim(
+                        (string) $networkRecord->sub_kategori
+                    );
+
+                    $allowedSubCategories = config(
+                        's2p_workflow.flows.rangkaian.sub_kategori',
+                        []
+                    );
+
+                    if (
+                        ! in_array(
+                            $subCategory,
+                            $allowedSubCategories,
+                            true
+                        )
+                    ) {
+                        throw ValidationException::withMessages([
+                            'sistem' => 'Subkategori tiket tidak menggunakan aliran Konsultasi Rangkaian.',
+                        ]);
+                    }
+
+                    $technicalReviews = json_encode(
+                        $validated['ulasan_teknikal'],
+                        JSON_THROW_ON_ERROR
+                        | JSON_UNESCAPED_UNICODE
+                    );
+
+                    $recommendations = json_encode(
+                        $validated['cadangan_penambahbaikan'],
+                        JSON_THROW_ON_ERROR
+                        | JSON_UNESCAPED_UNICODE
+                    );
+
+                    $existingReport = Laporan::query()
+                        ->where('id_tiket', $id_tiket)
+                        ->lockForUpdate()
+                        ->first();
+
+                    $oldLogicalPath =
+                        $existingReport?->logical_diagram;
+
+                    $oldPhysicalPath =
+                        $existingReport?->physical_diagram;
+
+                    $logicalPath =
+                        $newLogicalPath
+                        ?? $oldLogicalPath;
+
+                    $physicalPath =
+                        $newPhysicalPath
+                        ?? $oldPhysicalPath;
+
+                    if (
+                        empty($logicalPath)
+                        || empty($physicalPath)
+                    ) {
+                        throw ValidationException::withMessages([
+                            'sistem' => 'Logical diagram dan physical diagram mesti disediakan sebelum laporan dihantar.',
+                        ]);
+                    }
+
+                    DB::table('konsultasi_rangkaian')
+                        ->where('id_tiket', $id_tiket)
+                        ->update([
+                            'nama_lokasi_bangunan' => $validated['nama_lokasi_bangunan']
+                                ?? null,
+                            'jenis_premis' => $validated['jenis_premis'],
+                            'bilik_server' => $validated['bilik_server'],
+                            'rack_server' => $validated['rack_server'],
+                            'sumber_kuasa' => $validated['sumber_kuasa'],
+                            'persekitaran_fizikal' => $validated['persekitaran_fizikal'],
+                            'liputan' => $validated['liputan'],
+                            'jenis_capaian' => $validated['jenis_capaian'],
+                            'kelajuan' => $validated['kelajuan'],
+                            'lan' => $validated['lan'],
+                            'ap' => $validated['ap'],
+                            'firewall' => $validated['firewall'],
+                            'rumusan' => $validated['rumusan'],
+                            'ulasan_teknikal' => $technicalReviews,
+                            'updated_at' => now(),
+                        ]);
+
+                    Laporan::query()->updateOrCreate(
+                        [
+                            'id_tiket' => $id_tiket,
+                        ],
+                        [
+                            'ulasan_teknikal' => $technicalReviews,
+                            'cadangan_penambahbaikan' => $recommendations,
+                            'logical_diagram' => $logicalPath,
+                            'physical_diagram' => $physicalPath,
+                            'pengguna_ic' => $technician->no_ic,
+                        ]
+                    );
+
+                    $ticket->update([
+                        'status_tiket' => config(
+                            's2p_workflow.statuses.report_review',
+                            'Menunggu Semakan Laporan'
+                        ),
+                        'ulasan_semakan' => null,
                     ]);
-                }
 
-                $isAssigned = DB::table('tugasan_tiket')
-                    ->where('id_tiket', $id_tiket)
-                    ->where('no_ic', $technician->no_ic)
-                    ->lockForUpdate()
-                    ->exists();
+                    $ticket->rekodLog(
+                        config(
+                            's2p_workflow.trail_events.performed',
+                            'DILAKSANA'
+                        ),
+                        'Oleh '.$technician->nama,
+                        'INFO'
+                    );
 
-                if (! $isAssigned) {
-                    throw ValidationException::withMessages([
-                        'sistem' => 'Anda bukan Juruteknik yang dilantik untuk tiket ini.',
-                    ]);
-                }
+                    DB::table('notifications')
+                        ->where(
+                            'notifiable_type',
+                            $technician->getMorphClass()
+                        )
+                        ->where(
+                            'notifiable_id',
+                            (string) $technician->getKey()
+                        )
+                        ->whereNull('read_at')
+                        ->where(
+                            'data',
+                            'LIKE',
+                            '%'.$id_tiket.'%'
+                        )
+                        ->update([
+                            'read_at' => now(),
+                            'updated_at' => now(),
+                        ]);
 
-                $networkRecord = DB::table(
-                    'konsultasi_rangkaian'
-                )
-                    ->where('id_tiket', $id_tiket)
-                    ->lockForUpdate()
-                    ->first();
-
-                if ($networkRecord === null) {
-                    throw ValidationException::withMessages([
-                        'sistem' => 'Rekod Konsultasi Rangkaian tidak ditemui.',
-                    ]);
-                }
-
-                $subCategory = trim(
-                    (string) $networkRecord->sub_kategori
-                );
-
-                $allowedSubCategories = config(
-                    's2p_workflow.flows.rangkaian.sub_kategori',
-                    []
-                );
-
-                if (
-                    ! in_array(
+                    return [
+                        $ticket->fresh(),
                         $subCategory,
-                        $allowedSubCategories,
-                        true
-                    )
-                ) {
-                    throw ValidationException::withMessages([
-                        'sistem' => 'Subkategori tiket tidak menggunakan aliran Konsultasi Rangkaian.',
-                    ]);
-                }
-
-                $technicalReviews = json_encode(
-                    $validated['ulasan_teknikal'],
-                    JSON_THROW_ON_ERROR
-                    | JSON_UNESCAPED_UNICODE
+                        $oldLogicalPath,
+                        $oldPhysicalPath,
+                    ];
+                },
+                3
+            );
+        } catch (\Throwable $exception) {
+            if ($newLogicalPath !== null) {
+                Storage::disk('public')->delete(
+                    $newLogicalPath
                 );
+            }
 
-                DB::table('konsultasi_rangkaian')
-                    ->where('id_tiket', $id_tiket)
-                    ->update([
-                        'nama_lokasi_bangunan' => $validated['nama_lokasi_bangunan']
-                            ?? null,
-                        'jenis_premis' => $validated['jenis_premis'],
-                        'bilik_server' => $validated['bilik_server'],
-                        'rack_server' => $validated['rack_server'],
-                        'sumber_kuasa' => $validated['sumber_kuasa'],
-                        'persekitaran_fizikal' => $validated['persekitaran_fizikal'],
-                        'liputan' => $validated['liputan'],
-                        'jenis_capaian' => $validated['jenis_capaian'],
-                        'kelajuan' => $validated['kelajuan'],
-                        'lan' => $validated['lan'],
-                        'ap' => $validated['ap'],
-                        'firewall' => $validated['firewall'],
-                        'rumusan' => $validated['rumusan'],
-                        'ulasan_teknikal' => $technicalReviews,
-                        'updated_at' => now(),
-                    ]);
-
-                $ticket->update([
-                    'status_tiket' => config(
-                        's2p_workflow.statuses.report_review',
-                        'Menunggu Semakan Laporan'
-                    ),
-                    'ulasan_semakan' => null,
-                ]);
-
-                $ticket->rekodLog(
-                    config(
-                        's2p_workflow.trail_events.performed',
-                        'DILAKSANA'
-                    ),
-                    'Oleh '.$technician->nama,
-                    'INFO'
+            if ($newPhysicalPath !== null) {
+                Storage::disk('public')->delete(
+                    $newPhysicalPath
                 );
+            }
 
-                DB::table('notifications')
-                    ->where(
-                        'notifiable_type',
-                        $technician->getMorphClass()
-                    )
-                    ->where(
-                        'notifiable_id',
-                        (string) $technician->getKey()
-                    )
-                    ->whereNull('read_at')
-                    ->where(
-                        'data',
-                        'LIKE',
-                        '%'.$id_tiket.'%'
-                    )
-                    ->update([
-                        'read_at' => now(),
-                        'updated_at' => now(),
-                    ]);
+            throw $exception;
+        }
 
-                return [
-                    $ticket->fresh(),
-                    $subCategory,
-                ];
-            },
-            3
-        );
+        try {
+            if (
+                $newLogicalPath !== null
+                && $oldLogicalPath !== null
+                && $oldLogicalPath !== $newLogicalPath
+            ) {
+                Storage::disk('public')->delete(
+                    $oldLogicalPath
+                );
+            }
+
+            if (
+                $newPhysicalPath !== null
+                && $oldPhysicalPath !== null
+                && $oldPhysicalPath !== $newPhysicalPath
+            ) {
+                Storage::disk('public')->delete(
+                    $oldPhysicalPath
+                );
+            }
+        } catch (\Throwable $exception) {
+            Log::warning(
+                'Laporan tapak disimpan tetapi diagram lama gagal dipadam.',
+                [
+                    'id_tiket' => $ticket->id_tiket,
+                    'message' => $exception->getMessage(),
+                ]
+            );
+        }
 
         $reviewers = Pengguna::query()
             ->where(

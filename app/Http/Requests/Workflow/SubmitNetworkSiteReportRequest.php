@@ -3,6 +3,8 @@
 namespace App\Http\Requests\Workflow;
 
 use Illuminate\Foundation\Http\FormRequest;
+use Illuminate\Support\Facades\DB;
+use Illuminate\Validation\Rule;
 
 class SubmitNetworkSiteReportRequest extends FormRequest
 {
@@ -17,6 +19,23 @@ class SubmitNetworkSiteReportRequest extends FormRequest
 
     public function rules(): array
     {
+        $ticketId = (string) $this->route(
+            'id_tiket',
+            ''
+        );
+
+        $existingReport = $ticketId !== ''
+            ? DB::table('laporan')
+                ->where('id_tiket', $ticketId)
+                ->first()
+            : null;
+
+        $requiresLogicalDiagram =
+            empty($existingReport?->logical_diagram);
+
+        $requiresPhysicalDiagram =
+            empty($existingReport?->physical_diagram);
+
         return [
             'nama_lokasi_bangunan' => [
                 'nullable',
@@ -98,6 +117,35 @@ class SubmitNetworkSiteReportRequest extends FormRequest
                 'string',
                 'max:2000',
             ],
+            'cadangan_penambahbaikan' => [
+                'required',
+                'array',
+                'min:1',
+                'max:20',
+            ],
+            'cadangan_penambahbaikan.*' => [
+                'required',
+                'array',
+            ],
+            'cadangan_penambahbaikan.*.teks' => [
+                'required',
+                'string',
+                'max:2000',
+            ],
+            'logical_diagram' => [
+                Rule::requiredIf($requiresLogicalDiagram),
+                'nullable',
+                'file',
+                'mimes:png,jpg,jpeg,pdf',
+                'max:5120',
+            ],
+            'physical_diagram' => [
+                Rule::requiredIf($requiresPhysicalDiagram),
+                'nullable',
+                'file',
+                'mimes:png,jpg,jpeg,pdf',
+                'max:5120',
+            ],
         ];
     }
 
@@ -124,6 +172,23 @@ class SubmitNetworkSiteReportRequest extends FormRequest
             'ulasan_teknikal.*.teks.required' => 'Setiap ulasan teknikal mesti mempunyai catatan.',
             'ulasan_teknikal.*.teks.string' => 'Ulasan teknikal mesti berupa teks.',
             'ulasan_teknikal.*.teks.max' => 'Setiap ulasan teknikal tidak boleh melebihi 2000 aksara.',
+            'cadangan_penambahbaikan.required' => 'Sekurang-kurangnya satu cadangan diperlukan.',
+            'cadangan_penambahbaikan.array' => 'Format cadangan tidak sah.',
+            'cadangan_penambahbaikan.min' => 'Sekurang-kurangnya satu cadangan diperlukan.',
+            'cadangan_penambahbaikan.max' => 'Cadangan tidak boleh melebihi 20 catatan.',
+            'cadangan_penambahbaikan.*.required' => 'Maklumat cadangan diperlukan.',
+            'cadangan_penambahbaikan.*.array' => 'Format cadangan tidak sah.',
+            'cadangan_penambahbaikan.*.teks.required' => 'Setiap cadangan mesti mempunyai catatan.',
+            'cadangan_penambahbaikan.*.teks.string' => 'Cadangan mesti berupa teks.',
+            'cadangan_penambahbaikan.*.teks.max' => 'Setiap cadangan tidak boleh melebihi 2000 aksara.',
+            'logical_diagram.required' => 'Logical diagram mesti dimuat naik.',
+            'logical_diagram.file' => 'Logical diagram mesti berupa fail.',
+            'logical_diagram.mimes' => 'Logical diagram mestilah fail PNG, JPG, JPEG atau PDF.',
+            'logical_diagram.max' => 'Logical diagram tidak boleh melebihi 5 MB.',
+            'physical_diagram.required' => 'Physical diagram mesti dimuat naik.',
+            'physical_diagram.file' => 'Physical diagram mesti berupa fail.',
+            'physical_diagram.mimes' => 'Physical diagram mestilah fail PNG, JPG, JPEG atau PDF.',
+            'physical_diagram.max' => 'Physical diagram tidak boleh melebihi 5 MB.',
         ];
     }
 }

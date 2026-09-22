@@ -1,9 +1,10 @@
 import React, { useState } from 'react';
 import { useForm } from '@inertiajs/react';
-import { Save, Edit, CheckCircle2, Briefcase, Users, LayoutTemplate, FileText, Plus, Trash2, Printer, Send, Clock } from 'lucide-react';
+import { Save, Edit, CheckCircle2, Briefcase, Users, LayoutTemplate, FileText, Plus, Trash2, Printer, Send, Clock, Upload, X } from 'lucide-react';
 
 export default function FormMaklumatTapak({ ticket, auth, senaraiPengguna }) {
     const dataTapak = ticket.konsultasi_rangkaian || {};
+    const dataLaporan = ticket.laporan || {};
 
     const user = auth?.user;
     const assignedPetugasIC = ticket?.petugas?.map(p => p.no_ic).filter(Boolean) || [];
@@ -42,6 +43,39 @@ export default function FormMaklumatTapak({ ticket, auth, senaraiPengguna }) {
         return [{ teks: '' }];
     };
 
+    const dapatkanCadanganAwal = () => {
+        const rawCadangan =
+            dataLaporan.cadangan_penambahbaikan;
+
+        if (!rawCadangan) return [{ teks: '' }];
+
+        if (Array.isArray(rawCadangan)) {
+            return rawCadangan.length > 0
+                ? rawCadangan
+                : [{ teks: '' }];
+        }
+
+        if (typeof rawCadangan === 'string') {
+            try {
+                const parsed = JSON.parse(rawCadangan);
+
+                if (
+                    Array.isArray(parsed)
+                    && parsed.length > 0
+                ) {
+                    return parsed;
+                }
+            } catch (error) {
+                console.error(
+                    'Gagal membaca cadangan Rangkaian:',
+                    error
+                );
+            }
+        }
+
+        return [{ teks: '' }];
+    };
+
     // Initialize form state
     const { data, setData, post, processing, errors } = useForm({
         nama_lokasi_bangunan: dataTapak.nama_lokasi_bangunan || '',
@@ -58,6 +92,9 @@ export default function FormMaklumatTapak({ ticket, auth, senaraiPengguna }) {
         firewall: dataTapak.firewall || 'TIADA',
         rumusan: dataTapak.rumusan || '',
         ulasan_teknikal: dapatkanUlasanAwal(),
+        cadangan_penambahbaikan: dapatkanCadanganAwal(),
+        logical_diagram: null,
+        physical_diagram: null,
     });
 
     // Technical comments dynamic array handlers
@@ -77,6 +114,68 @@ export default function FormMaklumatTapak({ ticket, auth, senaraiPengguna }) {
         setData('ulasan_teknikal', arrayBaru);
     };
 
+    const tambahCadangan = () => {
+        const cadangan = Array.isArray(
+            data.cadangan_penambahbaikan
+        )
+            ? data.cadangan_penambahbaikan
+            : [];
+
+        if (cadangan.length >= 20) return;
+
+        setData(
+            'cadangan_penambahbaikan',
+            [...cadangan, { teks: '' }]
+        );
+    };
+
+    const kemaskiniCadangan = (index, value) => {
+        const cadangan = Array.isArray(
+            data.cadangan_penambahbaikan
+        )
+            ? [...data.cadangan_penambahbaikan]
+            : [{ teks: '' }];
+
+        cadangan[index] = {
+            ...cadangan[index],
+            teks: value,
+        };
+
+        setData(
+            'cadangan_penambahbaikan',
+            cadangan
+        );
+    };
+
+    const buangCadangan = (index) => {
+        const cadangan = Array.isArray(
+            data.cadangan_penambahbaikan
+        )
+            ? data.cadangan_penambahbaikan
+            : [];
+
+        if (cadangan.length <= 1) return;
+
+        setData(
+            'cadangan_penambahbaikan',
+            cadangan.filter(
+                (_, itemIndex) => itemIndex !== index
+            )
+        );
+    };
+
+    const logicalFileName = data.logical_diagram
+        ? data.logical_diagram.name
+        : dataLaporan.logical_diagram
+            ?.split('/')
+            .pop();
+
+    const physicalFileName = data.physical_diagram
+        ? data.physical_diagram.name
+        : dataLaporan.physical_diagram
+            ?.split('/')
+            .pop();
+
     // Hantar laporan tapak melalui route yang sepadan dengan versi workflow.
     const handleHantarTapak = (e) => {
         e.preventDefault();
@@ -95,6 +194,7 @@ export default function FormMaklumatTapak({ ticket, auth, senaraiPengguna }) {
 
         post(submissionRoute, {
             preserveScroll: true,
+            forceFormData: isWorkflowV2,
             onSuccess: () => {
                 alert(
                     isWorkflowV2
@@ -347,6 +447,82 @@ export default function FormMaklumatTapak({ ticket, auth, senaraiPengguna }) {
                             </div>
                         </div>
 
+                        <hr className="border-gray-100" />
+
+                        <div className="space-y-3.5">
+                            <h5 className="text-[10px] uppercase tracking-wider text-blue-900 font-black flex items-center gap-1.5">
+                                <FileText size={14} />
+                                Cadangan Penambahbaikan
+                            </h5>
+
+                            <div className="p-4 bg-gray-50/80 border border-gray-100 rounded-xl text-xs font-semibold text-gray-700 space-y-2.5 min-h-[100px]">
+                                {Array.isArray(data.cadangan_penambahbaikan)
+                                && data.cadangan_penambahbaikan.length > 0
+                                && data.cadangan_penambahbaikan[0]?.teks ? (
+                                    data.cadangan_penambahbaikan.map((item, index) => (
+                                        <div key={index} className="flex items-start gap-2">
+                                            <span className="text-gray-400 font-black w-5">
+                                                {index + 1}.
+                                            </span>
+                                            <span className="text-gray-800 font-semibold leading-relaxed whitespace-pre-wrap">
+                                                {item.teks}
+                                            </span>
+                                        </div>
+                                    ))
+                                ) : (
+                                    <span className="text-gray-400 italic">
+                                        Tiada cadangan direkodkan.
+                                    </span>
+                                )}
+                            </div>
+                        </div>
+
+                        <hr className="border-gray-100" />
+
+                        <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
+                            <div className="p-4 border border-gray-200 rounded-xl bg-slate-50">
+                                <p className="text-[10px] uppercase font-black text-blue-900 mb-2">
+                                    Logical Diagram
+                                </p>
+
+                                {dataLaporan.logical_diagram ? (
+                                    <a
+                                        href={`/storage/${dataLaporan.logical_diagram}`}
+                                        target="_blank"
+                                        rel="noreferrer"
+                                        className="text-xs font-bold text-blue-600 hover:underline break-all"
+                                    >
+                                        {logicalFileName}
+                                    </a>
+                                ) : (
+                                    <p className="text-xs italic text-gray-400">
+                                        Tiada fail.
+                                    </p>
+                                )}
+                            </div>
+
+                            <div className="p-4 border border-gray-200 rounded-xl bg-slate-50">
+                                <p className="text-[10px] uppercase font-black text-blue-900 mb-2">
+                                    Physical Diagram
+                                </p>
+
+                                {dataLaporan.physical_diagram ? (
+                                    <a
+                                        href={`/storage/${dataLaporan.physical_diagram}`}
+                                        target="_blank"
+                                        rel="noreferrer"
+                                        className="text-xs font-bold text-blue-600 hover:underline break-all"
+                                    >
+                                        {physicalFileName}
+                                    </a>
+                                ) : (
+                                    <p className="text-xs italic text-gray-400">
+                                        Tiada fail.
+                                    </p>
+                                )}
+                            </div>
+                        </div>
+
                     </div>
                 </div>
             </div>
@@ -583,6 +759,179 @@ export default function FormMaklumatTapak({ ticket, auth, senaraiPengguna }) {
                     >
                         <Plus size={12} /> Tambah Ulasan
                     </button>
+                </div>
+            </div>
+
+            {/* Cadangan Penambahbaikan oleh Juruteknik */}
+            <div className="bg-white p-6 md:p-8 rounded-2xl border border-gray-200/70 shadow-sm space-y-4 w-full">
+                <h3 className="text-blue-800 font-black text-xs uppercase tracking-wider">
+                    Cadangan Penambahbaikan
+                    <span className="text-red-500 ml-1">*</span>
+                </h3>
+
+                {errors.cadangan_penambahbaikan && (
+                    <p role="alert" className="text-xs font-bold text-red-600">
+                        {errors.cadangan_penambahbaikan}
+                    </p>
+                )}
+
+                <div className="space-y-2">
+                    {(Array.isArray(data.cadangan_penambahbaikan)
+                        ? data.cadangan_penambahbaikan
+                        : [{ teks: '' }]
+                    ).map((item, index) => (
+                        <div key={index} className="flex items-start gap-2">
+                            <span className="h-11 min-w-8 inline-flex items-center justify-center bg-slate-100 border border-slate-200 rounded-xl text-xs font-black text-slate-600">
+                                {index + 1}
+                            </span>
+
+                            <div className="flex-1 space-y-1">
+                                <textarea
+                                    value={item?.teks || ''}
+                                    onChange={event => kemaskiniCadangan(index, event.target.value)}
+                                    maxLength={2000}
+                                    rows={2}
+                                    placeholder="Nyatakan cadangan penambahbaikan..."
+                                    className="w-full p-3 bg-white border border-gray-200 rounded-xl text-xs font-semibold focus:outline-none focus:border-blue-500"
+                                    required
+                                />
+
+                                {errors[`cadangan_penambahbaikan.${index}.teks`] && (
+                                    <p role="alert" className="text-xs font-bold text-red-600">
+                                        {errors[`cadangan_penambahbaikan.${index}.teks`]}
+                                    </p>
+                                )}
+                            </div>
+
+                            {data.cadangan_penambahbaikan.length > 1 && (
+                                <button
+                                    type="button"
+                                    onClick={() => buangCadangan(index)}
+                                    className="text-red-500 hover:text-red-700 p-2.5 border border-red-100 rounded-xl"
+                                    title="Padam Cadangan"
+                                >
+                                    <Trash2 size={16} />
+                                </button>
+                            )}
+                        </div>
+                    ))}
+                </div>
+
+                <button
+                    type="button"
+                    onClick={tambahCadangan}
+                    disabled={data.cadangan_penambahbaikan.length >= 20}
+                    className="inline-flex items-center gap-1.5 px-3 py-2 text-blue-600 bg-blue-50 hover:bg-blue-100 disabled:opacity-50 rounded-lg text-[10px] uppercase font-black"
+                >
+                    <Plus size={12} />
+                    Tambah Cadangan
+                </button>
+            </div>
+
+            {/* Diagram oleh Juruteknik */}
+            <div className="grid grid-cols-1 md:grid-cols-2 gap-5">
+                <div className="bg-white p-6 rounded-2xl border border-gray-200/70 shadow-sm space-y-3">
+                    <h3 className="text-blue-800 font-black text-xs uppercase">
+                        Logical Diagram
+                        <span className="text-red-500 ml-1">*</span>
+                    </h3>
+
+                    <label className="flex flex-col items-center justify-center min-h-36 border-2 border-dashed border-gray-200 rounded-xl bg-slate-50 cursor-pointer hover:border-blue-300">
+                        <Upload size={24} className="text-blue-600 mb-2" />
+                        <span className="text-xs font-bold text-gray-700 text-center break-all px-3">
+                            {logicalFileName || 'Pilih fail PNG, JPG, JPEG atau PDF'}
+                        </span>
+
+                        <input
+                            type="file"
+                            accept=".png,.jpg,.jpeg,.pdf"
+                            className="hidden"
+                            onChange={event => setData(
+                                'logical_diagram',
+                                event.target.files?.[0] || null
+                            )}
+                        />
+                    </label>
+
+                    {data.logical_diagram && (
+                        <button
+                            type="button"
+                            onClick={() => setData('logical_diagram', null)}
+                            className="inline-flex items-center gap-1 text-xs font-bold text-red-600"
+                        >
+                            <X size={13} />
+                            Buang pilihan
+                        </button>
+                    )}
+
+                    {dataLaporan.logical_diagram && (
+                        <a
+                            href={`/storage/${dataLaporan.logical_diagram}`}
+                            target="_blank"
+                            rel="noreferrer"
+                            className="block text-xs font-bold text-blue-600 hover:underline"
+                        >
+                            Lihat fail sedia ada
+                        </a>
+                    )}
+
+                    {errors.logical_diagram && (
+                        <p role="alert" className="text-xs font-bold text-red-600">
+                            {errors.logical_diagram}
+                        </p>
+                    )}
+                </div>
+
+                <div className="bg-white p-6 rounded-2xl border border-gray-200/70 shadow-sm space-y-3">
+                    <h3 className="text-blue-800 font-black text-xs uppercase">
+                        Physical Diagram
+                        <span className="text-red-500 ml-1">*</span>
+                    </h3>
+
+                    <label className="flex flex-col items-center justify-center min-h-36 border-2 border-dashed border-gray-200 rounded-xl bg-slate-50 cursor-pointer hover:border-blue-300">
+                        <Upload size={24} className="text-blue-600 mb-2" />
+                        <span className="text-xs font-bold text-gray-700 text-center break-all px-3">
+                            {physicalFileName || 'Pilih fail PNG, JPG, JPEG atau PDF'}
+                        </span>
+
+                        <input
+                            type="file"
+                            accept=".png,.jpg,.jpeg,.pdf"
+                            className="hidden"
+                            onChange={event => setData(
+                                'physical_diagram',
+                                event.target.files?.[0] || null
+                            )}
+                        />
+                    </label>
+
+                    {data.physical_diagram && (
+                        <button
+                            type="button"
+                            onClick={() => setData('physical_diagram', null)}
+                            className="inline-flex items-center gap-1 text-xs font-bold text-red-600"
+                        >
+                            <X size={13} />
+                            Buang pilihan
+                        </button>
+                    )}
+
+                    {dataLaporan.physical_diagram && (
+                        <a
+                            href={`/storage/${dataLaporan.physical_diagram}`}
+                            target="_blank"
+                            rel="noreferrer"
+                            className="block text-xs font-bold text-blue-600 hover:underline"
+                        >
+                            Lihat fail sedia ada
+                        </a>
+                    )}
+
+                    {errors.physical_diagram && (
+                        <p role="alert" className="text-xs font-bold text-red-600">
+                            {errors.physical_diagram}
+                        </p>
+                    )}
                 </div>
             </div>
 

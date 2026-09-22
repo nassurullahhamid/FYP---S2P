@@ -26,6 +26,33 @@ export default function InfoTiket({ auth, backUrl, ticket, senaraiPengguna, sena
     const [q2Serah, setQ2Serah] = useState('Tidak');
     const [networkReviewProcessing, setNetworkReviewProcessing] = useState(false);
 
+    const initialNetworkObjectives = (() => {
+        const rawObjectives = ticket.laporan?.objektif;
+
+        if (Array.isArray(rawObjectives)) {
+            return rawObjectives.length > 0
+                ? rawObjectives
+                : [{ teks: '' }];
+        }
+
+        if (typeof rawObjectives === 'string') {
+            try {
+                const parsed = JSON.parse(rawObjectives);
+
+                if (Array.isArray(parsed) && parsed.length > 0) {
+                    return parsed;
+                }
+            } catch (error) {
+                console.error(
+                    'Gagal membaca objektif Rangkaian:',
+                    error
+                );
+            }
+        }
+
+        return [{ teks: '' }];
+    })();
+
     const { data, setData, post, processing, errors, transform } = useForm({
         kategori: ticket.kategori || '',
         sub_kategori: ticket.sub_kategori || '',
@@ -39,9 +66,53 @@ export default function InfoTiket({ auth, backUrl, ticket, senaraiPengguna, sena
         tarikh_lawatan: '',
         masa_lawatan: '',
         catatan_lawatan: '',
+        pendahuluan: ticket.laporan?.pendahuluan || '',
+        objektif: initialNetworkObjectives,
         serial_no: ticket.serial_no || '',
         kuantiti_dipinjam: ticket.kuantiti_dipinjam || 1,
     });
+
+    const handleAddNetworkObjective = () => {
+        const objectives = Array.isArray(data.objektif)
+            ? data.objektif
+            : [];
+
+        if (objectives.length < 20) {
+            setData(
+                'objektif',
+                [...objectives, { teks: '' }]
+            );
+        }
+    };
+
+    const handleUpdateNetworkObjective = (index, value) => {
+        const objectives = Array.isArray(data.objektif)
+            ? [...data.objektif]
+            : [{ teks: '' }];
+
+        objectives[index] = {
+            ...objectives[index],
+            teks: value,
+        };
+
+        setData('objektif', objectives);
+    };
+
+    const handleRemoveNetworkObjective = (index) => {
+        const objectives = Array.isArray(data.objektif)
+            ? data.objektif
+            : [];
+
+        if (objectives.length <= 1) return;
+
+        setData(
+            'objektif',
+            objectives.filter(
+                (_, objectiveIndex) =>
+                    objectiveIndex !== index
+            )
+        );
+    };
 
     const handleAddPic = () => {
         const currentPics = Array.isArray(data.senarai_pic_ic) ? data.senarai_pic_ic : [];
@@ -97,11 +168,16 @@ export default function InfoTiket({ auth, backUrl, ticket, senaraiPengguna, sena
     const isSelesai = statusFormat === 'selesai';
     const isValidasiPhase = statusFormat.includes('validasi');
 
-    const isAwalPhaseKR = ['menunggu klasifikasi', 'menunggu semakan dokumen', 'tugasan upp', 'tugasan utd'].includes(statusFormat);
+    const isAwalPhaseKR = [
+        'menunggu klasifikasi',
+        'menunggu semakan dokumen',
+        'menunggu semakan',
+        'tugasan upp',
+        'tugasan utd',
+    ].includes(statusFormat);
     const isLepasTindakanKR = [
         'menunggu pengesahan',
         'menunggu pengesahan lkk',
-        'menunggu semakan',
         'semakan kutd',
         'menunggu semakan laporan',
         'sedia diverifikasi',
@@ -117,7 +193,6 @@ export default function InfoTiket({ auth, backUrl, ticket, senaraiPengguna, sena
         (isKR && isKUTD && [
             'menunggu pengesahan',
             'menunggu pengesahan lkk',
-            'menunggu semakan',
             'semakan kutd',
             'sedia diverifikasi',
             'lkk perlu pembetulan',
@@ -239,6 +314,17 @@ export default function InfoTiket({ auth, backUrl, ticket, senaraiPengguna, sena
 
             if (semakanNetworkV2) {
                 return {
+                    pendahuluan:
+                        String(values.pendahuluan || '').trim(),
+                    objektif: (
+                        Array.isArray(values.objektif)
+                            ? values.objektif
+                            : []
+                    )
+                        .map(item => ({
+                            teks: String(item?.teks || '').trim(),
+                        }))
+                        .filter(item => item.teks !== ''),
                     senarai_pic_ic: (
                         Array.isArray(values.senarai_pic_ic)
                             ? values.senarai_pic_ic
@@ -709,6 +795,97 @@ export default function InfoTiket({ auth, backUrl, ticket, senaraiPengguna, sena
                                                         </p>
                                                     )}
 
+                                                    <div className="space-y-2">
+                                                        <label className="block text-[10px] font-black text-gray-500 uppercase tracking-wide">
+                                                            Pendahuluan
+                                                            <span className="text-red-500 ml-1">*</span>
+                                                        </label>
+
+                                                        <textarea
+                                                            value={data.pendahuluan}
+                                                            onChange={e => setData('pendahuluan', e.target.value)}
+                                                            maxLength={10000}
+                                                            rows={5}
+                                                            placeholder="Masukkan pendahuluan atau latar belakang permohonan Rangkaian..."
+                                                            className="w-full p-3 bg-white border border-gray-200 rounded-xl text-xs font-medium text-slate-800 focus:ring-2 focus:ring-blue-500/20 focus:outline-none"
+                                                            required
+                                                        />
+
+                                                        {errors.pendahuluan && (
+                                                            <p role="alert" className="text-xs font-bold text-red-600">
+                                                                {errors.pendahuluan}
+                                                            </p>
+                                                        )}
+                                                    </div>
+
+                                                    <div className="space-y-3">
+                                                        <label className="block text-[10px] font-black text-gray-500 uppercase tracking-wide">
+                                                            Objektif
+                                                            <span className="text-red-500 ml-1">*</span>
+                                                        </label>
+
+                                                        {errors.objektif && (
+                                                            <p role="alert" className="text-xs font-bold text-red-600">
+                                                                {errors.objektif}
+                                                            </p>
+                                                        )}
+
+                                                        {(Array.isArray(data.objektif)
+                                                            ? data.objektif
+                                                            : [{ teks: '' }]
+                                                        ).map((objective, index) => (
+                                                            <div key={index} className="flex items-start gap-2">
+                                                                <span className="h-11 min-w-8 inline-flex items-center justify-center bg-slate-100 border border-slate-200 rounded-xl text-xs font-black text-slate-600">
+                                                                    {index + 1}
+                                                                </span>
+
+                                                                <div className="flex-1 space-y-1">
+                                                                    <textarea
+                                                                        value={objective?.teks || ''}
+                                                                        onChange={e => handleUpdateNetworkObjective(index, e.target.value)}
+                                                                        maxLength={2000}
+                                                                        rows={2}
+                                                                        placeholder="Nyatakan objektif lawatan atau kajian..."
+                                                                        className="w-full p-3 bg-white border border-gray-200 rounded-xl text-xs font-medium text-slate-800 focus:ring-2 focus:ring-blue-500/20 focus:outline-none"
+                                                                        required
+                                                                    />
+
+                                                                    {errors[`objektif.${index}.teks`] && (
+                                                                        <p role="alert" className="text-xs font-bold text-red-600">
+                                                                            {errors[`objektif.${index}.teks`]}
+                                                                        </p>
+                                                                    )}
+                                                                </div>
+
+                                                                {(Array.isArray(data.objektif)
+                                                                    ? data.objektif.length
+                                                                    : 1
+                                                                ) > 1 && (
+                                                                    <button
+                                                                        type="button"
+                                                                        onClick={() => handleRemoveNetworkObjective(index)}
+                                                                        className="text-red-500 hover:text-red-700 p-2.5 hover:bg-red-50 rounded-xl border border-red-100 transition-colors"
+                                                                        title="Padam Objektif"
+                                                                    >
+                                                                        <Trash2 size={16} />
+                                                                    </button>
+                                                                )}
+                                                            </div>
+                                                        ))}
+
+                                                        <button
+                                                            type="button"
+                                                            onClick={handleAddNetworkObjective}
+                                                            disabled={
+                                                                Array.isArray(data.objektif)
+                                                                && data.objektif.length >= 20
+                                                            }
+                                                            className="inline-flex items-center gap-1.5 px-3.5 py-2 text-blue-600 bg-blue-50 hover:bg-blue-100 disabled:opacity-50 border border-blue-200/60 rounded-xl transition-colors text-[10px] uppercase font-black shadow-sm"
+                                                        >
+                                                            <Plus size={13} />
+                                                            Tambah Objektif
+                                                        </button>
+                                                    </div>
                                                     <div className="grid grid-cols-1 sm:grid-cols-2 gap-4">
                                                         <div className="space-y-2">
                                                             <label className="block text-[10px] font-black text-gray-500 uppercase tracking-wide">

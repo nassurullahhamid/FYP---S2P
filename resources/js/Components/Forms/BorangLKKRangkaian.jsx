@@ -29,6 +29,9 @@ export default function BorangLKKRangkaian({ ticket, senaraiKosSelamat, existing
     // Form read-only lock state (Only editable by KUTD before it hits KW)
     const isBorangLocked = isSelesai || isMenungguKW || !isKUTD;
 
+    // Bukti teknikal workflow v2 dimiliki oleh Juruteknik.
+    const isTechnicalEvidenceLocked = isWorkflowV2;
+
     // Manual processing state for router.post
     const [isSubmitting, setIsSubmitting] = useState(false);
 
@@ -181,10 +184,6 @@ export default function BorangLKKRangkaian({ ticket, senaraiKosSelamat, existing
         e.preventDefault();
         if (isBorangLocked || isSubmitting) return;
 
-        if (!data.disediakan_oleh || !data.disemak_oleh) {
-            alert("Sila pilih nama pegawai untuk ruangan 'Disediakan Oleh' dan 'Disemak Oleh' di bahagian pengesahan terlebih dahulu.");
-            return;
-        }
 
         const submissionRoute = isWorkflowV2
             ? route(
@@ -220,7 +219,7 @@ export default function BorangLKKRangkaian({ ticket, senaraiKosSelamat, existing
                 onSuccess: () => {
                     alert(
                         isWorkflowV2
-                            ? 'LKK berjaya dihantar untuk validasi Ketua Wilayah!'
+                            ? 'LKK berjaya diverifikasi dan dihantar untuk validasi Ketua Wilayah!'
                             : 'Laporan LKK berjaya dihantar untuk pengesahan Ketua Wilayah!'
                     );
                 },
@@ -435,7 +434,7 @@ export default function BorangLKKRangkaian({ ticket, senaraiKosSelamat, existing
 
                             <input
                                 type="text"
-                                disabled={isBorangLocked}
+                                disabled={isBorangLocked || isTechnicalEvidenceLocked}
                                 value={item.teks || ''}
                                 onChange={e => kemaskiniCadangan(idx, e.target.value)}
                                 placeholder="Sila nyatakan cadangan penambahbaikan..."
@@ -445,7 +444,7 @@ export default function BorangLKKRangkaian({ ticket, senaraiKosSelamat, existing
                                 required
                             />
 
-                            {!isBorangLocked && (
+                            {!isBorangLocked && !isTechnicalEvidenceLocked && (
                                 <button
                                     type="button"
                                     onClick={() => buangCadangan(idx)}
@@ -458,7 +457,7 @@ export default function BorangLKKRangkaian({ ticket, senaraiKosSelamat, existing
                         </div>
                     ))}
 
-                    {!isBorangLocked && (
+                    {!isBorangLocked && !isTechnicalEvidenceLocked && (
                         <button
                             type="button"
                             onClick={tambahCadangan}
@@ -480,7 +479,7 @@ export default function BorangLKKRangkaian({ ticket, senaraiKosSelamat, existing
                             <div className="flex flex-col items-center justify-center text-center space-y-2">
                                 <div className="p-3 bg-blue-50 text-blue-600 rounded-full"><Upload size={24} /></div>
                                 <span className="text-xs font-extrabold text-slate-800">Tiada fail diagram diupload</span>
-                                {!isBorangLocked && (
+                                {!isBorangLocked && !isTechnicalEvidenceLocked && (
                                     <label className="mt-2 inline-flex items-center px-4 py-2 bg-white border border-gray-200 text-xs font-bold text-gray-700 rounded-xl hover:bg-gray-50 shadow-sm cursor-pointer transition-all">
                                         Pilih Fail
                                         <input type="file" accept="image/*,.pdf" className="hidden" onChange={(e) => setData('logical_diagram', e.target.files[0])} />
@@ -496,7 +495,7 @@ export default function BorangLKKRangkaian({ ticket, senaraiKosSelamat, existing
                                 )}
                                 <div className="flex items-center gap-2 bg-blue-50 text-blue-700 px-3 py-1.5 rounded-xl text-xs font-bold max-w-full">
                                     <span className="truncate max-w-[180px]">{logicalFileName}</span>
-                                    {!isBorangLocked && (
+                                    {!isBorangLocked && !isTechnicalEvidenceLocked && (
                                         <button type="button" onClick={() => setData('logical_diagram', null)} className="text-blue-600 hover:text-red-500 ml-1"><X size={14} /></button>
                                     )}
                                 </div>
@@ -513,7 +512,7 @@ export default function BorangLKKRangkaian({ ticket, senaraiKosSelamat, existing
                             <div className="flex flex-col items-center justify-center text-center space-y-2">
                                 <div className="p-3 bg-blue-50 text-blue-600 rounded-full"><Upload size={24} /></div>
                                 <span className="text-xs font-extrabold text-slate-800">Tiada fail diagram diupload</span>
-                                {!isBorangLocked && (
+                                {!isBorangLocked && !isTechnicalEvidenceLocked && (
                                     <label className="mt-2 inline-flex items-center px-4 py-2 bg-white border border-gray-200 text-xs font-bold text-gray-700 rounded-xl hover:bg-gray-50 shadow-sm cursor-pointer transition-all">
                                         Pilih Fail
                                         <input type="file" accept="image/*,.pdf" className="hidden" onChange={(e) => setData('physical_diagram', e.target.files[0])} />
@@ -529,7 +528,7 @@ export default function BorangLKKRangkaian({ ticket, senaraiKosSelamat, existing
                                 )}
                                 <div className="flex items-center gap-2 bg-blue-50 text-blue-700 px-3 py-1.5 rounded-xl text-xs font-bold max-w-full">
                                     <span className="truncate max-w-[180px]">{physicalFileName}</span>
-                                    {!isBorangLocked && (
+                                    {!isBorangLocked && !isTechnicalEvidenceLocked && (
                                         <button type="button" onClick={() => setData('physical_diagram', null)} className="text-blue-600 hover:text-red-500 ml-1"><X size={14} /></button>
                                     )}
                                 </div>
@@ -663,39 +662,36 @@ export default function BorangLKKRangkaian({ ticket, senaraiKosSelamat, existing
             <div className="bg-white p-6 rounded-2xl border border-gray-200/80 shadow-sm space-y-4">
                 <div className="flex items-center gap-2 text-blue-900 border-b pb-2">
                     <h4 className="text-xs uppercase tracking-wider font-black">
-                         Pengesahan <span className="text-red-500">*</span>
+                        Pengesahan
                     </h4>
                 </div>
-                <div className="grid grid-cols-1 md:grid-cols-2 gap-6">
-                    <div className="space-y-2">
-                        <label className="block text-[10px] font-black uppercase text-gray-500 tracking-wide">
-                            Disediakan Oleh <span className="text-red-500">*</span>
-                        </label>
-                        <select
-                            value={data.disediakan_oleh}
-                            onChange={e => setData('disediakan_oleh', e.target.value)}
-                            disabled={isBorangLocked}
-                            className={`w-full h-11 text-xs font-bold border-gray-200 rounded-xl px-4 focus:outline-none focus:border-blue-500 shadow-sm uppercase text-gray-700 ${isBorangLocked ? 'bg-gray-50/50 cursor-not-allowed border-transparent' : 'bg-white cursor-pointer'}`}
-                            required={!isBorangLocked}
-                        >
-                            <option value="">Pilih Pegawai</option>
-                            {senaraiDisediakanOleh.map(p => <option key={`sedia-${p.no_ic}`} value={p.nama}>{p.nama}</option>)}
-                        </select>
+
+                <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
+                    <div className="p-4 bg-blue-50 border border-blue-100 rounded-xl">
+                        <p className="text-[10px] font-black uppercase text-blue-700 tracking-wide">
+                            Disediakan Oleh
+                        </p>
+                        <p className="mt-1 text-xs font-black text-blue-950 uppercase">
+                            {ticket.laporan?.disediakan_oleh || currentUser.nama || 'KUTD'}
+                        </p>
+                        <p className="mt-1 text-[10px] font-semibold text-blue-700 uppercase">
+                            {currentUser.jawatan || 'Ketua Unit Teknologi Digital'}
+                        </p>
+                        <p className="mt-2 text-[10px] text-blue-600">
+                            Nama akan direkod secara automatik semasa Verifikasi.
+                        </p>
                     </div>
-                    <div className="space-y-2">
-                        <label className="block text-[10px] font-black uppercase text-gray-500 tracking-wide">
-                            Disemak Oleh <span className="text-red-500">*</span>
-                        </label>
-                        <select
-                            value={data.disemak_oleh}
-                            onChange={e => setData('disemak_oleh', e.target.value)}
-                            disabled={isBorangLocked}
-                            className={`w-full h-11 text-xs font-bold border-gray-200 rounded-xl px-4 focus:outline-none focus:border-blue-500 shadow-sm uppercase text-gray-700 ${isBorangLocked ? 'bg-gray-50/50 cursor-not-allowed border-transparent' : 'bg-white cursor-pointer'}`}
-                            required={!isBorangLocked}
-                        >
-                            <option value="">Pilih Pegawai</option>
-                            {senaraiDisemakOleh.map(p => <option key={`semak-${p.no_ic}`} value={p.nama}>{p.nama}</option>)}
-                        </select>
+
+                    <div className="p-4 bg-slate-50 border border-slate-200 rounded-xl">
+                        <p className="text-[10px] font-black uppercase text-slate-500 tracking-wide">
+                            Disemak Oleh
+                        </p>
+                        <p className="mt-1 text-xs font-black text-slate-800 uppercase">
+                            {ticket.laporan?.disemak_oleh || 'Akan direkod oleh Ketua Wilayah'}
+                        </p>
+                        <p className="mt-2 text-[10px] text-slate-500">
+                            Nama Ketua Wilayah akan direkod secara automatik selepas Validasi.
+                        </p>
                     </div>
                 </div>
             </div>
@@ -707,7 +703,7 @@ export default function BorangLKKRangkaian({ ticket, senaraiKosSelamat, existing
                         <Save size={15} /> Simpan Draf
                     </button>
                     <button type="submit" disabled={isSubmitting} className="flex items-center justify-center gap-2 bg-blue-600 hover:bg-blue-700 text-white font-extrabold text-xs uppercase tracking-wider px-6 h-11 rounded-xl shadow-md transition-all cursor-pointer">
-                        <Send size={14} /> {isSubmitting ? 'Memproses...' : 'Sahkan Laporan & Hantar'}
+                        <Send size={14} /> {isSubmitting ? 'Memproses...' : 'Verifikasi & Hantar kepada KW'}
                     </button>
                 </div>
             )}

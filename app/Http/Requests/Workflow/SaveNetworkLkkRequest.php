@@ -123,13 +123,11 @@ class SaveNetworkLkkRequest extends FormRequest
                 'max:10000',
             ],
             'disediakan_oleh' => [
-                Rule::requiredIf(! $isDraft),
                 'nullable',
                 'string',
                 'max:255',
             ],
             'disemak_oleh' => [
-                Rule::requiredIf(! $isDraft),
                 'nullable',
                 'string',
                 'max:255',
@@ -172,8 +170,7 @@ class SaveNetworkLkkRequest extends FormRequest
             'kos_items.*.anggaran.required' => 'Anggaran harga item mesti dinyatakan.',
             'kos_items.*.anggaran.numeric' => 'Anggaran harga item mesti berupa nombor.',
             'rumusan.required' => 'Rumusan LKK mesti dilengkapkan.',
-            'disediakan_oleh.required' => 'Pegawai yang menyediakan laporan mesti dipilih.',
-            'disemak_oleh.required' => 'Pegawai yang menyemak laporan mesti dipilih.',
+
             'logical_diagram.required' => 'Logical diagram mesti dimuat naik.',
             'logical_diagram.file' => 'Logical diagram mesti berupa fail.',
             'logical_diagram.mimes' => 'Logical diagram mestilah fail PNG, JPG, JPEG atau PDF.',

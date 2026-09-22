@@ -19,6 +19,26 @@ class ReviewNetworkTicketRequest extends FormRequest
     public function rules(): array
     {
         return [
+            'pendahuluan' => [
+                'required',
+                'string',
+                'max:10000',
+            ],
+            'objektif' => [
+                'required',
+                'array',
+                'min:1',
+                'max:20',
+            ],
+            'objektif.*' => [
+                'required',
+                'array',
+            ],
+            'objektif.*.teks' => [
+                'required',
+                'string',
+                'max:2000',
+            ],
             'senarai_pic_ic' => [
                 'required',
                 'array',
@@ -55,6 +75,18 @@ class ReviewNetworkTicketRequest extends FormRequest
     public function messages(): array
     {
         return [
+            'pendahuluan.required' => 'Pendahuluan mesti dilengkapkan.',
+            'pendahuluan.string' => 'Pendahuluan mesti berupa teks.',
+            'pendahuluan.max' => 'Pendahuluan tidak boleh melebihi 10000 aksara.',
+            'objektif.required' => 'Sekurang-kurangnya satu objektif diperlukan.',
+            'objektif.array' => 'Format objektif tidak sah.',
+            'objektif.min' => 'Sekurang-kurangnya satu objektif diperlukan.',
+            'objektif.max' => 'Objektif tidak boleh melebihi 20 catatan.',
+            'objektif.*.required' => 'Maklumat objektif diperlukan.',
+            'objektif.*.array' => 'Format objektif tidak sah.',
+            'objektif.*.teks.required' => 'Setiap objektif mesti mempunyai catatan.',
+            'objektif.*.teks.string' => 'Catatan objektif mesti berupa teks.',
+            'objektif.*.teks.max' => 'Setiap objektif tidak boleh melebihi 2000 aksara.',
             'senarai_pic_ic.required' => 'Sekurang-kurangnya seorang Juruteknik mesti dipilih.',
             'senarai_pic_ic.array' => 'Senarai Juruteknik tidak sah.',
             'senarai_pic_ic.min' => 'Sekurang-kurangnya seorang Juruteknik mesti dipilih.',

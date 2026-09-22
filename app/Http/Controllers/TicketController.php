@@ -278,12 +278,38 @@ class TicketController extends Controller
 
         try {
 
+            $isNetworkWorkflowV2 =
+                $ticket->usesCurrentWorkflow()
+                && $ticket->kategori
+                    === 'Konsultasi Rangkaian'
+                && in_array(
+                    $subKategoriValue,
+                    config(
+                        's2p_workflow.flows.rangkaian.sub_kategori',
+                        []
+                    ),
+                    true
+                );
+
+            /*
+             * Tiket Rangkaian v2 perlu diklasifikasikan oleh KUPP.
+             * Kekalkan penerima asal bagi workflow lama, Meja Bantuan
+             * dan Transformasi Digital.
+             */
+            $registrationRecipientRoles =
+                $isNetworkWorkflowV2
+                    ? ['ketua_upp']
+                    : [
+                        'ketua_upp',
+                        'ketua_utd',
+                        'ketua_wilayah',
+                    ];
+
             $senaraiPengurus = Pengguna::query()
-                ->whereIn('peranan', [
-                    'ketua_upp',
-                    'ketua_utd',
-                    'ketua_wilayah',
-                ])
+                ->whereIn(
+                    'peranan',
+                    $registrationRecipientRoles
+                )
                 ->where('status_pengguna', 'Aktif')
                 ->get();
             $targetHeadsEmails = $senaraiPengurus->whereNotNull('emel')->pluck('emel')->toArray();
