@@ -18,6 +18,7 @@ use App\Http\Requests\Workflow\ValidateNetworkLkkRequest;
 use App\Models\Laporan;
 use App\Models\Pengguna;
 use App\Models\Tiket;
+use App\Notifications\NewTicketNoti;
 use App\Notifications\PengesahanKetuaNoti;
 use App\Notifications\TugasanPicNoti;
 use App\Notifications\WorkflowAssignmentNotification;
@@ -130,6 +131,58 @@ class TicketWorkflowController extends Controller
                     'Oleh '.$request->user()->nama,
                     'INFO'
                 );
+
+                /*
+                 * Apabila seorang pegawai pengurusan mengambil
+                 * tindakan klasifikasi, tutup notifikasi pendaftaran
+                 * tiket yang sama bagi KUPP, KUTD dan KW.
+                 */
+                $classificationRecipientIds =
+                    Pengguna::query()
+                        ->whereIn(
+                            'peranan',
+                            config(
+                                's2p_workflow.classification_roles',
+                                []
+                            )
+                        )
+                        ->where(
+                            'status_pengguna',
+                            'Aktif'
+                        )
+                        ->pluck('no_ic')
+                        ->map(
+                            fn ($id): string => (string) $id
+                        )
+                        ->all();
+
+                if (
+                    $classificationRecipientIds !== []
+                ) {
+                    DB::table('notifications')
+                        ->where(
+                            'type',
+                            NewTicketNoti::class
+                        )
+                        ->where(
+                            'notifiable_type',
+                            $request->user()->getMorphClass()
+                        )
+                        ->whereIn(
+                            'notifiable_id',
+                            $classificationRecipientIds
+                        )
+                        ->whereNull('read_at')
+                        ->where(
+                            'data',
+                            'LIKE',
+                            '%'.$id_tiket.'%'
+                        )
+                        ->update([
+                            'read_at' => now(),
+                            'updated_at' => now(),
+                        ]);
+                }
 
                 return [
                     $ticket->fresh(),

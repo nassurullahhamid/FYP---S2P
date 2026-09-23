@@ -942,7 +942,7 @@ export default function FormMaklumatTapak({ ticket, auth, senaraiPengguna }) {
                     disabled={processing}
                     className="inline-flex items-center gap-2 px-6 py-3.5 bg-blue-900 hover:bg-blue-950 disabled:bg-gray-200 disabled:text-gray-400 disabled:cursor-not-allowed text-white rounded-xl font-black text-xs uppercase tracking-wider shadow-md transition-all active:scale-[0.99] cursor-pointer w-full sm:w-auto justify-center"
                 >
-                    <Send size={13} /> {processing ? 'Menyimpan...' : 'Hantar Maklumat Tapak'}
+                    <Send size={13} /> {processing ? 'Menyimpan...' : (isWorkflowV2 ? 'KEMASKINI TIKET' : 'Hantar Maklumat Tapak')}
                 </button>
             </div>
 

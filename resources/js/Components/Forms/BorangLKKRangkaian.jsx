@@ -703,7 +703,7 @@ export default function BorangLKKRangkaian({ ticket, senaraiKosSelamat, existing
                         <Save size={15} /> Simpan Draf
                     </button>
                     <button type="submit" disabled={isSubmitting} className="flex items-center justify-center gap-2 bg-blue-600 hover:bg-blue-700 text-white font-extrabold text-xs uppercase tracking-wider px-6 h-11 rounded-xl shadow-md transition-all cursor-pointer">
-                        <Send size={14} /> {isSubmitting ? 'Memproses...' : 'Verifikasi & Hantar kepada KW'}
+                        <Send size={14} /> {isSubmitting ? 'Memproses...' : 'VERIFIKASI'}
                     </button>
                 </div>
             )}

@@ -24,7 +24,6 @@ class ReviewNetworkSiteReportRequest extends FormRequest
                 'string',
                 Rule::in([
                     'TERIMA',
-                    'PEMBETULAN',
                 ]),
             ],
             'ulasan' => [

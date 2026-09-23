@@ -221,7 +221,11 @@ export default function SenaraiTiket({ auth, tickets, selectedKategori, selected
                                                     <span className={`inline-block px-2.5 py-0.5 rounded-full text-[9px] font-black uppercase tracking-wider border shadow-sm ${
                                                         statusStyles[ticket.status_tiket] || 'bg-gray-100 text-gray-600 border-gray-200'
                                                     }`}>
-                                                        {ticket.status_tiket}
+                                                        {Number(ticket.workflow_version) === 2
+                                                        && ticket.kategori === 'Konsultasi Rangkaian'
+                                                        && ticket.status_tiket === 'Menunggu Semakan Laporan'
+                                                            ? 'Menunggu Semakan'
+                                                            : ticket.status_tiket}
                                                     </span>
                                                 </td>
 

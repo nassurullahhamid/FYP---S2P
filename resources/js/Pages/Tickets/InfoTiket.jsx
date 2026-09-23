@@ -155,6 +155,13 @@ export default function InfoTiket({ auth, backUrl, ticket, senaraiPengguna, sena
     const isPembekalanICT = String(ticket.transformasi_digital?.sub_kategori || ticket.sub_kategori || '').toLowerCase().includes('pembekalan');
 
     const statusFormat = String(ticket.status_tiket || '').trim().toLowerCase();
+
+    const statusPaparan =
+        isWorkflowV2
+        && isKR
+        && statusFormat === 'menunggu semakan laporan'
+            ? 'Menunggu Semakan'
+            : ticket.status_tiket;
     const isDalamTindakan =
         statusFormat === 'dalam tindakan pegawai'
         || statusFormat === 'tindakan pic'
@@ -414,24 +421,16 @@ export default function InfoTiket({ auth, backUrl, ticket, senaraiPengguna, sena
         });
     };
 
-    const handleNetworkSiteReview = (action) => {
+    const handleNetworkSiteReview = () => {
         if (networkReviewProcessing) return;
 
-        const isCorrection = action === 'PEMBETULAN';
-        const reviewComment = String(data.ulasan || '').trim();
-
-        if (isCorrection && !reviewComment) {
-            alert(
-                'Sila masukkan ulasan pembetulan terlebih dahulu.'
-            );
+        if (
+            !confirm(
+                'Adakah anda pasti mahu mengesahkan laporan tapak ini?'
+            )
+        ) {
             return;
         }
-
-        const confirmationMessage = isCorrection
-            ? 'Adakah anda pasti mahu memulangkan laporan ini kepada Juruteknik untuk pembetulan?'
-            : 'Adakah anda pasti laporan tapak ini lengkap dan boleh diteruskan kepada penyediaan LKK?';
-
-        if (!confirm(confirmationMessage)) return;
 
         setNetworkReviewProcessing(true);
 
@@ -441,18 +440,14 @@ export default function InfoTiket({ auth, backUrl, ticket, senaraiPengguna, sena
                 ticket.id_tiket
             ),
             {
-                tindakan: action,
-                ulasan: isCorrection
-                    ? reviewComment
-                    : null,
+                tindakan: 'TERIMA',
+                ulasan: null,
             },
             {
                 preserveScroll: true,
                 onSuccess: () => {
                     alert(
-                        isCorrection
-                            ? 'Laporan dipulangkan kepada Juruteknik untuk pembetulan.'
-                            : 'Laporan tapak diterima. Penyediaan LKK boleh diteruskan.'
+                        'Laporan tapak berjaya disahkan. Penyediaan LKK boleh diteruskan.'
                     );
                 },
                 onError: (reviewErrors) => {
@@ -460,15 +455,10 @@ export default function InfoTiket({ auth, backUrl, ticket, senaraiPengguna, sena
                         reviewErrors
                     ).flat();
 
-                    if (messages.length === 0) {
-                        alert(
-                            'Tindakan semakan laporan tidak berjaya.'
-                        );
-                        return;
-                    }
-
-                    messages.forEach(
-                        message => alert(message)
+                    alert(
+                        messages.length > 0
+                            ? messages.join('\n')
+                            : 'Pengesahan laporan tapak tidak berjaya.'
                     );
                 },
                 onFinish: () => {
@@ -578,7 +568,7 @@ export default function InfoTiket({ auth, backUrl, ticket, senaraiPengguna, sena
                                         <span className={`px-2.5 py-0.5 border text-[9px] font-black rounded-full uppercase tracking-wider shadow-sm ${
                                             ticket.status_tiket === 'Selesai' ? 'bg-green-50 border-green-200 text-green-600' : 'bg-amber-50 border-amber-200 text-amber-600'
                                         }`}>
-                                            {ticket.status_tiket || 'Menunggu Klasifikasi'}
+                                            {statusPaparan || 'Menunggu Klasifikasi'}
                                         </span>
                                     </div>
                                     <h3 className="text-xs font-black text-gray-700 tracking-tight leading-relaxed truncate">Perkara: {ticket.perkara || 'Tiada Tajuk Perkara'}</h3>
@@ -1394,59 +1384,21 @@ export default function InfoTiket({ auth, backUrl, ticket, senaraiPengguna, sena
 
                                             <div className="p-5 space-y-4">
                                                 <div className="p-4 bg-blue-50 border border-blue-100 rounded-xl text-xs font-semibold text-blue-900 leading-relaxed">
-                                                    Semak semua maklumat tapak di atas. Terima laporan untuk meneruskan penyediaan LKK atau pulangkan kepada Juruteknik jika pembetulan diperlukan.
+                                                    Semak semua maklumat tapak di atas sebelum mengesahkan laporan dan meneruskan penyediaan LKK.
                                                 </div>
 
-                                                <div className="space-y-2">
-                                                    <label className="block text-[10px] font-black text-gray-500 uppercase tracking-wide">
-                                                        Ulasan Pembetulan
-                                                    </label>
-
-                                                    <textarea
-                                                        value={data.ulasan}
-                                                        onChange={e => setData('ulasan', e.target.value)}
-                                                        maxLength={2000}
-                                                        rows={4}
-                                                        placeholder="Wajib diisi jika laporan dipulangkan untuk pembetulan..."
-                                                        className="w-full p-3 bg-white border border-gray-200 rounded-xl text-xs font-medium text-slate-800 focus:ring-2 focus:ring-blue-500/20 focus:outline-none"
-                                                    />
-
-                                                    {errors.ulasan && (
-                                                        <p
-                                                            role="alert"
-                                                            className="text-xs font-bold text-red-600"
-                                                        >
-                                                            {errors.ulasan}
-                                                        </p>
-                                                    )}
-                                                </div>
-
-                                                <div className="flex flex-col-reverse sm:flex-row justify-end gap-3 pt-3 border-t border-gray-100">
+                                                <div className="flex justify-end pt-3 border-t border-gray-100">
                                                     <button
                                                         type="button"
                                                         disabled={networkReviewProcessing}
-                                                        onClick={() => handleNetworkSiteReview('PEMBETULAN')}
-                                                        className="inline-flex items-center justify-center gap-2 px-5 py-2.5 bg-amber-500 hover:bg-amber-600 disabled:bg-gray-300 text-white font-black text-xs uppercase rounded-xl shadow-sm transition-all active:scale-95 cursor-pointer"
-                                                    >
-                                                        <XCircle size={14} />
-                                                        <span>
-                                                            {networkReviewProcessing
-                                                                ? 'Memproses...'
-                                                                : 'Pulangkan untuk Pembetulan'}
-                                                        </span>
-                                                    </button>
-
-                                                    <button
-                                                        type="button"
-                                                        disabled={networkReviewProcessing}
-                                                        onClick={() => handleNetworkSiteReview('TERIMA')}
+                                                        onClick={handleNetworkSiteReview}
                                                         className="inline-flex items-center justify-center gap-2 px-5 py-2.5 bg-emerald-600 hover:bg-emerald-700 disabled:bg-gray-300 text-white font-black text-xs uppercase rounded-xl shadow-sm transition-all active:scale-95 cursor-pointer"
                                                     >
                                                         <CheckCircle2 size={14} />
                                                         <span>
                                                             {networkReviewProcessing
                                                                 ? 'Memproses...'
-                                                                : 'Terima dan Sediakan LKK'}
+                                                                : 'SAHKAN'}
                                                         </span>
                                                     </button>
                                                 </div>

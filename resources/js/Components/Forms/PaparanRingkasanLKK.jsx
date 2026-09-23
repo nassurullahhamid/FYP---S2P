@@ -822,7 +822,10 @@ export default function PaparanRingkasanLKK({ ticket, auth, senaraiPegawai }) {
                     </div>
                     <div className="flex justify-end gap-2 pt-2 border-t border-blue-200/40">
                         <button type="button" onClick={() => handleTindakan('pulang_semak')} className="flex items-center gap-1.5 px-4 h-9 bg-white hover:bg-amber-50 border border-amber-200 text-amber-600 font-bold text-xs uppercase rounded-xl shadow-sm cursor-pointer"><AlertTriangle size={13} /> Perlu Pembetulan</button>
-                        <button type="button" onClick={() => handleTindakan('kw_sahkan')} className="flex items-center gap-1.5 px-5 h-9 bg-blue-600 hover:bg-blue-700 text-white font-bold text-xs uppercase rounded-xl shadow-md cursor-pointer"><CheckCircle2 size={13} /> Validasi &amp; Tutup Tiket</button>
+                        <button type="button" onClick={() => handleTindakan('kw_sahkan')} className="flex items-center gap-1.5 px-5 h-9 bg-blue-600 hover:bg-blue-700 text-white font-bold text-xs uppercase rounded-xl shadow-md cursor-pointer">
+                            <CheckCircle2 size={13} />
+                            {isNetworkValidationV2 ? 'VALIDASI' : 'Validasi & Tutup Tiket'}
+                        </button>
                     </div>
                 </div>
             )}
