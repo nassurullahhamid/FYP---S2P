@@ -17,6 +17,15 @@ return [
         false
     ),
 
+    /*
+     * Pelaksanaan berperingkat bagi semua subkategori
+     * Meja Bantuan termasuk Peminjaman Peralatan ICT.
+     */
+    'enable_helpdesk_new_tickets' => env(
+        'S2P_WORKFLOW_V2_HELPDESK_TICKETS',
+        false
+    ),
+
     'roles' => [
         'admin' => 'Admin',
         'ketua_upp' => 'KUPP',

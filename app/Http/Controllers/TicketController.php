@@ -184,6 +184,14 @@ class TicketController extends Controller
                     's2p_workflow.enable_network_new_tickets',
                     false
                 )
+            )
+            || (
+                $validated['kategori']
+                    === 'Meja Bantuan'
+                && (bool) config(
+                    's2p_workflow.enable_helpdesk_new_tickets',
+                    false
+                )
             );
 
         $workflowVersion = $enableCurrentWorkflow
