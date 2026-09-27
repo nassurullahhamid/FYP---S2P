@@ -5,7 +5,13 @@ import Topbar from '@/Components/Topbar';
 import FormMaklumatTapak from '@/Components/Forms/FormMaklumatTapak';
 import BorangLKKRangkaian from '@/Components/Forms/BorangLKKRangkaian';
 import BorangLKKTransformasi from '@/Components/Forms/BorangLKKTransformasi';
+import BorangLKKPemodenanV2 from '@/Components/Forms/BorangLKKPemodenanV2';
+import BorangLKKPemodenanTindakanV2 from '@/Components/Forms/BorangLKKPemodenanTindakanV2';
 import BorangLKKPembekalanICT from '@/Components/Forms/BorangLKKPembekalanICT';
+import BorangLKKPembekalanICTV2 from '@/Components/Forms/BorangLKKPembekalanICTV2';
+import BorangLKKPembekalanTindakanV2 from '@/Components/Forms/BorangLKKPembekalanTindakanV2';
+import BorangLKKPembekalanKUPPV2 from '@/Components/Forms/BorangLKKPembekalanKUPPV2';
+import BorangLKKPembekalanKWV2 from '@/Components/Forms/BorangLKKPembekalanKWV2';
 import PaparanRingkasanLKK from '@/Components/Forms/PaparanRingkasanLKK';
 import BorangPeminjamanPeralatan from '@/Components/Forms/BorangPeminjamanPeralatan';
 import axios from 'axios';
@@ -153,6 +159,20 @@ export default function InfoTiket({ auth, backUrl, ticket, senaraiPengguna, sena
     const perlukanModulRangkaian = isKR || isTD;
     const adakahTapakSudahIsi = !!ticket.konsultasi_rangkaian?.jenis_premis;
     const isPembekalanICT = String(ticket.transformasi_digital?.sub_kategori || ticket.sub_kategori || '').toLowerCase().includes('pembekalan');
+    const isPembekalanV2 =
+        isWorkflowV2
+        && isTD
+        && isPembekalanICT;
+    const isPemodenanV2 =
+        isWorkflowV2
+        && isTD
+        && !isPembekalanICT
+        && String(
+            ticket.transformasi_digital?.sub_kategori
+            || ticket.transformasiDigital?.sub_kategori
+            || ticket.sub_kategori
+            || ''
+        ).trim() === 'Pemodenan Bilik Mesyuarat';
 
     const statusFormat = String(ticket.status_tiket || '').trim().toLowerCase();
 
@@ -197,6 +217,35 @@ export default function InfoTiket({ auth, backUrl, ticket, senaraiPengguna, sena
     ].includes(statusFormat);
 
     const isAuthorizedToEdit =
+        (isPemodenanV2 && (
+            (
+                isKUPP
+                && [
+                    'menunggu semakan',
+                    'menunggu semakan laporan',
+                    'pembetulan ketua',
+                ].includes(statusFormat)
+            )
+            ||
+            (
+                isKUTD
+                && statusFormat === 'disemak'
+            )
+            ||
+            (
+                isCurrentUserPIC
+                && [
+                    'dalam tindakan',
+                    'laporan perlu pembetulan',
+                ].includes(statusFormat)
+            )
+            ||
+            (
+                isKW
+                && statusFormat === 'menunggu validasi'
+            )
+        ))
+        ||
         (isKR && isKUTD && [
             'menunggu pengesahan',
             'menunggu pengesahan lkk',
@@ -212,7 +261,36 @@ export default function InfoTiket({ auth, backUrl, ticket, senaraiPengguna, sena
             (isKUTD && ['tugasan utd', 'semakan laporan teknikal', 'menunggu semakan', 'semakan kutd'].includes(statusFormat))
         ))
         ||
-        (isTD && isPembekalanICT && (
+        (isPembekalanV2 && (
+            (
+                isKUPP
+                && [
+                    'menunggu semakan',
+                    'menunggu semakan laporan',
+                    'pembetulan ketua',
+                ].includes(statusFormat)
+            )
+            ||
+            (
+                isKUTD
+                && statusFormat === 'disemak'
+            )
+            ||
+            (
+                isCurrentUserPIC
+                && [
+                    'dalam tindakan',
+                    'laporan perlu pembetulan',
+                ].includes(statusFormat)
+            )
+            ||
+            (
+                isKW
+                && statusFormat === 'menunggu validasi'
+            )
+        ))
+        ||
+        (!isPembekalanV2 && isTD && isPembekalanICT && (
             (isKUPP && ['tugasan upp', 'menunggu pengesahan'].includes(statusFormat)) ||
             (isCurrentUserPIC && ['dalam tindakan pegawai', 'tindakan pic', 'lkk perlu pembetulan'].includes(statusFormat)) ||
             (isKUTD && ['tugasan utd', 'semakan laporan teknikal', 'menunggu semakan', 'lkk perlu pembetulan'].includes(statusFormat))
@@ -620,7 +698,10 @@ export default function InfoTiket({ auth, backUrl, ticket, senaraiPengguna, sena
                                                 activeTab === 'lkk' ? 'bg-blue-600 text-white shadow-md' : 'text-gray-500 hover:text-gray-800'
                                             }`}
                                         >
-                                            <ClipboardList size={14} /> Laporan LKK
+                                            <ClipboardList size={14} />
+                                            {(isPemodenanV2 || isPembekalanV2)
+                                                ? 'LAPORAN'
+                                                : 'Laporan LKK'}
                                         </button>
                                     )}
                                 </div>
@@ -1413,7 +1494,70 @@ export default function InfoTiket({ auth, backUrl, ticket, senaraiPengguna, sena
                                     {isAuthorizedToEdit ? (
                                         isTD ? (
                                             isPembekalanICT ? (
-                                                <BorangLKKPembekalanICT ticket={ticket} senaraiPegawai={senaraiPengguna} auth={auth} />
+                                                isPembekalanV2
+                                                && [
+                                                    'menunggu semakan',
+                                                    'disemak',
+                                                ].includes(statusFormat) ? (
+                                                    <BorangLKKPembekalanICTV2
+                                                        ticket={ticket}
+                                                        senaraiPegawai={senaraiPengguna}
+                                                        auth={auth}
+                                                    />
+                                                ) : (
+                                                    isPembekalanV2
+                                                    && [
+                                                        'dalam tindakan',
+                                                        'laporan perlu pembetulan',
+                                                    ].includes(statusFormat) ? (
+                                                        <BorangLKKPembekalanTindakanV2
+                                                            ticket={ticket}
+                                                            auth={auth}
+                                                        />
+                                                    ) : (
+                                                        isPembekalanV2
+                                                        && [
+                                                            'menunggu semakan laporan',
+                                                            'pembetulan ketua',
+                                                        ].includes(statusFormat) ? (
+                                                            <BorangLKKPembekalanKUPPV2
+                                                                ticket={ticket}
+                                                                auth={auth}
+                                                            />
+                                                        ) : (
+                                                            isPembekalanV2
+                                                            && statusFormat === 'menunggu validasi' ? (
+                                                                <BorangLKKPembekalanKWV2
+                                                                    ticket={ticket}
+                                                                    auth={auth}
+                                                                    senaraiPegawai={senaraiPengguna}
+                                                                />
+                                                            ) : (
+                                                                <BorangLKKPembekalanICT
+                                                                    ticket={ticket}
+                                                                    senaraiPegawai={senaraiPengguna}
+                                                                    auth={auth}
+                                                                />
+                                                            )
+                                                        )
+                                                    )
+                                                )
+                                            ) : isPemodenanV2 ? (
+                                                [
+                                                    'menunggu semakan',
+                                                    'disemak',
+                                                ].includes(statusFormat) ? (
+                                                    <BorangLKKPemodenanV2
+                                                        ticket={ticket}
+                                                        senaraiPegawai={senaraiPengguna}
+                                                        auth={auth}
+                                                    />
+                                                ) : (
+                                                    <BorangLKKPemodenanTindakanV2
+                                                        ticket={ticket}
+                                                        auth={auth}
+                                                    />
+                                                )
                                             ) : (
                                                 <BorangLKKTransformasi ticket={ticket} senaraiPegawai={senaraiPengguna} auth={auth} />
                                             )
@@ -1477,7 +1621,11 @@ export default function InfoTiket({ auth, backUrl, ticket, senaraiPengguna, sena
                                                 if (K === 'petugas dilantik' || K === 'petugas ditugaskan' || K === 'pegawai dilantik') return 'Petugas ditugaskan';
                                                 if (K === 'laporan dihantar' || K === 'lkk dihantar') return 'Laporan dihantar';
                                                 if (K === 'laporan disemak & disahkan' || K === 'laporan disemak dan disahkan' || K === 'laporan lkk diluluskan' || K === 'lkk disemak & disahkan') return 'Laporan disemak dan disahkan';
-                                                if (K === 'tiket selesai' || K === 'tiket ditutup' || K === 'tiket diluluskan & ditutup') return 'Tiket ditutup';
+                                                if (K === 'tiket selesai' || K === 'tiket ditutup' || K === 'tiket diluluskan & ditutup') {
+                                                    return isPemodenanV2
+                                                        ? 'TIKET DITUTUP'
+                                                        : 'Tiket ditutup';
+                                                }
                                                 return akt;
                                             };
 

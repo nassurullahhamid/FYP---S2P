@@ -3061,53 +3061,260 @@ class TicketController extends Controller
 
     public function cetakLKK($id_tiket)
     {
-        $ticket = Tiket::with('transformasiDigital')->where('id_tiket', $id_tiket)->firstOrFail();
-        if ($ticket->kategori === 'Transformasi Digital' && ($ticket->transformasiDigital->sub_kategori ?? '') === 'Pemodenan Bilik Mesyuarat') {
-            $perananSemasa = strtolower(trim((string) (Auth::user()->peranan ?? '')));
-            $perananDibenarkan = ['ketua_upp', 'ketua upp', 'kupp', 'ketua_utd', 'ketua utd', 'kutd', 'ketua_wilayah', 'ketua wilayah', 'kw'];
+        $ticket = Tiket::query()
+            ->with('transformasiDigital')
+            ->where('id_tiket', $id_tiket)
+            ->firstOrFail();
 
-            if ($ticket->status_tiket !== 'Selesai') {
-                abort(403, 'LKK Pemodenan Bilik Mesyuarat hanya boleh dicetak selepas validasi akhir Ketua Wilayah.');
+        $subKategori =
+            $ticket->transformasiDigital?->sub_kategori
+            ?? '';
+
+        $isModernization =
+            $ticket->kategori === 'Transformasi Digital'
+            && $subKategori === 'Pemodenan Bilik Mesyuarat';
+
+        $isModernizationV2 =
+            $isModernization
+            && $ticket->usesCurrentWorkflow();
+
+        $isProcurement =
+            $ticket->kategori === 'Transformasi Digital'
+            && $subKategori === 'Pembekalan Peralatan ICT';
+
+        $isProcurementV2 =
+            $isProcurement
+            && $ticket->usesCurrentWorkflow();
+
+        $isDigitalTransformationV2 =
+            $isModernizationV2
+            || $isProcurementV2;
+
+        if ($isModernization || $isProcurementV2) {
+            if (
+                $ticket->status_tiket
+                !== config(
+                    's2p_workflow.statuses.completed',
+                    'Selesai'
+                )
+            ) {
+                abort(
+                    403,
+                    $isProcurementV2
+                        ? 'LKK Pembekalan Peralatan ICT hanya boleh dicetak selepas validasi akhir Ketua Wilayah.'
+                        : 'LKK Pemodenan Bilik Mesyuarat hanya boleh dicetak selepas validasi akhir Ketua Wilayah.'
+                );
             }
 
-            if (! in_array($perananSemasa, $perananDibenarkan, true)) {
-                abort(403, 'Hanya KUPP, KUTD dan Ketua Wilayah dibenarkan mencetak LKK Pemodenan Bilik Mesyuarat.');
+            $currentRole = strtolower(
+                trim(
+                    (string) (
+                        Auth::user()?->peranan
+                        ?? ''
+                    )
+                )
+            );
+
+            $allowedRoles = $isDigitalTransformationV2
+                ? config(
+                    's2p_workflow.flows.'.
+                    (
+                        $isProcurementV2
+                            ? 'pembekalan'
+                            : 'pemodenan'
+                    ).
+                    '.report_print_roles',
+                    []
+                )
+                : [
+                    'ketua_upp',
+                    'ketua upp',
+                    'kupp',
+                    'ketua_utd',
+                    'ketua utd',
+                    'kutd',
+                    'ketua_wilayah',
+                    'ketua wilayah',
+                    'kw',
+                ];
+
+            $allowedRoles = array_map(
+                static fn ($role): string => strtolower(
+                    trim((string) $role)
+                ),
+                $allowedRoles
+            );
+
+            if (
+                ! in_array(
+                    $currentRole,
+                    $allowedRoles,
+                    true
+                )
+            ) {
+                abort(
+                    403,
+                    $isProcurementV2
+                        ? 'Hanya KUPP dan Ketua Wilayah dibenarkan mencetak LKK Pembekalan Peralatan ICT V2.'
+                        : (
+                            $isModernizationV2
+                                ? 'Hanya KUPP dan Ketua Wilayah dibenarkan mencetak LKK Pemodenan V2.'
+                                : 'Hanya KUPP, KUTD dan Ketua Wilayah dibenarkan mencetak LKK Pemodenan Bilik Mesyuarat.'
+                        )
+                );
             }
         }
 
-        $laporan = DB::table('laporan')->where('id_tiket', $id_tiket)->first();
+        $laporan = DB::table('laporan')
+            ->where('id_tiket', $id_tiket)
+            ->first();
 
-        if (! $laporan) {
-            return redirect()->back()->withErrors(['sistem' => 'Laporan LKK belum dijana.']);
+        if ($laporan === null) {
+            return redirect()
+                ->back()
+                ->withErrors([
+                    'sistem' => 'Laporan LKK belum dijana.',
+                ]);
         }
 
-        if ($laporan) {
-            foreach (['gambar_tapak', 'gambar_cadangan'] as $field) {
-                if (! empty($laporan->{$field})) {
-                    $decoded = json_decode($laporan->{$field}, true);
+        foreach (
+            [
+                'gambar_tapak',
+                'gambar_cadangan',
+            ] as $field
+        ) {
+            if (! empty($laporan->{$field})) {
+                $decoded = json_decode(
+                    $laporan->{$field},
+                    true
+                );
 
-                    if (! is_array($decoded)) {
-                        $decoded = $decoded ? [$decoded] : [];
-                    }
-                    $laporan->{$field} = json_encode($decoded);
-                } else {
-                    $laporan->{$field} = json_encode([]);
+                if (! is_array($decoded)) {
+                    $decoded = $decoded
+                        ? [$decoded]
+                        : [];
                 }
+
+                $laporan->{$field} = json_encode(
+                    $decoded
+                );
+            } else {
+                $laporan->{$field} = json_encode([]);
             }
         }
 
-        $kosItems = json_decode($laporan->kos_items) ?? [];
+        $kosItems = json_decode(
+            $laporan->kos_items
+        ) ?? [];
+
+        $tarikhDisediakan = null;
+        $tarikhDisemak = null;
+        $jawatanPenyedia = null;
+        $jawatanPenyemak = null;
+
+        if ($isDigitalTransformationV2) {
+            $verifiedTrail = DB::table('jejak_tiket')
+                ->where('id_tiket', $id_tiket)
+                ->where(
+                    'aktiviti',
+                    config(
+                        's2p_workflow.trail_events.verified',
+                        'DIVERIFIKASI'
+                    )
+                )
+                ->orderByDesc('id')
+                ->first();
+
+            $validatedTrail = DB::table('jejak_tiket')
+                ->where('id_tiket', $id_tiket)
+                ->where(
+                    'aktiviti',
+                    config(
+                        's2p_workflow.trail_events.validated',
+                        'DIVALIDASI'
+                    )
+                )
+                ->orderByDesc('id')
+                ->first();
+
+            $tarikhDisediakan =
+                $verifiedTrail?->created_at;
+
+            $tarikhDisemak =
+                $validatedTrail?->created_at;
+
+            if (
+                filled(
+                    $laporan->disediakan_oleh
+                    ?? null
+                )
+            ) {
+                $jawatanPenyedia = Pengguna::query()
+                    ->where(
+                        'nama',
+                        $laporan->disediakan_oleh
+                    )
+                    ->value('jawatan');
+            }
+
+            if (
+                filled(
+                    $laporan->disemak_oleh
+                    ?? null
+                )
+            ) {
+                $jawatanPenyemak = Pengguna::query()
+                    ->where(
+                        'nama',
+                        $laporan->disemak_oleh
+                    )
+                    ->value('jawatan');
+            }
+        }
 
         if ($ticket->kategori === 'Transformasi Digital') {
-            $subKategori = $ticket->transformasiDigital->sub_kategori ?? '';
-            if ($subKategori === 'Pembekalan Peralatan ICT') {
-                return view('reports.laporan_lkk_pembekalanICT', compact('ticket', 'laporan', 'kosItems'));
+            if (
+                $subKategori
+                === 'Pembekalan Peralatan ICT'
+            ) {
+                return view(
+                    'reports.laporan_lkk_pembekalanICT',
+                    compact(
+                        'ticket',
+                        'laporan',
+                        'kosItems',
+                        'isProcurementV2',
+                        'tarikhDisediakan',
+                        'tarikhDisemak',
+                        'jawatanPenyedia',
+                        'jawatanPenyemak'
+                    )
+                );
             }
 
-            return view('reports.laporan_lkk_transformasi', compact('ticket', 'laporan', 'kosItems'));
+            return view(
+                'reports.laporan_lkk_transformasi',
+                compact(
+                    'ticket',
+                    'laporan',
+                    'kosItems',
+                    'isModernizationV2',
+                    'tarikhDisediakan',
+                    'tarikhDisemak',
+                    'jawatanPenyedia',
+                    'jawatanPenyemak'
+                )
+            );
         }
 
-        return view('reports.laporan_lkk_rangkaian', compact('ticket', 'laporan', 'kosItems'));
+        return view(
+            'reports.laporan_lkk_rangkaian',
+            compact(
+                'ticket',
+                'laporan',
+                'kosItems'
+            )
+        );
     }
 
     public function verifikasiLKK(Request $request, string $id_tiket)

@@ -113,6 +113,74 @@ Route::middleware('auth')->group(function () {
         '/tickets/{id_tiket}/workflow/submit-loan',
         [TicketWorkflowController::class, 'submitLoanByPic']
     )->name('tickets.workflow.submitLoan');
+    Route::post(
+        '/tickets/{id_tiket}/workflow/submit-procurement-report',
+        [
+            TicketWorkflowController::class,
+            'submitProcurementReport',
+        ]
+    )->name('tickets.workflow.submitProcurementReport');
+
+    Route::post(
+        '/tickets/{id_tiket}/workflow/save-procurement-lkk',
+        [
+            TicketWorkflowController::class,
+            'saveProcurementLkk',
+        ]
+    )->name('tickets.workflow.saveProcurementLkk');
+    Route::post(
+        '/tickets/{id_tiket}/workflow/submit-modernization-report',
+        [TicketWorkflowController::class, 'submitModernizationReport']
+    )->name('tickets.workflow.submitModernizationReport');
+    Route::post(
+        '/tickets/{id_tiket}/workflow/save-modernization-lkk',
+        [TicketWorkflowController::class, 'saveModernizationLkk']
+    )->name('tickets.workflow.saveModernizationLkk');
+    Route::post(
+        '/tickets/{id_tiket}/workflow/review-procurement-lkk',
+        [
+            TicketWorkflowController::class,
+            'reviewProcurementLkk',
+        ]
+    )->name('tickets.workflow.reviewProcurementLkk');
+    Route::post(
+        '/tickets/{id_tiket}/workflow/review-modernization-lkk',
+        [TicketWorkflowController::class, 'reviewModernizationLkk']
+    )->name('tickets.workflow.reviewModernizationLkk');
+    Route::post(
+        '/tickets/{id_tiket}/workflow/validate-procurement-lkk',
+        [
+            TicketWorkflowController::class,
+            'validateProcurementLkk',
+        ]
+    )->name('tickets.workflow.validateProcurementLkk');
+    Route::post(
+        '/tickets/{id_tiket}/workflow/validate-modernization-lkk',
+        [TicketWorkflowController::class, 'validateModernizationLkk']
+    )->name('tickets.workflow.validateModernizationLkk');
+    Route::post(
+        '/tickets/{id_tiket}/workflow/review-procurement',
+        [
+            TicketWorkflowController::class,
+            'reviewProcurementTicket',
+        ]
+    )->name('tickets.workflow.reviewProcurement');
+
+    Route::post(
+        '/tickets/{id_tiket}/workflow/assign-procurement',
+        [
+            TicketWorkflowController::class,
+            'assignProcurementTicket',
+        ]
+    )->name('tickets.workflow.assignProcurement');
+    Route::post(
+        '/tickets/{id_tiket}/workflow/review-modernization',
+        [TicketWorkflowController::class, 'reviewModernizationTicket']
+    )->name('tickets.workflow.reviewModernization');
+    Route::post(
+        '/tickets/{id_tiket}/workflow/assign-modernization',
+        [TicketWorkflowController::class, 'assignModernizationTicket']
+    )->name('tickets.workflow.assignModernization');
     Route::get('/tickets/{id_tiket}', [TicketController::class, 'show'])->name('tickets.show');
     Route::post('/tickets/{ticket}/processAction', [TicketController::class, 'processAction'])->name('tickets.processAction');
     Route::post('/tickets/{ticket}/pic-update', [TicketController::class, 'picUpdate'])->name('tickets.picUpdate');

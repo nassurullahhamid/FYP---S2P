@@ -74,20 +74,51 @@
             $grandTotalKajian += (float)($kajian['anggaran_kos'] ?? 0);
         }
 
+        /*
+         * Workflow V2 mengambil tarikh pengesahan daripada
+         * jejak DIVERIFIKASI dan DIVALIDASI. Workflow lama
+         * mengekalkan kaedah tarikh sedia ada.
+         */
         $tarikhPengkaji = '-';
-        if (!empty($dataLaporan->created_at)) {
-            $tarikhPengkaji = \Carbon\Carbon::parse($dataLaporan->created_at)->format('d/m/Y');
+
+        if (
+            ($isProcurementV2 ?? false)
+            && !empty($tarikhDisediakan)
+        ) {
+            $tarikhPengkaji = \Carbon\Carbon::parse(
+                $tarikhDisediakan
+            )->format('d/m/Y');
+        } elseif (!empty($dataLaporan->created_at)) {
+            $tarikhPengkaji = \Carbon\Carbon::parse(
+                $dataLaporan->created_at
+            )->format('d/m/Y');
         } elseif (!empty($dataLaporan->updated_at)) {
-            $tarikhPengkaji = \Carbon\Carbon::parse($dataLaporan->updated_at)->format('d/m/Y');
+            $tarikhPengkaji = \Carbon\Carbon::parse(
+                $dataLaporan->updated_at
+            )->format('d/m/Y');
         } elseif (!empty($ticket->created_at)) {
-            $tarikhPengkaji = \Carbon\Carbon::parse($ticket->created_at)->format('d/m/Y');
+            $tarikhPengkaji = \Carbon\Carbon::parse(
+                $ticket->created_at
+            )->format('d/m/Y');
         }
 
         $tarikhVerifikasi = '-';
-        if (!empty($dataLaporan->updated_at)) {
-            $tarikhVerifikasi = \Carbon\Carbon::parse($dataLaporan->updated_at)->format('d/m/Y');
+
+        if (
+            ($isProcurementV2 ?? false)
+            && !empty($tarikhDisemak)
+        ) {
+            $tarikhVerifikasi = \Carbon\Carbon::parse(
+                $tarikhDisemak
+            )->format('d/m/Y');
+        } elseif (!empty($dataLaporan->updated_at)) {
+            $tarikhVerifikasi = \Carbon\Carbon::parse(
+                $dataLaporan->updated_at
+            )->format('d/m/Y');
         } elseif (!empty($ticket->updated_at)) {
-            $tarikhVerifikasi = \Carbon\Carbon::parse($ticket->updated_at)->format('d/m/Y');
+            $tarikhVerifikasi = \Carbon\Carbon::parse(
+                $ticket->updated_at
+            )->format('d/m/Y');
         }
     @endphp
 
@@ -102,7 +133,7 @@
         <table style="width: 100%; margin-bottom: 20px;">
             <tr>
                 <td colspan="2" style="text-align: right; font-size: 8px; font-style: italic; font-weight: bold; padding-bottom: 15px;">
-                    BPI/BP02v1.1
+                    BPI/B02v1.3
                 </td>
             </tr>
 
@@ -116,7 +147,7 @@
 
                 <td style="vertical-align: middle; padding-left: 15px;">
                     <h1 style="font-size: 12px; font-weight: 900; text-transform: uppercase; margin: 0; color: #000; letter-spacing: 0.5px;">
-                        LAPORAN KAJIAN KEPERLUAN (BPI/BP02 &ndash; {{ date('Y') }} / {{ $pendahuluan['jabatan'] ?? $ticket->agensi ?? '<Agensi>' }} / 001 )
+                        LAPORAN KAJIAN KEPERLUAN (BPI/B02 &ndash; {{ date('Y') }} / {{ $pendahuluan['jabatan'] ?? $ticket->agensi ?? '<Agensi>' }} / 001 )
                     </h1>
                 </td>
             </tr>
@@ -284,7 +315,7 @@
                             <div class="space-y-4 pt-4">
                                 <div class="flex"><div class="w-[85px]">Tandatangan</div><div class="w-4 text-center">:</div><div class="flex-1"></div></div>
                                 <div class="flex"><div class="w-[85px]">Nama</div><div class="w-4 text-center">:</div><div class="flex-1 font-bold capitalize">{{ $dataLaporan->disediakan_oleh ?? '-' }}</div></div>
-                                <div class="flex"><div class="w-[85px]">Jawatan</div><div class="w-4 text-center">:</div><div class="flex-1 font-semibold capitalize">{{ $pendahuluan['jawatan_penyedia'] ?? $dataLaporan->jawatan ?? 'Penolong Pegawai Teknologi Maklumat' }}</div></div>
+                                <div class="flex"><div class="w-[85px]">Jawatan</div><div class="w-4 text-center">:</div><div class="flex-1 font-semibold capitalize">{{ ($isProcurementV2 ?? false) ? ($jawatanPenyedia ?? '-') : ($pendahuluan['jawatan_penyedia'] ?? $dataLaporan->jawatan ?? 'Penolong Pegawai Teknologi Maklumat') }}</div></div>
                                 <div class="flex"><div class="w-[85px]">Tarikh</div><div class="w-4 text-center">:</div><div class="flex-1 font-semibold">{{ $tarikhPengkaji }}</div></div>
                             </div>
                             <div class="italic text-[10px] text-black pt-4 font-medium">
@@ -296,7 +327,7 @@
                             <div class="space-y-4 pt-4">
                                 <div class="flex"><div class="w-[85px]">Tandatangan</div><div class="w-4 text-center">:</div><div class="flex-1"></div></div>
                                 <div class="flex"><div class="w-[85px]">Nama</div><div class="w-4 text-center">:</div><div class="flex-1 font-bold capitalize">{{ $dataLaporan->disemak_oleh ?? '-' }}</div></div>
-                                <div class="flex"><div class="w-[85px]">Jawatan</div><div class="w-4 text-center">:</div><div class="flex-1 font-semibold capitalize">{{ $pendahuluan['jawatan_penyemak'] ?? $dataLaporan->jawatan_pengesah ?? 'Pegawai Teknologi Maklumat' }}</div></div>
+                                <div class="flex"><div class="w-[85px]">Jawatan</div><div class="w-4 text-center">:</div><div class="flex-1 font-semibold capitalize">{{ ($isProcurementV2 ?? false) ? ($jawatanPenyemak ?? '-') : ($pendahuluan['jawatan_penyemak'] ?? $dataLaporan->jawatan_pengesah ?? 'Pegawai Teknologi Maklumat') }}</div></div>
                                 <div class="flex"><div class="w-[85px]">Tarikh</div><div class="w-4 text-center">:</div><div class="flex-1 font-semibold">{{ $tarikhVerifikasi }}</div></div>
                             </div>
                             <div></div>

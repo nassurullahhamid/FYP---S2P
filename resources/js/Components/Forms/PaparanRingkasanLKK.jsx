@@ -115,6 +115,10 @@ export default function PaparanRingkasanLKK({ ticket, auth, senaraiPegawai }) {
         && statusFormat === 'menunggu validasi'
         && isKW;
 
+    const isModernizationV2 =
+        isWorkflowV2
+        && isBilikMesyuarat;
+
     const isStatusPeminjamanSah = [
         'menunggu pengesahan',
         'menunggu pengesahan lkk',
@@ -810,7 +814,7 @@ export default function PaparanRingkasanLKK({ ticket, auth, senaraiPegawai }) {
                 </div>
             )}
 
-            {!isPeminjaman && ['menunggu validasi kw', 'menunggu validasi'].includes(statusFormat) && isKW && (
+            {!isModernizationV2 && !isPeminjaman && ['menunggu validasi kw', 'menunggu validasi'].includes(statusFormat) && isKW && (
                 <div className="bg-blue-50/60 p-5 rounded-2xl border border-blue-200/80 shadow-sm space-y-4">
                     <div className="flex items-center gap-2">
                         <div className="p-1.5 bg-blue-100 text-blue-700 rounded-lg"><ShieldCheck size={14} /></div>

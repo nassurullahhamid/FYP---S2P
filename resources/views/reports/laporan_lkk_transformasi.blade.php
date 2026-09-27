@@ -78,10 +78,44 @@
         $kosItems = is_string($kosItemsRaw) ? json_decode($kosItemsRaw, true) : $kosItemsRaw;
         $kosItems = is_array($kosItems) ? $kosItems : [];
 
-        // Format dates
+        // Workflow lama mengekalkan tarikh laporan sedia ada.
         $tarikhLaporan = ($laporan->updated_at ?? false)
             ? \Carbon\Carbon::parse($laporan->updated_at)->format('d/m/Y')
             : (($ticket->updated_at ?? false) ? \Carbon\Carbon::parse($ticket->updated_at)->format('d/m/Y') : '');
+
+        /*
+         * Workflow V2 menggunakan masa sebenar daripada
+         * jejak DIVERIFIKASI dan DIVALIDASI.
+         *
+         * Workflow 1 mengekalkan $tarikhLaporan.
+         */
+        $tarikhPenyedia =
+            ($isModernizationV2 ?? false)
+            && !empty($tarikhDisediakan ?? null)
+                ? \Carbon\Carbon::parse(
+                    $tarikhDisediakan
+                )->format('d/m/Y')
+                : $tarikhLaporan;
+
+        $tarikhPenyemak =
+            ($isModernizationV2 ?? false)
+            && !empty($tarikhDisemak ?? null)
+                ? \Carbon\Carbon::parse(
+                    $tarikhDisemak
+                )->format('d/m/Y')
+                : $tarikhLaporan;
+
+        $jawatanPenyediaPaparan =
+            ($isModernizationV2 ?? false)
+            && !empty($jawatanPenyedia ?? null)
+                ? $jawatanPenyedia
+                : 'Penolong Pegawai Teknologi Maklumat';
+
+        $jawatanPenyemakPaparan =
+            ($isModernizationV2 ?? false)
+            && !empty($jawatanPenyemak ?? null)
+                ? $jawatanPenyemak
+                : 'Pegawai Teknologi Maklumat';
     @endphp
 
     <div class="no-print" style="text-align: right; margin-bottom: 20px;">
@@ -95,6 +129,11 @@
                     <img src="{{ asset('images/logo_jtdi.png') }}" style="height: 80px; object-fit: contain; margin-bottom: 6px;" alt="Logo JTDI" />
                     <div class="header-dept">JABATAN TEKNOLOGI DIGITAL DAN INOVASI NEGERI SABAH</div>
                 </div>
+                @if($isModernizationV2 ?? false)
+                    <div style="margin-bottom: 4px; text-align: right; font-size: 8px; font-style: italic; font-weight: bold;">
+                        BPI/B01v1.3
+                    </div>
+                @endif
                 <div class="header-title">LAPORAN KAJIAN KESAURAN<br>PEMODENAN BILIK MESYUARAT</div>
             </td>
         </tr>
@@ -230,12 +269,12 @@
                             <tr>
                                 <td style="width: 1%; white-space: nowrap; border: none; padding: 2px 0;">Jawatan</td>
                                 <td style="width: 1%; white-space: nowrap; border: none; padding: 2px 10px;">:</td>
-                                <td style="border: none; padding: 2px 0;"><span style="text-transform: uppercase;">Penolong Pegawai Teknologi Maklumat</span></td>
+                                <td style="border: none; padding: 2px 0;"><span style="text-transform: uppercase;">{{ $jawatanPenyediaPaparan }}</span></td>
                             </tr>
                             <tr>
                                 <td style="width: 1%; white-space: nowrap; border: none; padding: 2px 0;">Tarikh</td>
                                 <td style="width: 1%; white-space: nowrap; border: none; padding: 2px 10px;">:</td>
-                                <td style="border: none; padding: 2px 0;">{{ $tarikhLaporan }}</td>
+                                <td style="border: none; padding: 2px 0;">{{ $tarikhPenyedia }}</td>
                             </tr>
                         </table>
                     </td>
@@ -251,12 +290,12 @@
                             <tr>
                                 <td style="width: 1%; white-space: nowrap; border: none; padding: 2px 0;">Jawatan</td>
                                 <td style="width: 1%; white-space: nowrap; border: none; padding: 2px 10px;">:</td>
-                                <td style="border: none; padding: 2px 0;"><span style="text-transform: uppercase;">Pegawai Teknologi Maklumat</span></td>
+                                <td style="border: none; padding: 2px 0;"><span style="text-transform: uppercase;">{{ $jawatanPenyemakPaparan }}</span></td>
                             </tr>
                             <tr>
                                 <td style="width: 1%; white-space: nowrap; border: none; padding: 2px 0;">Tarikh</td>
                                 <td style="width: 1%; white-space: nowrap; border: none; padding: 2px 10px;">:</td>
-                                <td style="border: none; padding: 2px 0;">{{ $tarikhLaporan }}</td>
+                                <td style="border: none; padding: 2px 0;">{{ $tarikhPenyemak }}</td>
                             </tr>
                         </table>
                     </td>
