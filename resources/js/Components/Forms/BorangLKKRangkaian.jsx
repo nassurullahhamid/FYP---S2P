@@ -15,22 +15,17 @@ export default function BorangLKKRangkaian({ ticket, senaraiKosSelamat, existing
     const isKW = perananSemasa === 'ketua_wilayah' || perananSemasa === 'kw';
 
     const statusFormat = String(ticket.status_tiket || '').trim().toLowerCase();
-    const isWorkflowV2 = Number(ticket.workflow_version) === 2;
     const isSelesai = statusFormat === 'selesai';
     const isMenungguKW = ['menunggu validasi kw', 'menunggu validasi', 'validasi kw'].includes(statusFormat);
-    const isDalamTindakan = statusFormat === 'dalam tindakan pegawai';
+
     const isPembetulan =
-        statusFormat === 'lkk perlu pembetulan'
-        || (
-            isWorkflowV2
-            && statusFormat === 'pembetulan ketua'
-        );
+        statusFormat === 'pembetulan ketua';
 
     // Form read-only lock state (Only editable by KUTD before it hits KW)
     const isBorangLocked = isSelesai || isMenungguKW || !isKUTD;
 
-    // Bukti teknikal workflow v2 dimiliki oleh Juruteknik.
-    const isTechnicalEvidenceLocked = isWorkflowV2;
+    // Bukti teknikal Workflow V2 dimiliki oleh Juruteknik.
+    const isTechnicalEvidenceLocked = true;
 
     // Manual processing state for router.post
     const [isSubmitting, setIsSubmitting] = useState(false);
@@ -185,27 +180,15 @@ export default function BorangLKKRangkaian({ ticket, senaraiKosSelamat, existing
         if (isBorangLocked || isSubmitting) return;
 
 
-        const submissionRoute = isWorkflowV2
-            ? route(
-                'tickets.workflow.saveNetworkLkk',
-                ticket.id_tiket
-            )
-            : route(
-                'tickets.storeLKKRangkaian',
-                ticket.id_tiket
-            );
+        const submissionRoute = route(
+            'tickets.workflow.saveNetworkLkk',
+            ticket.id_tiket
+        );
 
-        const submissionData = isWorkflowV2
-            ? {
-                ...data,
-                is_draft: false,
-            }
-            : {
-                ...data,
-                is_draft: false,
-                is_kutd_hantar: true,
-                tindakan: 'KUTD_SAH_SEMAKAN',
-            };
+        const submissionData = {
+            ...data,
+            is_draft: false,
+        };
 
         setIsSubmitting(true);
 
@@ -218,9 +201,7 @@ export default function BorangLKKRangkaian({ ticket, senaraiKosSelamat, existing
                 onFinish: () => setIsSubmitting(false),
                 onSuccess: () => {
                     alert(
-                        isWorkflowV2
-                            ? 'LKK berjaya diverifikasi dan dihantar untuk validasi Ketua Wilayah!'
-                            : 'Laporan LKK berjaya dihantar untuk pengesahan Ketua Wilayah!'
+                        'LKK berjaya diverifikasi dan dihantar untuk validasi Ketua Wilayah!'
                     );
                 },
                 onError: (submissionErrors) => {
@@ -247,15 +228,10 @@ export default function BorangLKKRangkaian({ ticket, senaraiKosSelamat, existing
         e.preventDefault();
         if (isBorangLocked || isSubmitting) return;
 
-        const submissionRoute = isWorkflowV2
-            ? route(
-                'tickets.workflow.saveNetworkLkk',
-                ticket.id_tiket
-            )
-            : route(
-                'tickets.storeLKKRangkaian',
-                ticket.id_tiket
-            );
+        const submissionRoute = route(
+            'tickets.workflow.saveNetworkLkk',
+            ticket.id_tiket
+        );
 
         setIsSubmitting(true);
 
