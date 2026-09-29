@@ -827,34 +827,4 @@ class TicketController extends Controller
             )
         );
     }
-
-    private function clearTicketNotifications(string $id_tiket)
-    {
-        try {
-            DB::table('notifications')
-                ->whereNull('read_at')
-                ->where('data->id_tiket', $id_tiket)
-                ->update(['read_at' => now()]);
-        } catch (\Exception $e) {
-        }
-
-        try {
-            DB::table('notifications')
-                ->whereNull('read_at')
-                ->whereRaw('CAST(data AS CHAR) LIKE ?', ['%'.$id_tiket.'%'])
-                ->update(['read_at' => now()]);
-        } catch (\Exception $e) {
-        }
-
-        $unreadNotis = DB::table('notifications')->whereNull('read_at')->get();
-        $notisToClear = [];
-        foreach ($unreadNotis as $noti) {
-            if (str_contains((string) $noti->data, $id_tiket)) {
-                $notisToClear[] = $noti->id;
-            }
-        }
-        if (! empty($notisToClear)) {
-            DB::table('notifications')->whereIn('id', $notisToClear)->update(['read_at' => now()]);
-        }
-    }
 }
