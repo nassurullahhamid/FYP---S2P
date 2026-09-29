@@ -11,8 +11,6 @@ use Illuminate\Support\Facades\DB;
 
 class Tiket extends Model
 {
-    public const WORKFLOW_VERSION_LEGACY = 1;
-
     public const WORKFLOW_VERSION_CURRENT = 2;
 
     protected $table = 'tiket';
@@ -57,11 +55,6 @@ class Tiket extends Model
         'tarikh_tutup' => 'datetime',
         'tarikh_semakan' => 'datetime',
     ];
-
-    public function usesCurrentWorkflow(): bool
-    {
-        return $this->workflow_version === self::WORKFLOW_VERSION_CURRENT;
-    }
 
     public function workflowKey(): ?string
     {

@@ -45,7 +45,6 @@ class WorkflowProcurementValidationNotification extends Notification
                     'id_tiket' => $this->ticket->id_tiket,
                 ]
             ),
-            'workflow_version' => $this->ticket->workflow_version,
         ];
     }
 }

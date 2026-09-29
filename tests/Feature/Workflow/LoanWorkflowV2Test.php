@@ -23,7 +23,7 @@ class LoanWorkflowV2Test extends TestCase
         $ticketId = 'TEST-LOAN-V2-001';
         $serialNumber = 'TEST-ASSET-001';
 
-        $this->createLoanTicket($ticketId, 2, $kupp->no_ic);
+        $this->createLoanTicket($ticketId, $kupp->no_ic);
         $this->createAsset($serialNumber);
 
         $this->actingAs($kupp)
@@ -188,42 +188,6 @@ class LoanWorkflowV2Test extends TestCase
         ]);
     }
 
-    public function test_loan_endpoint_rejects_workflow_one_ticket(): void
-    {
-        [$kupp, , $technician] =
-            $this->createWorkflowUsers('02');
-
-        $ticketId = 'TEST-LOAN-V1-001';
-        $serialNumber = 'TEST-ASSET-002';
-
-        $this->createLoanTicket($ticketId, 1, $kupp->no_ic);
-        $this->createAsset($serialNumber);
-
-        $this->actingAs($kupp)
-            ->post(
-                route(
-                    'tickets.workflow.reviewLoan',
-                    ['id_tiket' => $ticketId]
-                ),
-                $this->reviewPayload(
-                    $technician,
-                    $serialNumber
-                )
-            )
-            ->assertSessionHasErrors();
-
-        $this->assertDatabaseHas('tiket', [
-            'id_tiket' => $ticketId,
-            'workflow_version' => 1,
-            'status_tiket' => 'Menunggu Semakan',
-        ]);
-
-        $this->assertDatabaseHas('aset', [
-            'serial_no' => $serialNumber,
-            'status' => 'Tersedia',
-        ]);
-    }
-
     public function test_wrong_role_cannot_review_loan_ticket(): void
     {
         [$kupp, $kutd, $technician] =
@@ -232,7 +196,7 @@ class LoanWorkflowV2Test extends TestCase
         $ticketId = 'TEST-LOAN-V2-ROLE';
         $serialNumber = 'TEST-ASSET-003';
 
-        $this->createLoanTicket($ticketId, 2, $kupp->no_ic);
+        $this->createLoanTicket($ticketId, $kupp->no_ic);
         $this->createAsset($serialNumber);
 
         $this->actingAs($kutd)
@@ -273,7 +237,7 @@ class LoanWorkflowV2Test extends TestCase
         $ticketId = 'TEST-LOAN-V2-PIC';
         $serialNumber = 'TEST-ASSET-004';
 
-        $this->createLoanTicket($ticketId, 2, $kupp->no_ic);
+        $this->createLoanTicket($ticketId, $kupp->no_ic);
         $this->createAsset($serialNumber);
 
         $this->actingAs($kupp)
@@ -324,7 +288,7 @@ class LoanWorkflowV2Test extends TestCase
         $ticketId = 'TEST-LOAN-V2-INCOMPLETE';
         $serialNumber = 'TEST-ASSET-005';
 
-        $this->createLoanTicket($ticketId, 2, $kupp->no_ic);
+        $this->createLoanTicket($ticketId, $kupp->no_ic);
         $this->createAsset($serialNumber);
 
         $this->actingAs($kupp)
@@ -365,7 +329,6 @@ class LoanWorkflowV2Test extends TestCase
 
         $this->createLoanTicket(
             $ticketId,
-            2,
             $kupp->no_ic,
             'Penyelenggaraan Komputer'
         );
@@ -402,7 +365,7 @@ class LoanWorkflowV2Test extends TestCase
         $ticketId = 'TEST-LOAN-V2-STOCK';
         $serialNumber = 'TEST-ASSET-007';
 
-        $this->createLoanTicket($ticketId, 2, $kupp->no_ic);
+        $this->createLoanTicket($ticketId, $kupp->no_ic);
         $this->createAsset($serialNumber);
 
         $this->actingAs($kupp)
@@ -473,7 +436,6 @@ class LoanWorkflowV2Test extends TestCase
 
     private function createLoanTicket(
         string $ticketId,
-        int $workflowVersion,
         string $ownerIdentityNumber,
         string $subCategory = 'Peminjaman Peralatan ICT'
     ): void {
@@ -492,7 +454,7 @@ class LoanWorkflowV2Test extends TestCase
             'tahap_keutamaan' => 'Sederhana',
             'status_tiket' => 'Menunggu Semakan',
             'pengguna_ic' => $ownerIdentityNumber,
-            'workflow_version' => $workflowVersion,
+            'workflow_version' => 2,
             'created_at' => now(),
             'updated_at' => now(),
         ]);

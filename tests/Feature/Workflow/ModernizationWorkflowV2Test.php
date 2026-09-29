@@ -26,7 +26,7 @@ class ModernizationWorkflowV2Test extends TestCase
     public function test_modernization_v2_completes_the_full_workflow(): void
     {
         $users = $this->createWorkflowUsers('81');
-        $ticketId = $this->createTicket('001', 2, 'Pemodenan Bilik Mesyuarat');
+        $ticketId = $this->createTicket('001', 'Pemodenan Bilik Mesyuarat');
 
         $this->reviewTicket($users['kupp'], $ticketId);
         $this->assertTicketStatus($ticketId, 'Disemak');
@@ -76,7 +76,7 @@ class ModernizationWorkflowV2Test extends TestCase
     public function test_modernization_v2_supports_both_correction_paths(): void
     {
         $users = $this->createWorkflowUsers('82');
-        $ticketId = $this->createTicket('002', 2, 'Pemodenan Bilik Mesyuarat');
+        $ticketId = $this->createTicket('002', 'Pemodenan Bilik Mesyuarat');
 
         $this->reviewTicket($users['kupp'], $ticketId);
         $this->assignTicket($users['kutd'], $ticketId, $users['technician']);
@@ -117,23 +117,10 @@ class ModernizationWorkflowV2Test extends TestCase
         );
     }
 
-    public function test_modernization_endpoint_rejects_workflow_one_ticket(): void
-    {
-        $users = $this->createWorkflowUsers('83');
-        $ticketId = $this->createTicket('003', 1, 'Pemodenan Bilik Mesyuarat');
-
-        $this->actingAs($users['kupp'])
-            ->post(route('tickets.workflow.reviewModernization', $ticketId), $this->reviewPayload())
-            ->assertSessionHasErrors('sistem');
-
-        $this->assertTicketStatus($ticketId, 'Menunggu Semakan');
-        $this->assertDatabaseMissing('laporan', ['id_tiket' => $ticketId]);
-    }
-
     public function test_wrong_role_cannot_review_modernization_ticket(): void
     {
         $users = $this->createWorkflowUsers('84');
-        $ticketId = $this->createTicket('004', 2, 'Pemodenan Bilik Mesyuarat');
+        $ticketId = $this->createTicket('004', 'Pemodenan Bilik Mesyuarat');
 
         $this->actingAs($users['kutd'])
             ->post(route('tickets.workflow.reviewModernization', $ticketId), $this->reviewPayload())
@@ -146,7 +133,7 @@ class ModernizationWorkflowV2Test extends TestCase
     {
         $users = $this->createWorkflowUsers('85');
         $unassigned = $this->createUser('859999999999', 'Juruteknik Tidak Dilantik 85', 'juruteknik');
-        $ticketId = $this->createTicket('005', 2, 'Pemodenan Bilik Mesyuarat');
+        $ticketId = $this->createTicket('005', 'Pemodenan Bilik Mesyuarat');
 
         $this->reviewTicket($users['kupp'], $ticketId);
         $this->assignTicket($users['kutd'], $ticketId, $users['technician']);
@@ -161,7 +148,7 @@ class ModernizationWorkflowV2Test extends TestCase
     public function test_modernization_route_rejects_procurement_subcategory(): void
     {
         $users = $this->createWorkflowUsers('86');
-        $ticketId = $this->createTicket('006', 2, 'Pembekalan Peralatan ICT');
+        $ticketId = $this->createTicket('006', 'Pembekalan Peralatan ICT');
 
         $this->actingAs($users['kupp'])
             ->post(route('tickets.workflow.reviewModernization', $ticketId), $this->reviewPayload())
@@ -279,7 +266,7 @@ class ModernizationWorkflowV2Test extends TestCase
         ]);
     }
 
-    private function createTicket(string $suffix, int $workflowVersion, string $subCategory): string
+    private function createTicket(string $suffix, string $subCategory): string
     {
         $applicant = $this->createUser(
             '87'.str_pad($suffix, 10, '0', STR_PAD_LEFT),
@@ -302,7 +289,7 @@ class ModernizationWorkflowV2Test extends TestCase
             'kategori' => 'Transformasi Digital',
             'status_tiket' => 'Menunggu Semakan',
             'pengguna_ic' => $applicant->no_ic,
-            'workflow_version' => $workflowVersion,
+            'workflow_version' => 2,
             'created_at' => now(),
             'updated_at' => now(),
         ]);

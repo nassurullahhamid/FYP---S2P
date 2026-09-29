@@ -76,14 +76,12 @@
 
         /*
          * Workflow V2 mengambil tarikh pengesahan daripada
-         * jejak DIVERIFIKASI dan DIVALIDASI. Workflow lama
-         * mengekalkan kaedah tarikh sedia ada.
+         * jejak DIVERIFIKASI dan DIVALIDASI. Nilai sandaran * mengekalkan kaedah tarikh sedia ada.
          */
         $tarikhPengkaji = '-';
 
         if (
-            ($isProcurementV2 ?? false)
-            && !empty($tarikhDisediakan)
+            !empty($tarikhDisediakan)
         ) {
             $tarikhPengkaji = \Carbon\Carbon::parse(
                 $tarikhDisediakan
@@ -105,8 +103,7 @@
         $tarikhVerifikasi = '-';
 
         if (
-            ($isProcurementV2 ?? false)
-            && !empty($tarikhDisemak)
+            !empty($tarikhDisemak)
         ) {
             $tarikhVerifikasi = \Carbon\Carbon::parse(
                 $tarikhDisemak
@@ -315,7 +312,7 @@
                             <div class="space-y-4 pt-4">
                                 <div class="flex"><div class="w-[85px]">Tandatangan</div><div class="w-4 text-center">:</div><div class="flex-1"></div></div>
                                 <div class="flex"><div class="w-[85px]">Nama</div><div class="w-4 text-center">:</div><div class="flex-1 font-bold capitalize">{{ $dataLaporan->disediakan_oleh ?? '-' }}</div></div>
-                                <div class="flex"><div class="w-[85px]">Jawatan</div><div class="w-4 text-center">:</div><div class="flex-1 font-semibold capitalize">{{ ($isProcurementV2 ?? false) ? ($jawatanPenyedia ?? '-') : ($pendahuluan['jawatan_penyedia'] ?? $dataLaporan->jawatan ?? 'Penolong Pegawai Teknologi Maklumat') }}</div></div>
+                                <div class="flex"><div class="w-[85px]">Jawatan</div><div class="w-4 text-center">:</div><div class="flex-1 font-semibold capitalize">{{ $jawatanPenyedia ?? '-' }}</div></div>
                                 <div class="flex"><div class="w-[85px]">Tarikh</div><div class="w-4 text-center">:</div><div class="flex-1 font-semibold">{{ $tarikhPengkaji }}</div></div>
                             </div>
                             <div class="italic text-[10px] text-black pt-4 font-medium">
@@ -327,7 +324,7 @@
                             <div class="space-y-4 pt-4">
                                 <div class="flex"><div class="w-[85px]">Tandatangan</div><div class="w-4 text-center">:</div><div class="flex-1"></div></div>
                                 <div class="flex"><div class="w-[85px]">Nama</div><div class="w-4 text-center">:</div><div class="flex-1 font-bold capitalize">{{ $dataLaporan->disemak_oleh ?? '-' }}</div></div>
-                                <div class="flex"><div class="w-[85px]">Jawatan</div><div class="w-4 text-center">:</div><div class="flex-1 font-semibold capitalize">{{ ($isProcurementV2 ?? false) ? ($jawatanPenyemak ?? '-') : ($pendahuluan['jawatan_penyemak'] ?? $dataLaporan->jawatan_pengesah ?? 'Pegawai Teknologi Maklumat') }}</div></div>
+                                <div class="flex"><div class="w-[85px]">Jawatan</div><div class="w-4 text-center">:</div><div class="flex-1 font-semibold capitalize">{{ $jawatanPenyemak ?? '-' }}</div></div>
                                 <div class="flex"><div class="w-[85px]">Tarikh</div><div class="w-4 text-center">:</div><div class="flex-1 font-semibold">{{ $tarikhVerifikasi }}</div></div>
                             </div>
                             <div></div>
