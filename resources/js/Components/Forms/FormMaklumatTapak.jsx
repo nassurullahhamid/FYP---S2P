@@ -11,11 +11,10 @@ export default function FormMaklumatTapak({ ticket, auth, senaraiPengguna }) {
 
     const statusFormat = String(ticket.status_tiket || '').trim().toLowerCase();
     const isCurrentUserPIC = user?.no_ic && assignedPetugasIC.includes(user.no_ic);
-    const isWorkflowV2 = Number(ticket.workflow_version) === 2;
-
-    const isActiveSiteReportStatus = isWorkflowV2
-        ? ['dalam tindakan', 'laporan perlu pembetulan'].includes(statusFormat)
-        : statusFormat === 'dalam tindakan pegawai';
+    const isActiveSiteReportStatus = [
+        'dalam tindakan',
+        'laporan perlu pembetulan',
+    ].includes(statusFormat);
 
     // Hanya Juruteknik yang dilantik boleh mengisi atau membetulkan laporan tapak.
     const bolehEditTapak = isCurrentUserPIC && isActiveSiteReportStatus;
@@ -182,24 +181,17 @@ export default function FormMaklumatTapak({ ticket, auth, senaraiPengguna }) {
 
         if (processing) return;
 
-        const submissionRoute = isWorkflowV2
-            ? route(
-                'tickets.workflow.submitNetworkSiteReport',
-                ticket.id_tiket
-            )
-            : route(
-                'tickets.storeLaporanTapak',
-                ticket.id_tiket
-            );
+        const submissionRoute = route(
+            'tickets.workflow.submitNetworkSiteReport',
+            ticket.id_tiket
+        );
 
         post(submissionRoute, {
             preserveScroll: true,
-            forceFormData: isWorkflowV2,
+            forceFormData: true,
             onSuccess: () => {
                 alert(
-                    isWorkflowV2
-                        ? 'Laporan tapak berjaya dihantar untuk semakan KUTD!'
-                        : 'Maklumat tapak berjaya disimpan dan dihantar ke KUTD!'
+                    'Laporan tapak berjaya dihantar untuk semakan KUTD!'
                 );
                 setIsEditing(false);
             },
@@ -942,7 +934,7 @@ export default function FormMaklumatTapak({ ticket, auth, senaraiPengguna }) {
                     disabled={processing}
                     className="inline-flex items-center gap-2 px-6 py-3.5 bg-blue-900 hover:bg-blue-950 disabled:bg-gray-200 disabled:text-gray-400 disabled:cursor-not-allowed text-white rounded-xl font-black text-xs uppercase tracking-wider shadow-md transition-all active:scale-[0.99] cursor-pointer w-full sm:w-auto justify-center"
                 >
-                    <Send size={13} /> {processing ? 'Menyimpan...' : (isWorkflowV2 ? 'KEMASKINI TIKET' : 'Hantar Maklumat Tapak')}
+                    <Send size={13} /> {processing ? 'Menyimpan...' : 'KEMASKINI TIKET'}
                 </button>
             </div>
 
