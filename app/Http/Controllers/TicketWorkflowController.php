@@ -242,7 +242,7 @@ class TicketWorkflowController extends Controller
             )
             ->with(
                 'success',
-                'Tiket berjaya diklasifikasikan dan dihantar untuk semakan.'
+                'Tiket telah berjaya diklasifikasi.'
             );
     }
 
