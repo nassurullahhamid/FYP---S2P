@@ -71,12 +71,6 @@ class TicketWorkflowController extends Controller
                     ->lockForUpdate()
                     ->firstOrFail();
 
-                if (! $ticket->usesCurrentWorkflow()) {
-                    throw ValidationException::withMessages([
-                        'sistem' => 'Tiket ini masih menggunakan workflow lama.',
-                    ]);
-                }
-
                 $classificationStatus = config(
                     's2p_workflow.statuses.classification',
                     'Menunggu Klasifikasi'
@@ -269,12 +263,6 @@ class TicketWorkflowController extends Controller
                     ->where('id_tiket', $id_tiket)
                     ->lockForUpdate()
                     ->firstOrFail();
-
-                if (! $ticket->usesCurrentWorkflow()) {
-                    throw ValidationException::withMessages([
-                        'sistem' => 'Tiket ini masih menggunakan workflow lama.',
-                    ]);
-                }
 
                 $expectedStatus = config(
                     's2p_workflow.statuses.initial_review',
@@ -469,12 +457,6 @@ class TicketWorkflowController extends Controller
                     ->lockForUpdate()
                     ->firstOrFail();
 
-                if (! $ticket->usesCurrentWorkflow()) {
-                    throw ValidationException::withMessages([
-                        'sistem' => 'Tiket ini masih menggunakan workflow lama.',
-                    ]);
-                }
-
                 $expectedStatus = config(
                     's2p_workflow.statuses.initial_review',
                     'Menunggu Semakan'
@@ -616,13 +598,6 @@ class TicketWorkflowController extends Controller
             ->where('id_tiket', $id_tiket)
             ->firstOrFail();
 
-        if (! $ticket->usesCurrentWorkflow()) {
-            abort(
-                403,
-                'Tiket ini masih menggunakan workflow lama.'
-            );
-        }
-
         $expectedStatus = config(
             's2p_workflow.statuses.initial_review',
             'Menunggu Semakan'
@@ -700,12 +675,6 @@ class TicketWorkflowController extends Controller
                     ->where('id_tiket', $id_tiket)
                     ->lockForUpdate()
                     ->firstOrFail();
-
-                if (! $ticket->usesCurrentWorkflow()) {
-                    throw ValidationException::withMessages([
-                        'sistem' => 'Tiket ini masih menggunakan workflow lama.',
-                    ]);
-                }
 
                 $expectedStatus = config(
                     's2p_workflow.statuses.initial_review',
@@ -926,12 +895,6 @@ class TicketWorkflowController extends Controller
                     ->where('id_tiket', $id_tiket)
                     ->lockForUpdate()
                     ->firstOrFail();
-
-                if (! $ticket->usesCurrentWorkflow()) {
-                    throw ValidationException::withMessages([
-                        'sistem' => 'Tiket ini masih menggunakan workflow lama.',
-                    ]);
-                }
 
                 $expectedStatus = config(
                     's2p_workflow.statuses.validation',
@@ -1194,12 +1157,6 @@ class TicketWorkflowController extends Controller
                         ->where('id_tiket', $id_tiket)
                         ->lockForUpdate()
                         ->firstOrFail();
-
-                    if (! $ticket->usesCurrentWorkflow()) {
-                        throw ValidationException::withMessages([
-                            'sistem' => 'Tiket ini masih menggunakan workflow lama.',
-                        ]);
-                    }
 
                     if (
                         $ticket->kategori
@@ -1506,12 +1463,6 @@ class TicketWorkflowController extends Controller
                     ->lockForUpdate()
                     ->firstOrFail();
 
-                if (! $ticket->usesCurrentWorkflow()) {
-                    throw ValidationException::withMessages([
-                        'sistem' => 'Tiket ini masih menggunakan workflow lama.',
-                    ]);
-                }
-
                 $expectedStatus = config(
                     's2p_workflow.statuses.report_review',
                     'Menunggu Semakan Laporan'
@@ -1748,12 +1699,6 @@ class TicketWorkflowController extends Controller
                         ->where('id_tiket', $id_tiket)
                         ->lockForUpdate()
                         ->firstOrFail();
-
-                    if (! $ticket->usesCurrentWorkflow()) {
-                        throw ValidationException::withMessages([
-                            'sistem' => 'Tiket ini masih menggunakan workflow lama.',
-                        ]);
-                    }
 
                     if (
                         $ticket->kategori
@@ -2061,12 +2006,6 @@ class TicketWorkflowController extends Controller
                     ->lockForUpdate()
                     ->firstOrFail();
 
-                if (! $ticket->usesCurrentWorkflow()) {
-                    throw ValidationException::withMessages([
-                        'sistem' => 'Tiket ini masih menggunakan workflow lama.',
-                    ]);
-                }
-
                 $expectedStatus = config(
                     's2p_workflow.statuses.in_progress',
                     'Dalam Tindakan'
@@ -2215,12 +2154,6 @@ class TicketWorkflowController extends Controller
                     ->lockForUpdate()
                     ->firstOrFail();
 
-                if (! $ticket->usesCurrentWorkflow()) {
-                    throw ValidationException::withMessages([
-                        'sistem' => 'Tiket ini masih menggunakan workflow lama.',
-                    ]);
-                }
-
                 $expectedStatus = config(
                     's2p_workflow.statuses.confirmation',
                     'Menunggu Pengesahan'
@@ -2342,12 +2275,6 @@ class TicketWorkflowController extends Controller
                     ->where('id_tiket', $id_tiket)
                     ->lockForUpdate()
                     ->firstOrFail();
-
-                if (! $ticket->usesCurrentWorkflow()) {
-                    throw ValidationException::withMessages([
-                        'sistem' => 'Tiket ini masih menggunakan workflow lama.',
-                    ]);
-                }
 
                 $expectedStatus = config(
                     's2p_workflow.statuses.confirmation',
@@ -2814,12 +2741,6 @@ class TicketWorkflowController extends Controller
                     ->lockForUpdate()
                     ->firstOrFail();
 
-                if (! $ticket->usesCurrentWorkflow()) {
-                    throw ValidationException::withMessages([
-                        'sistem' => 'Tiket ini masih menggunakan workflow lama.',
-                    ]);
-                }
-
                 $allowedStatuses = [
                     config(
                         's2p_workflow.statuses.in_progress',
@@ -3017,12 +2938,6 @@ class TicketWorkflowController extends Controller
                     ->lockForUpdate()
                     ->firstOrFail();
 
-                if (! $ticket->usesCurrentWorkflow()) {
-                    throw ValidationException::withMessages([
-                        'sistem' => 'Tiket ini masih menggunakan workflow lama.',
-                    ]);
-                }
-
                 $allowedStatuses = [
                     config(
                         's2p_workflow.statuses.report_review',
@@ -3142,12 +3057,6 @@ class TicketWorkflowController extends Controller
                         ->where('id_tiket', $id_tiket)
                         ->lockForUpdate()
                         ->firstOrFail();
-
-                    if (! $ticket->usesCurrentWorkflow()) {
-                        throw ValidationException::withMessages([
-                            'sistem' => 'Tiket ini masih menggunakan workflow lama.',
-                        ]);
-                    }
 
                     $allowedStatuses = [
                         config(
@@ -3532,12 +3441,6 @@ class TicketWorkflowController extends Controller
                     ->lockForUpdate()
                     ->firstOrFail();
 
-                if (! $ticket->usesCurrentWorkflow()) {
-                    throw ValidationException::withMessages([
-                        'sistem' => 'Tiket ini masih menggunakan workflow lama.',
-                    ]);
-                }
-
                 $allowedStatuses = [
                     config(
                         's2p_workflow.statuses.report_review',
@@ -3683,12 +3586,6 @@ class TicketWorkflowController extends Controller
                     ->where('id_tiket', $id_tiket)
                     ->lockForUpdate()
                     ->firstOrFail();
-
-                if (! $ticket->usesCurrentWorkflow()) {
-                    throw ValidationException::withMessages([
-                        'sistem' => 'Tiket ini masih menggunakan workflow lama.',
-                    ]);
-                }
 
                 if (
                     $ticket->kategori
@@ -3979,12 +3876,6 @@ class TicketWorkflowController extends Controller
                     ->lockForUpdate()
                     ->firstOrFail();
 
-                if (! $ticket->usesCurrentWorkflow()) {
-                    throw ValidationException::withMessages([
-                        'sistem' => 'Tiket ini masih menggunakan workflow lama.',
-                    ]);
-                }
-
                 if (
                     $ticket->kategori
                     !== 'Transformasi Digital'
@@ -4271,12 +4162,6 @@ class TicketWorkflowController extends Controller
                     ->lockForUpdate()
                     ->firstOrFail();
 
-                if (! $ticket->usesCurrentWorkflow()) {
-                    throw ValidationException::withMessages([
-                        'sistem' => 'Tiket ini masih menggunakan workflow lama.',
-                    ]);
-                }
-
                 $expectedStatus = config(
                     's2p_workflow.statuses.validation',
                     'Menunggu Validasi'
@@ -4505,12 +4390,6 @@ class TicketWorkflowController extends Controller
                     ->lockForUpdate()
                     ->firstOrFail();
 
-                if (! $ticket->usesCurrentWorkflow()) {
-                    throw ValidationException::withMessages([
-                        'sistem' => 'Tiket ini masih menggunakan workflow lama.',
-                    ]);
-                }
-
                 $expectedStatus = config(
                     's2p_workflow.statuses.validation',
                     'Menunggu Validasi'
@@ -4731,12 +4610,6 @@ class TicketWorkflowController extends Controller
                     ->lockForUpdate()
                     ->firstOrFail();
 
-                if (! $ticket->usesCurrentWorkflow()) {
-                    throw ValidationException::withMessages([
-                        'sistem' => 'Tiket ini masih menggunakan workflow lama.',
-                    ]);
-                }
-
                 if (
                     $ticket->status_tiket
                     !== config(
@@ -4920,12 +4793,6 @@ class TicketWorkflowController extends Controller
                     ->lockForUpdate()
                     ->firstOrFail();
 
-                if (! $ticket->usesCurrentWorkflow()) {
-                    throw ValidationException::withMessages([
-                        'sistem' => 'Tiket ini masih menggunakan workflow lama.',
-                    ]);
-                }
-
                 if (
                     $ticket->status_tiket
                     !== config(
@@ -5105,12 +4972,6 @@ class TicketWorkflowController extends Controller
                     ->where('id_tiket', $id_tiket)
                     ->lockForUpdate()
                     ->firstOrFail();
-
-                if (! $ticket->usesCurrentWorkflow()) {
-                    throw ValidationException::withMessages([
-                        'sistem' => 'Tiket ini masih menggunakan workflow lama.',
-                    ]);
-                }
 
                 $expectedStatus = config(
                     's2p_workflow.statuses.initial_review',
@@ -5299,12 +5160,6 @@ class TicketWorkflowController extends Controller
                     ->lockForUpdate()
                     ->firstOrFail();
 
-                if (! $ticket->usesCurrentWorkflow()) {
-                    throw ValidationException::withMessages([
-                        'sistem' => 'Tiket ini masih menggunakan workflow lama.',
-                    ]);
-                }
-
                 $expectedStatus = config(
                     's2p_workflow.statuses.reviewed',
                     'Disemak'
@@ -5480,11 +5335,6 @@ class TicketWorkflowController extends Controller
         Tiket $ticket,
         string $userIc
     ): void {
-        if (! $ticket->usesCurrentWorkflow()) {
-            throw ValidationException::withMessages([
-                'sistem' => 'Tiket ini masih menggunakan workflow lama.',
-            ]);
-        }
 
         $expectedStatus = config(
             's2p_workflow.statuses.in_progress',

@@ -58,7 +58,6 @@ class ProcurementWorkflowV2Test extends TestCase
             $ticketId,
             $admin,
             'Pembekalan Peralatan ICT',
-            2,
             'Menunggu Semakan'
         );
 
@@ -346,7 +345,6 @@ class ProcurementWorkflowV2Test extends TestCase
             $ticketId,
             $admin,
             'Pembekalan Peralatan ICT',
-            2,
             'Menunggu Semakan'
         );
 
@@ -517,66 +515,6 @@ class ProcurementWorkflowV2Test extends TestCase
         ]);
     }
 
-    public function test_procurement_endpoint_rejects_workflow_one_ticket(): void
-    {
-        $admin = $this->createUser(
-            '882000000001',
-            'Admin Legacy',
-            'admin'
-        );
-
-        $kupp = $this->createUser(
-            '882000000002',
-            'KUPP Legacy',
-            'ketua_upp'
-        );
-
-        $ticketId = 'TEST-PROCUREMENT-V1-001';
-
-        $this->createTicket(
-            $ticketId,
-            $admin,
-            'Pembekalan Peralatan ICT',
-            1,
-            'Menunggu Semakan'
-        );
-
-        $response = $this
-            ->actingAs($kupp)
-            ->from(
-                route(
-                    'tickets.show',
-                    ['id_tiket' => $ticketId]
-                )
-            )
-            ->post(
-                route(
-                    'tickets.workflow.reviewProcurement',
-                    ['id_tiket' => $ticketId]
-                ),
-                $this->procurementReviewPayload()
-            );
-
-        $response
-            ->assertRedirect(
-                route(
-                    'tickets.show',
-                    ['id_tiket' => $ticketId]
-                )
-            )
-            ->assertSessionHasErrors('sistem');
-
-        $this->assertDatabaseHas('tiket', [
-            'id_tiket' => $ticketId,
-            'workflow_version' => 1,
-            'status_tiket' => 'Menunggu Semakan',
-        ]);
-
-        $this->assertDatabaseMissing('laporan', [
-            'id_tiket' => $ticketId,
-        ]);
-    }
-
     public function test_wrong_role_cannot_review_procurement_ticket(): void
     {
         $admin = $this->createUser(
@@ -597,7 +535,6 @@ class ProcurementWorkflowV2Test extends TestCase
             $ticketId,
             $admin,
             'Pembekalan Peralatan ICT',
-            2,
             'Menunggu Semakan'
         );
 
@@ -648,7 +585,6 @@ class ProcurementWorkflowV2Test extends TestCase
             $ticketId,
             $admin,
             'Pembekalan Peralatan ICT',
-            2,
             'Dalam Tindakan'
         );
 
@@ -722,7 +658,6 @@ class ProcurementWorkflowV2Test extends TestCase
             $ticketId,
             $admin,
             'Pemodenan Bilik Mesyuarat',
-            2,
             'Menunggu Semakan'
         );
 
@@ -791,7 +726,6 @@ class ProcurementWorkflowV2Test extends TestCase
         string $ticketId,
         Pengguna $creator,
         string $subCategory,
-        int $workflowVersion,
         string $status
     ): void {
         DB::table('tiket')->insert([
@@ -809,7 +743,7 @@ class ProcurementWorkflowV2Test extends TestCase
             'tahap_keutamaan' => 'Sederhana',
             'status_tiket' => $status,
             'pengguna_ic' => $creator->no_ic,
-            'workflow_version' => $workflowVersion,
+            'workflow_version' => 2,
             'created_at' => now(),
             'updated_at' => now(),
         ]);

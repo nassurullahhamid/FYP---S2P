@@ -33,7 +33,6 @@ class HelpdeskWorkflowV2Test extends TestCase
 
         $this->createHelpdeskTicket(
             $ticketId,
-            2,
             'Penyelenggaraan Komputer'
         );
 
@@ -126,52 +125,6 @@ class HelpdeskWorkflowV2Test extends TestCase
         ]);
     }
 
-    public function test_helpdesk_endpoint_rejects_workflow_one_ticket(): void
-    {
-        $kutd = $this->createUser(
-            '810101120011',
-            'KUTD Workflow Satu',
-            'ketua_utd'
-        );
-
-        $technician = $this->createUser(
-            '820202120012',
-            'Juruteknik Workflow Satu',
-            'juruteknik'
-        );
-
-        $ticketId = 'TEST-MB-V1-001';
-
-        $this->createHelpdeskTicket(
-            $ticketId,
-            1,
-            'Penyelenggaraan Komputer'
-        );
-
-        $this->actingAs($kutd)
-            ->post(
-                route(
-                    'tickets.workflow.reviewHelpdesk',
-                    ['id_tiket' => $ticketId]
-                ),
-                [
-                    'pic_ic' => $technician->no_ic,
-                ]
-            )
-            ->assertSessionHasErrors();
-
-        $this->assertDatabaseHas('tiket', [
-            'id_tiket' => $ticketId,
-            'workflow_version' => 1,
-            'status_tiket' => 'Menunggu Semakan',
-        ]);
-
-        $this->assertDatabaseMissing('tugasan_tiket', [
-            'id_tiket' => $ticketId,
-            'no_ic' => $technician->no_ic,
-        ]);
-    }
-
     public function test_wrong_role_cannot_review_helpdesk_ticket(): void
     {
         $technician = $this->createUser(
@@ -190,7 +143,6 @@ class HelpdeskWorkflowV2Test extends TestCase
 
         $this->createHelpdeskTicket(
             $ticketId,
-            2,
             'Penyelenggaraan Komputer'
         );
 
@@ -240,7 +192,6 @@ class HelpdeskWorkflowV2Test extends TestCase
 
         $this->createHelpdeskTicket(
             $ticketId,
-            2,
             'Penyelenggaraan Komputer'
         );
 
@@ -299,7 +250,6 @@ class HelpdeskWorkflowV2Test extends TestCase
 
         $this->createHelpdeskTicket(
             $ticketId,
-            2,
             'Peminjaman Peralatan ICT'
         );
 
@@ -343,7 +293,6 @@ class HelpdeskWorkflowV2Test extends TestCase
 
         $this->createHelpdeskTicket(
             $ticketId,
-            2,
             'Penyelenggaraan Komputer'
         );
 
@@ -403,7 +352,6 @@ class HelpdeskWorkflowV2Test extends TestCase
 
     private function createHelpdeskTicket(
         string $ticketId,
-        int $workflowVersion,
         string $subCategory
     ): void {
         $ownerIdentityNumber = Pengguna::query()
@@ -429,7 +377,7 @@ class HelpdeskWorkflowV2Test extends TestCase
             'kategori' => 'Meja Bantuan',
             'tahap_keutamaan' => 'Sederhana',
             'status_tiket' => 'Menunggu Semakan',
-            'workflow_version' => $workflowVersion,
+            'workflow_version' => 2,
             'pengguna_ic' => $ownerIdentityNumber,
             'created_at' => now(),
             'updated_at' => now(),

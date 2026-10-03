@@ -163,35 +163,6 @@ class TicketController extends Controller
             'lampiran' => ['nullable', 'file', 'mimes:pdf,doc,docx,jpg,jpeg,png', 'max:5120'],
         ]);
 
-        $enableCurrentWorkflow =
-            (bool) config(
-                's2p_workflow.enable_new_tickets',
-                false
-            )
-            || (
-                $validated['kategori']
-                    === 'Konsultasi Rangkaian'
-                && (bool) config(
-                    's2p_workflow.enable_network_new_tickets',
-                    false
-                )
-            )
-            || (
-                $validated['kategori']
-                    === 'Meja Bantuan'
-                && (bool) config(
-                    's2p_workflow.enable_helpdesk_new_tickets',
-                    false
-                )
-            );
-
-        $workflowVersion = $enableCurrentWorkflow
-            ? (int) config(
-                's2p_workflow.version',
-                Tiket::WORKFLOW_VERSION_CURRENT
-            )
-            : Tiket::WORKFLOW_VERSION_LEGACY;
-
         $prefix = match ($request->kategori) {
             'Meja Bantuan' => 'MB',
             'Transformasi Digital' => 'TD',
@@ -234,7 +205,7 @@ class TicketController extends Controller
             'Menunggu Klasifikasi'
         );
         $validated['pengguna_ic'] = $request->user()->no_ic;
-        $validated['workflow_version'] = $workflowVersion;
+        $validated['workflow_version'] = Tiket::WORKFLOW_VERSION_CURRENT;
 
         $subKategoriValue = $validated['sub_kategori'];
         unset($validated['sub_kategori']);
@@ -259,13 +230,10 @@ class TicketController extends Controller
                 ]);
             }
 
-            $aktivitiJejak = $workflowVersion
-                === Tiket::WORKFLOW_VERSION_CURRENT
-                    ? config(
-                        's2p_workflow.trail_events.registered',
-                        'DAFTAR TIKET'
-                    )
-                    : 'Daftar Tiket';
+            $aktivitiJejak = config(
+                's2p_workflow.trail_events.registered',
+                'DAFTAR TIKET'
+            );
 
             $ticket->rekodLog(
                 $aktivitiJejak,
@@ -585,23 +553,15 @@ class TicketController extends Controller
             $ticket->kategori === 'Transformasi Digital'
             && $subKategori === 'Pemodenan Bilik Mesyuarat';
 
-        $isModernizationV2 =
-            $isModernization
-            && $ticket->usesCurrentWorkflow();
-
         $isProcurement =
             $ticket->kategori === 'Transformasi Digital'
             && $subKategori === 'Pembekalan Peralatan ICT';
 
-        $isProcurementV2 =
-            $isProcurement
-            && $ticket->usesCurrentWorkflow();
+        $isDigitalTransformation =
+            $isModernization
+            || $isProcurement;
 
-        $isDigitalTransformationV2 =
-            $isModernizationV2
-            || $isProcurementV2;
-
-        if ($isModernization || $isProcurementV2) {
+        if ($isModernization || $isProcurement) {
             if (
                 $ticket->status_tiket
                 !== config(
@@ -611,7 +571,7 @@ class TicketController extends Controller
             ) {
                 abort(
                     403,
-                    $isProcurementV2
+                    $isProcurement
                         ? 'LKK Pembekalan Peralatan ICT hanya boleh dicetak selepas validasi akhir Ketua Wilayah.'
                         : 'LKK Pemodenan Bilik Mesyuarat hanya boleh dicetak selepas validasi akhir Ketua Wilayah.'
                 );
@@ -626,11 +586,11 @@ class TicketController extends Controller
                 )
             );
 
-            $allowedRoles = $isDigitalTransformationV2
+            $allowedRoles = $isDigitalTransformation
                 ? config(
                     's2p_workflow.flows.'.
                     (
-                        $isProcurementV2
+                        $isProcurement
                             ? 'pembekalan'
                             : 'pemodenan'
                     ).
@@ -665,10 +625,10 @@ class TicketController extends Controller
             ) {
                 abort(
                     403,
-                    $isProcurementV2
+                    $isProcurement
                         ? 'Hanya KUPP dan Ketua Wilayah dibenarkan mencetak LKK Pembekalan Peralatan ICT V2.'
                         : (
-                            $isModernizationV2
+                            $isModernization
                                 ? 'Hanya KUPP dan Ketua Wilayah dibenarkan mencetak LKK Pemodenan V2.'
                                 : 'Hanya KUPP, KUTD dan Ketua Wilayah dibenarkan mencetak LKK Pemodenan Bilik Mesyuarat.'
                         )
@@ -723,7 +683,7 @@ class TicketController extends Controller
         $jawatanPenyedia = null;
         $jawatanPenyemak = null;
 
-        if ($isDigitalTransformationV2) {
+        if ($isDigitalTransformation) {
             $verifiedTrail = DB::table('jejak_tiket')
                 ->where('id_tiket', $id_tiket)
                 ->where(
@@ -794,7 +754,6 @@ class TicketController extends Controller
                         'ticket',
                         'laporan',
                         'kosItems',
-                        'isProcurementV2',
                         'tarikhDisediakan',
                         'tarikhDisemak',
                         'jawatanPenyedia',
@@ -809,7 +768,6 @@ class TicketController extends Controller
                     'ticket',
                     'laporan',
                     'kosItems',
-                    'isModernizationV2',
                     'tarikhDisediakan',
                     'tarikhDisemak',
                     'jawatanPenyedia',

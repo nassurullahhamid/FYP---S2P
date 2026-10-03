@@ -36,7 +36,6 @@ class WorkflowProcurementReviewNotification extends Notification
                 ['id_tiket' => $this->ticket->id_tiket]
             ),
             'target_role' => 'ketua_upp',
-            'workflow_version' => $this->ticket->workflow_version,
         ];
     }
 }

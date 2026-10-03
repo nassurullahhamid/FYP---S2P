@@ -40,7 +40,6 @@ class WorkflowReviewNotification extends Notification
                 ['id_tiket' => $this->ticket->id_tiket]
             ),
             'target_role' => $this->reviewRole,
-            'workflow_version' => $this->ticket->workflow_version,
         ];
     }
 }

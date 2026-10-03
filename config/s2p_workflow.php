@@ -3,29 +3,6 @@
 return [
     'version' => 2,
 
-    'enable_new_tickets' => env(
-        'S2P_WORKFLOW_V2_NEW_TICKETS',
-        false
-    ),
-
-    /*
-     * Pelaksanaan berperingkat: hanya tiket Rangkaian baharu
-     * menggunakan workflow semasa apabila flag ini diaktifkan.
-     */
-    'enable_network_new_tickets' => env(
-        'S2P_WORKFLOW_V2_NETWORK_TICKETS',
-        false
-    ),
-
-    /*
-     * Pelaksanaan berperingkat bagi semua subkategori
-     * Meja Bantuan termasuk Peminjaman Peralatan ICT.
-     */
-    'enable_helpdesk_new_tickets' => env(
-        'S2P_WORKFLOW_V2_HELPDESK_TICKETS',
-        false
-    ),
-
     'roles' => [
         'admin' => 'Admin',
         'ketua_upp' => 'KUPP',

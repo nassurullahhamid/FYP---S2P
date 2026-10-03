@@ -28,7 +28,6 @@ class NetworkWorkflowV2Test extends TestCase
         $users = $this->createWorkflowUsers('91');
         $ticketId = $this->createTicket(
             '001',
-            2,
             'Pemasangan Baharu'
         );
 
@@ -179,43 +178,11 @@ class NetworkWorkflowV2Test extends TestCase
         );
     }
 
-    public function test_network_endpoint_rejects_workflow_one_ticket(): void
-    {
-        $users = $this->createWorkflowUsers('92');
-        $ticketId = $this->createTicket(
-            '002',
-            1,
-            'Pemasangan Baharu'
-        );
-
-        $this->actingAs($users['kutd'])
-            ->post(
-                route(
-                    'tickets.workflow.reviewNetwork',
-                    $ticketId
-                ),
-                $this->reviewPayload(
-                    $users['technician']
-                )
-            )
-            ->assertSessionHasErrors('sistem');
-
-        $this->assertTicketStatus(
-            $ticketId,
-            'Menunggu Semakan'
-        );
-
-        $this->assertDatabaseMissing('tugasan_tiket', [
-            'id_tiket' => $ticketId,
-        ]);
-    }
-
     public function test_wrong_role_cannot_review_network_ticket(): void
     {
         $users = $this->createWorkflowUsers('93');
         $ticketId = $this->createTicket(
             '003',
-            2,
             'Pemasangan Baharu'
         );
 
@@ -249,7 +216,6 @@ class NetworkWorkflowV2Test extends TestCase
 
         $ticketId = $this->createTicket(
             '004',
-            2,
             'Pemasangan Baharu'
         );
 
@@ -280,7 +246,6 @@ class NetworkWorkflowV2Test extends TestCase
         $users = $this->createWorkflowUsers('95');
         $ticketId = $this->createHelpdeskTicket(
             '005',
-            2,
             'Aduan Perkakasan'
         );
 
@@ -466,7 +431,6 @@ class NetworkWorkflowV2Test extends TestCase
 
     private function createTicket(
         string $suffix,
-        int $workflowVersion,
         string $subCategory
     ): string {
         $applicant = $this->createUser(
@@ -496,7 +460,7 @@ class NetworkWorkflowV2Test extends TestCase
             'kategori' => 'Konsultasi Rangkaian',
             'status_tiket' => 'Menunggu Semakan',
             'pengguna_ic' => $applicant->no_ic,
-            'workflow_version' => $workflowVersion,
+            'workflow_version' => 2,
             'created_at' => now(),
             'updated_at' => now(),
         ]);
@@ -513,7 +477,6 @@ class NetworkWorkflowV2Test extends TestCase
 
     private function createHelpdeskTicket(
         string $suffix,
-        int $workflowVersion,
         string $subCategory
     ): string {
         $applicant = $this->createUser(
@@ -543,7 +506,7 @@ class NetworkWorkflowV2Test extends TestCase
             'kategori' => 'Meja Bantuan',
             'status_tiket' => 'Menunggu Semakan',
             'pengguna_ic' => $applicant->no_ic,
-            'workflow_version' => $workflowVersion,
+            'workflow_version' => 2,
             'created_at' => now(),
             'updated_at' => now(),
         ]);
