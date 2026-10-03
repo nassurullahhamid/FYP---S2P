@@ -443,7 +443,7 @@ export default function InfoTiket({ auth, backUrl, ticket, senaraiPengguna, sena
             preserveScroll: true,
             onSuccess: () => alert(
                 klasifikasi
-                    ? 'Klasifikasi berjaya. Tiket kini Menunggu Semakan.'
+                    ? 'Tiket telah berjaya diklasifikasi.'
                     : semakanNetworkV2
                         ? 'Tiket Rangkaian berjaya disemak, lawatan dijadualkan dan Juruteknik telah dilantik.'
                         : semakanHelpdeskV2
@@ -1176,7 +1176,7 @@ export default function InfoTiket({ auth, backUrl, ticket, senaraiPengguna, sena
                                                     >
                                                         <Send size={14} className="shrink-0" />
                                                         <span>
-                                                            {processing ? 'Memproses...' : 'Hantar untuk Pengesahan'}
+                                                            {processing ? 'Memproses...' : 'KEMASKINI TIKET'}
                                                         </span>
                                                     </button>
                                                 </div>
@@ -1260,7 +1260,7 @@ export default function InfoTiket({ auth, backUrl, ticket, senaraiPengguna, sena
                                                                 className="inline-flex items-center justify-center gap-2 px-5 py-2.5 bg-emerald-600 hover:bg-emerald-700 text-white font-black text-xs uppercase rounded-xl shadow-sm transition-all active:scale-95 cursor-pointer"
                                                             >
                                                                 <CheckCircle2 size={14} className="shrink-0" />
-                                                                <span>Sahkan &amp; Tutup Tiket</span>
+                                                                <span>SAHKAN TIKET</span>
                                                             </button>
                                                         </div>
                                                     );
@@ -1472,9 +1472,7 @@ export default function InfoTiket({ auth, backUrl, ticket, senaraiPengguna, sena
                                                 if (K === 'laporan dihantar' || K === 'lkk dihantar') return 'Laporan dihantar';
                                                 if (K === 'laporan disemak & disahkan' || K === 'laporan disemak dan disahkan' || K === 'laporan lkk diluluskan' || K === 'lkk disemak & disahkan') return 'Laporan disemak dan disahkan';
                                                 if (K === 'tiket selesai' || K === 'tiket ditutup' || K === 'tiket diluluskan & ditutup') {
-                                                    return isPemodenanV2
-                                                        ? 'TIKET DITUTUP'
-                                                        : 'Tiket ditutup';
+                                                    return 'TIKET DITUTUP';
                                                 }
                                                 return akt;
                                             };

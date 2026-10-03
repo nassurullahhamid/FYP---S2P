@@ -290,7 +290,7 @@ export default function DaftarPermohonan() {
                                     disabled={processing}
                                     className="bg-blue-900 text-white px-8 py-3.5 rounded-xl font-black uppercase text-xs hover:bg-blue-800 disabled:bg-gray-400 transition shadow-md active:scale-[0.99] cursor-pointer"
                                 >
-                                    {processing ? 'Mendaftar...' : 'Daftar Permohonan'}
+                                    {processing ? 'Mendaftar...' : 'Daftar Tiket'}
                                 </button>
                             </div>
                         </form>

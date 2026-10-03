@@ -116,7 +116,7 @@ export default function BorangPeminjamanPeralatan({ ticket, senaraiAset, senarai
             return;
         }
 
-        if (!confirm("Adakah anda pasti untuk luluskan peminjaman ini?")) return;
+        if (!confirm("Adakah permohonan ini disokong?")) return;
 
         const payload = {
             id_aset: idAset,
@@ -132,7 +132,7 @@ export default function BorangPeminjamanPeralatan({ ticket, senaraiAset, senarai
 
         router.post(reviewLoanRoute, payload, {
             preserveScroll: true,
-            onSuccess: () => alert("Berjaya! Peminjaman diluluskan."),
+            onSuccess: () => alert("Peminjaman Peralatan ICT telah Disokong."),
         });
     };
 
@@ -226,7 +226,7 @@ export default function BorangPeminjamanPeralatan({ ticket, senaraiAset, senarai
                     return;
                 }
 
-                if (!confirm("Adakah anda pasti untuk menyimpan maklumat borang ini?")) return;
+                if (!confirm("Adakah anda ingin menyimpan maklumat ini?")) return;
 
                 const serialAset = asetDiurus.serial_no || asetDiurus.no_siri;
 
@@ -651,7 +651,7 @@ export default function BorangPeminjamanPeralatan({ ticket, senaraiAset, senarai
                                 </div>
 
                                 <h4 className="text-xs font-black text-emerald-900 uppercase tracking-wider">
-                                    Pengesahan Akhir Peminjaman
+                                    ULASAN (Jika Ada)
                                 </h4>
                             </div>
 
@@ -681,7 +681,7 @@ export default function BorangPeminjamanPeralatan({ ticket, senaraiAset, senarai
                                     className="inline-flex items-center justify-center gap-2 px-5 py-2.5 bg-emerald-600 hover:bg-emerald-700 text-white font-black text-xs uppercase rounded-xl shadow-sm transition-all active:scale-95 cursor-pointer"
                                 >
                                     <CheckCircle2 size={14} className="shrink-0" />
-                                    <span>Sahkan & Tutup Tiket</span>
+                                    <span>SAHKAN TIKET</span>
                                 </button>
                             </div>
                         </div>
