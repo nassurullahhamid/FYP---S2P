@@ -554,12 +554,18 @@ export default function InfoTiket({ auth, backUrl, ticket, senaraiPengguna, sena
             && String(p.status_pengguna || '').toLowerCase() === 'aktif'
     );
 
-    const formatTarikh = (dateString) => {
-        if (!dateString) return 'Belum Ditetapkan';
-        const cleanDate = dateString.split(' ')[0];
-        const [year, month, day] = cleanDate.split('-');
-        if (!year || !month || !day) return dateString;
-        return `${day}-${month}-${year}`;
+    const formatTarikh = (dateValue) => {
+        if (!dateValue) return 'Belum Ditetapkan';
+
+        const match = String(dateValue)
+            .trim()
+            .match(/^(\d{4})-(\d{2})-(\d{2})/);
+
+        if (!match) return 'Tarikh Tidak Sah';
+
+        const [, year, month, day] = match;
+
+        return `${day}/${month}/${year}`;
     };
 
     const formatMasa = (timeString) => {
@@ -647,7 +653,7 @@ export default function InfoTiket({ auth, backUrl, ticket, senaraiPengguna, sena
                                     </div>
                                     <h3 className="text-xs font-black text-gray-700 tracking-tight leading-relaxed truncate">Perkara: {ticket.perkara || 'Tiada Tajuk Perkara'}</h3>
                                     <div className="flex items-center gap-4 text-[11px] text-gray-400 font-bold pt-1 flex-wrap">
-                                        <span className="flex items-center gap-1"><Calendar size={12} /> Tarikh Terima: <span className="text-gray-600">{ticket.tarikh_terima ? formatTarikh(ticket.tarikh_terima) : '04/06/2026'}</span></span>
+                                        <span className="flex items-center gap-1"><Calendar size={12} /> Tarikh Terima: <span className="text-gray-600">{formatTarikh(ticket.tarikh_terima || ticket.created_at)}</span></span>
                                         <span className="flex items-center gap-1"><Phone size={12} /> Saluran: <span className="text-gray-600">{ticket.saluran || 'Telefon'}</span></span>
                                     </div>
                                 </div>
@@ -731,7 +737,7 @@ export default function InfoTiket({ auth, backUrl, ticket, senaraiPengguna, sena
                                                     <div className="grid grid-cols-3"><span className="text-gray-400 font-medium">Perkara</span><span className="col-span-2 text-gray-800 pl-2">: &nbsp; {ticket.perkara}</span></div>
                                                     <div className="grid grid-cols-3"><span className="text-gray-400 font-medium">Kategori / Sub Kategori</span><span className="col-span-2 text-blue-950 uppercase pl-2">: &nbsp; {ticket.kategori || 'Belum Diklasifikasi'} <span className="text-gray-400 font-normal">({ticket.sub_kategori || 'Belum Ditetapkan'})</span></span></div>
                                                     {isAlreadyClassified && <div className="grid grid-cols-3"><span className="text-gray-400 font-medium">Tahap Keutamaan</span><span className="col-span-2 text-gray-800 uppercase pl-2">: &nbsp; {ticket.tahap_keutamaan || 'TIADA'}</span></div>}
-                                                    <div className="grid grid-cols-3"><span className="text-gray-400 font-medium">Tarikh Terima</span><span className="col-span-2 text-gray-800 pl-2">: &nbsp; {ticket.tarikh_terima ? formatTarikh(ticket.tarikh_terima) : ''}</span></div>
+                                                    <div className="grid grid-cols-3"><span className="text-gray-400 font-medium">Tarikh Terima</span><span className="col-span-2 text-gray-800 pl-2">: &nbsp; {formatTarikh(ticket.tarikh_terima || ticket.created_at)}</span></div>
                                                     <div className="grid grid-cols-3">
                                                         <span className="text-gray-400 font-medium">SLA</span>
                                                         <span className="col-span-2 text-gray-800 pl-2">: &nbsp; {ticket.tahap_keutamaan ? <span className="font-black text-blue-900 uppercase">{ticket.tahap_keutamaan === 'Tinggi' ? '3 Hari' : ticket.tahap_keutamaan === 'Sederhana' ? '7 Hari' : '14 Hari'}</span> : <span className="text-gray-400 italic font-medium">Belum Dijana </span>}</span>
