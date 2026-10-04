@@ -445,7 +445,7 @@ export default function InfoTiket({ auth, backUrl, ticket, senaraiPengguna, sena
                 klasifikasi
                     ? 'Tiket telah berjaya diklasifikasi.'
                     : semakanNetworkV2
-                        ? 'Tiket Rangkaian berjaya disemak, lawatan dijadualkan dan Juruteknik telah dilantik.'
+                        ? 'Tiket telah disemak.'
                         : semakanHelpdeskV2
                             ? 'Tiket berjaya disemak dan petugas telah dilantik.'
                             : 'Tiket telah berjaya dikemaskini!'
@@ -511,7 +511,7 @@ export default function InfoTiket({ auth, backUrl, ticket, senaraiPengguna, sena
                 preserveScroll: true,
                 onSuccess: () => {
                     alert(
-                        'Laporan tapak berjaya disahkan. Penyediaan LKK boleh diteruskan.'
+                        'Laporan tapak telah disahkan.'
                     );
                 },
                 onError: (reviewErrors) => {
