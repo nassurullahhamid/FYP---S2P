@@ -10,6 +10,8 @@ class WorkflowReportReviewNotification extends Notification
 {
     use Queueable;
 
+    public string $targetRole = 'ketua_utd';
+
     public function __construct(
         public Tiket $ticket,
         public string $submittedByName,
@@ -42,7 +44,7 @@ class WorkflowReportReviewNotification extends Notification
                 'tickets.show',
                 ['id_tiket' => $this->ticket->id_tiket]
             ),
-            'target_role' => 'ketua_utd',
+            'target_role' => $this->targetRole,
         ];
     }
 }

@@ -28,11 +28,8 @@ class ReviewModernizationLkkRequest extends FormRequest
                 ]),
             ],
             'ulasan' => [
-                Rule::requiredIf(
-                    fn (): bool => $this->input('tindakan')
-                        === 'PEMBETULAN'
-                ),
                 'nullable',
+
                 'string',
                 'max:2000',
             ],

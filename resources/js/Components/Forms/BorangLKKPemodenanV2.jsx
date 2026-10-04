@@ -264,7 +264,7 @@ export default function BorangLKKPemodenanV2({
                 skop_kajian:
                     cleanTextRows(skopKajian),
             },
-            'Maklumat kajian berjaya dikemaskini dan dihantar kepada KUTD.'
+            'Maklumat kajian telah dikemaskini.'
         );
     };
 
@@ -282,7 +282,7 @@ export default function BorangLKKPemodenanV2({
                 senarai_pic_ic:
                     senaraiPicIc.filter(Boolean),
             },
-            'Lawatan berjaya dijadualkan dan Juruteknik telah dilantik.'
+            'Laporan tiket telah dikemaskini.'
         );
     };
 
@@ -293,9 +293,6 @@ export default function BorangLKKPemodenanV2({
                     Laporan Kajian Keperluan Pemodenan Bilik Mesyuarat
                 </h2>
 
-                <p className="mt-1 text-[11px] text-slate-500">
-                    Workflow V2 · Status: {ticket.status_tiket}
-                </p>
             </div>
 
             {Object.keys(errors).length > 0 && (
@@ -359,7 +356,7 @@ export default function BorangLKKPemodenanV2({
                         <CheckCircle2 size={16} />
 
                         <h3 className="font-black uppercase">
-                            Maklumat Kajian KUPP
+                            Maklumat Kajian
                         </h3>
                     </div>
 
@@ -534,7 +531,7 @@ export default function BorangLKKPemodenanV2({
                         <Calendar size={16} />
 
                         <h3 className="font-black uppercase">
-                            Lawatan dan Pelantikan Juruteknik
+                            Penetapan Lawatan dan Lantikan Petugas
                         </h3>
                     </div>
 
@@ -618,7 +615,7 @@ export default function BorangLKKPemodenanV2({
                             (selectedIc, index) => (
                                 <div
                                     key={`pic-${index}`}
-                                    className="flex gap-2"
+                                    className="flex gap-2 rounded-xl border border-gray-200 bg-gray-50/50 p-2"
                                 >
                                     <select
                                         value={selectedIc}

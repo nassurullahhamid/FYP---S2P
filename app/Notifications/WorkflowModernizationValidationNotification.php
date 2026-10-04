@@ -39,6 +39,7 @@ class WorkflowModernizationValidationNotification extends Notification
                 $this->submittedByName
             ),
             'icon' => 'ShieldCheck',
+            'target_role' => 'ketua_wilayah',
             'url' => route(
                 'tickets.show',
                 [
