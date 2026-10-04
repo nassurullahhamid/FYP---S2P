@@ -149,9 +149,6 @@ export default function PaparanRingkasanLKK({ ticket, auth, senaraiPegawai }) {
             return;
         }
 
-        if (!confirm('Adakah anda pasti dengan tindakan ini?')) {
-            return;
-        }
 
         router.post(
             route(
@@ -170,8 +167,8 @@ export default function PaparanRingkasanLKK({ ticket, auth, senaraiPegawai }) {
                 onSuccess: () => {
                     alert(
                         action === 'PEMBETULAN'
-                            ? 'LKK telah dipulangkan kepada KUTD untuk pembetulan.'
-                            : 'LKK berjaya divalidasi dan tiket telah ditutup.'
+                            ? 'Dihantar ke KUTD untuk tindakan sewajarnya.'
+                            : 'Laporan telah divalidasi.'
                     );
 
                     setUlasanKetua('');
@@ -731,10 +728,10 @@ export default function PaparanRingkasanLKK({ ticket, auth, senaraiPegawai }) {
                 <div className="bg-blue-50/60 p-5 rounded-2xl border border-blue-200/80 shadow-sm space-y-4">
                     <div className="flex items-center gap-2">
                         <div className="p-1.5 bg-blue-100 text-blue-700 rounded-lg"><ShieldCheck size={14} /></div>
-                        <h4 className="text-xs font-black text-blue-900 uppercase tracking-wider">Tindakan Validasi Akhir </h4>
+                        <h4 className="text-xs font-black text-blue-900 uppercase tracking-wider">ULASAN (Jika Ada)</h4>
                     </div>
                     <div className="space-y-2">
-                        <label className="text-[10px] uppercase font-black text-slate-500 tracking-wide block">Nota / Ulasan Semakan:</label>
+
                         <textarea value={ulasanKetua} onChange={(e) => setUlasanKetua(e.target.value)} placeholder="Tulis ulasan validasi di sini..." className="w-full p-3 bg-white border border-gray-200 rounded-xl text-xs font-medium text-slate-800 focus:outline-none" rows={3} />
                     </div>
                     <div className="flex justify-end gap-2 pt-2 border-t border-blue-200/40">
@@ -748,7 +745,7 @@ export default function PaparanRingkasanLKK({ ticket, auth, senaraiPegawai }) {
                             className="flex h-9 items-center gap-1.5 rounded-xl border border-amber-200 bg-white px-4 text-xs font-bold uppercase text-amber-600 shadow-sm hover:bg-amber-50"
                         >
                             <AlertTriangle size={13} />
-                            Perlu Pembetulan
+                            PEMBETULAN LAPORAN
                         </button>
                         <button
                             type="button"

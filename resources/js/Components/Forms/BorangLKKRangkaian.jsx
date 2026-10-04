@@ -201,7 +201,7 @@ export default function BorangLKKRangkaian({ ticket, senaraiKosSelamat, existing
                 onFinish: () => setIsSubmitting(false),
                 onSuccess: () => {
                     alert(
-                        'LKK berjaya diverifikasi dan dihantar untuk validasi Ketua Wilayah!'
+                        'Laporan telah diverifikasi.'
                     );
                 },
                 onError: (submissionErrors) => {
@@ -320,19 +320,6 @@ export default function BorangLKKRangkaian({ ticket, senaraiKosSelamat, existing
                 )}
             </div>
 
-            {/* Nota / Ulasan Semakan */}
-            {isPembetulan && (ticket.ulasan_semakan || ticket.catatan_penutupan) && (
-                <div className="bg-amber-50 border-2 border-amber-300 p-4 md:p-5 rounded-2xl shadow-sm space-y-2 animate-in fade-in duration-200">
-                    <div className="flex items-center gap-2 text-amber-900">
-                        <h4 className="text-xs uppercase font-black tracking-wider">
-                            Nota / Ulasan Semakan
-                        </h4>
-                    </div>
-                    <div className="text-xs font-semibold text-amber-950 bg-white/90 p-3 rounded-xl border border-amber-200/80 leading-relaxed whitespace-pre-wrap">
-                        {ticket.ulasan_semakan || ticket.catatan_penutupan}
-                    </div>
-                </div>
-            )}
 
             {/* Notifikasi Ralat */}
             {Object.keys(errors).length > 0 && (

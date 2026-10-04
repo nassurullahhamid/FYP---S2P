@@ -435,7 +435,7 @@ class TicketWorkflowController extends Controller
             )
             ->with(
                 'success',
-                'Tiket Rangkaian berjaya disemak, lawatan dijadualkan dan Juruteknik telah dilantik.'
+                'Tiket telah disemak.'
             );
     }
 
@@ -1005,14 +1005,6 @@ class TicketWorkflowController extends Controller
                         'tarikh_tutup' => null,
                     ]);
 
-                    $ticket->rekodLog(
-                        config(
-                            's2p_workflow.trail_events.correction_requested',
-                            'PEMBETULAN DIMINTA'
-                        ),
-                        'Oleh '.$validator->nama,
-                        'PEMBETULAN'
-                    );
                 } else {
                     $report->update([
                         'disemak_oleh' => $validator->nama,
@@ -1109,7 +1101,7 @@ class TicketWorkflowController extends Controller
                 'success',
                 $isCorrection
                     ? 'LKK dipulangkan kepada KUTD untuk pembetulan.'
-                    : 'LKK berjaya divalidasi dan tiket telah ditutup.'
+                    : 'Laporan telah divalidasi.'
             );
     }
 
@@ -1186,7 +1178,7 @@ class TicketWorkflowController extends Controller
                         )
                     ) {
                         throw ValidationException::withMessages([
-                            'sistem' => 'Status tiket tidak membenarkan LKK disimpan atau dihantar.',
+                            'sistem' => 'Laporan lawatan tapak perlu disahkan!',
                         ]);
                     }
 
@@ -1433,7 +1425,7 @@ class TicketWorkflowController extends Controller
                 'success',
                 $isDraft
                     ? 'Draf LKK Rangkaian berjaya disimpan.'
-                    : 'LKK Rangkaian berjaya dihantar untuk validasi Ketua Wilayah.'
+                    : 'Laporan telah diverifikasi.'
             );
     }
 
@@ -1653,7 +1645,7 @@ class TicketWorkflowController extends Controller
                 'success',
                 $isCorrection
                     ? 'Laporan tapak dipulangkan kepada Juruteknik untuk pembetulan.'
-                    : 'Laporan tapak diterima. Penyediaan LKK boleh diteruskan.'
+                    : 'Laporan tapak telah disahkan.'
             );
     }
 
@@ -1869,14 +1861,29 @@ class TicketWorkflowController extends Controller
                         'INFO'
                     );
 
+                    /*
+                     * Apabila salah seorang PIC menghantar laporan,
+                     * tugasan itu telah diambil tindakan. Tandakan
+                     * notifikasi tiket yang sama bagi semua PIC yang
+                     * dilantik sebagai dibaca supaya notifikasi lama
+                     * tidak terus dipaparkan kepada PIC lain.
+                     */
+                    $assignedPicIds = DB::table('tugasan_tiket')
+                        ->where('id_tiket', $id_tiket)
+                        ->pluck('no_ic')
+                        ->map(
+                            fn ($identity): string => (string) $identity
+                        )
+                        ->all();
+
                     DB::table('notifications')
                         ->where(
                             'notifiable_type',
                             $technician->getMorphClass()
                         )
-                        ->where(
+                        ->whereIn(
                             'notifiable_id',
-                            (string) $technician->getKey()
+                            $assignedPicIds
                         )
                         ->whereNull('read_at')
                         ->where(
@@ -1984,7 +1991,7 @@ class TicketWorkflowController extends Controller
             )
             ->with(
                 'success',
-                'Laporan tapak berjaya dihantar untuk semakan KUTD.'
+                'Laporan lawatan tapak telah dikemaskini.'
             );
     }
 

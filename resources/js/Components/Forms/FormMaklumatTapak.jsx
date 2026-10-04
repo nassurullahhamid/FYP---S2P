@@ -191,7 +191,7 @@ export default function FormMaklumatTapak({ ticket, auth, senaraiPengguna }) {
             forceFormData: true,
             onSuccess: () => {
                 alert(
-                    'Laporan tapak berjaya dihantar untuk semakan KUTD!'
+                    'Laporan lawatan tapak telah dikemaskini.'
                 );
                 setIsEditing(false);
             },

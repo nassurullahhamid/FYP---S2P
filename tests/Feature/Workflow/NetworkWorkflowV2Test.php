@@ -3,12 +3,14 @@
 namespace Tests\Feature\Workflow;
 
 use App\Models\Pengguna;
+use App\Notifications\WorkflowAssignmentNotification;
 use Illuminate\Foundation\Testing\DatabaseTransactions;
 use Illuminate\Http\UploadedFile;
 use Illuminate\Support\Facades\DB;
 use Illuminate\Support\Facades\Hash;
 use Illuminate\Support\Facades\Notification;
 use Illuminate\Support\Facades\Storage;
+use Illuminate\Support\Str;
 use Tests\TestCase;
 
 class NetworkWorkflowV2Test extends TestCase
@@ -265,6 +267,144 @@ class NetworkWorkflowV2Test extends TestCase
             $ticketId,
             'Menunggu Semakan'
         );
+    }
+
+    public function test_all_assigned_pic_notifications_are_cleared_when_one_pic_acts(): void
+    {
+        $users = $this->createWorkflowUsers('92');
+        $secondTechnician = $this->createUser(
+            '920000000005',
+            'Juruteknik Kedua 92',
+            'juruteknik'
+        );
+        $ticketId = $this->createTicket(
+            '002',
+            'Naiktaraf'
+        );
+
+        $payload = $this->reviewPayload(
+            $users['technician']
+        );
+        $payload['senarai_pic_ic'] = [
+            $users['technician']->no_ic,
+            $secondTechnician->no_ic,
+        ];
+
+        $this->actingAs($users['kutd'])
+            ->post(
+                route(
+                    'tickets.workflow.reviewNetwork',
+                    $ticketId
+                ),
+                $payload
+            )
+            ->assertSessionHasNoErrors();
+
+        Notification::assertSentTo(
+            $users['technician'],
+            WorkflowAssignmentNotification::class
+        );
+        Notification::assertSentTo(
+            $secondTechnician,
+            WorkflowAssignmentNotification::class
+        );
+
+        $notificationIds = [];
+
+        foreach (
+            [$users['technician'], $secondTechnician] as $assignedTechnician
+        ) {
+            $notificationId = (string) Str::uuid();
+            $notificationIds[] = $notificationId;
+
+            DB::table('notifications')->insert([
+                'id' => $notificationId,
+                'type' => WorkflowAssignmentNotification::class,
+                'notifiable_type' => $assignedTechnician->getMorphClass(),
+                'notifiable_id' => (string) $assignedTechnician->getKey(),
+                'data' => json_encode(
+                    ['id_tiket' => $ticketId],
+                    JSON_THROW_ON_ERROR
+                ),
+                'read_at' => null,
+                'created_at' => now(),
+                'updated_at' => now(),
+            ]);
+        }
+
+        $this->submitSiteReport(
+            $users['technician'],
+            $ticketId
+        );
+
+        foreach ($notificationIds as $notificationId) {
+            $this->assertNotNull(
+                DB::table('notifications')
+                    ->where('id', $notificationId)
+                    ->value('read_at')
+            );
+        }
+    }
+
+    public function test_network_correction_workflow_does_not_add_correction_requested_trail(): void
+    {
+        $users = $this->createWorkflowUsers('98');
+        $ticketId = $this->createTicket(
+            '006',
+            'Pemasangan Baharu'
+        );
+
+        $this->reviewTicket(
+            $users['kutd'],
+            $ticketId,
+            $users['technician']
+        );
+        $this->submitSiteReport(
+            $users['technician'],
+            $ticketId
+        );
+
+        $this->actingAs($users['kutd'])
+            ->post(
+                route(
+                    'tickets.workflow.reviewNetworkSiteReport',
+                    $ticketId
+                ),
+                ['tindakan' => 'TERIMA']
+            )
+            ->assertSessionHasNoErrors();
+
+        $this->actingAs($users['kutd'])
+            ->post(
+                route(
+                    'tickets.workflow.saveNetworkLkk',
+                    $ticketId
+                ),
+                $this->lkkPayload()
+            )
+            ->assertSessionHasNoErrors();
+
+        $this->actingAs($users['kw'])
+            ->post(
+                route(
+                    'tickets.workflow.validateNetworkLkk',
+                    $ticketId
+                ),
+                [
+                    'tindakan' => 'PEMBETULAN',
+                    'ulasan' => 'Sila kemas kini laporan akhir.',
+                ]
+            )
+            ->assertSessionHasNoErrors();
+
+        $this->assertTicketStatus(
+            $ticketId,
+            'Pembetulan Ketua'
+        );
+        $this->assertDatabaseMissing('jejak_tiket', [
+            'id_tiket' => $ticketId,
+            'aktiviti' => 'PEMBETULAN DIMINTA',
+        ]);
     }
 
     private function reviewTicket(
