@@ -10,6 +10,7 @@ class LKKPembetulanNoti extends Notification
     use Queueable;
 
     protected $ticket;
+
     protected $namaKetua;
 
     public function __construct($ticket, $namaKetua)
@@ -29,9 +30,9 @@ class LKKPembetulanNoti extends Notification
 
         return [
             'id_tiket' => $this->ticket->id_tiket,
-            'tajuk'    => 'LKK Perlu Pembetulan',
-            'pesanan'  => 'Laporan LKK bagi Tiket #' . $this->ticket->id_tiket . ' telah dikembalikan oleh ' . $jawatanKetua . ' (' . $this->namaKetua . ') untuk pembetulan semula.',
-            'url'      => '/tickets/' . $this->ticket->id_tiket,
+            'tajuk' => 'LKK Perlu Pembetulan',
+            'pesanan' => 'Laporan LKK bagi Tiket #'.$this->ticket->id_tiket.' telah dikembalikan oleh '.$jawatanKetua.' ('.$this->namaKetua.') untuk pembetulan semula.',
+            'url' => '/tickets/'.$this->ticket->id_tiket,
         ];
     }
 }

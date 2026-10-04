@@ -8,13 +8,14 @@ use Illuminate\Database\Eloquent\Relations\BelongsTo;
 class KonsultasiRangkaian extends Model
 {
     protected $table = 'konsultasi_rangkaian';
+
     protected $primaryKey = 'id_kr';
 
     protected $fillable = [
         'sub_kategori', 'tarikh_lawatan', 'masa_lawatan', 'catatan_lawatan',
         'jenis_premis', 'bilik_server', 'rack_server', 'sumber_kuasa',
         'persekitaran_fizikal', 'liputan', 'jenis_capaian', 'kelajuan',
-        'lan', 'ap', 'firewall', 'rumusan', 'ulasan_teknikal', 'lampiran', 'id_tiket'
+        'lan', 'ap', 'firewall', 'rumusan', 'ulasan_teknikal', 'lampiran', 'id_tiket',
     ];
 
     public function tiket(): BelongsTo

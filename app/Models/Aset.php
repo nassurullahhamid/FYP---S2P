@@ -8,12 +8,15 @@ use Illuminate\Database\Eloquent\Relations\BelongsTo;
 class Aset extends Model
 {
     protected $table = 'aset';
+
     protected $primaryKey = 'serial_no';
 
     public $incrementing = false;
+
     protected $keyType = 'string';
+
     protected $fillable = [
-        'serial_no', 'nama_aset', 'model', 'cpu', 'ram', 'hard_disk', 'os', 'status', 'pengguna_ic'
+        'serial_no', 'nama_aset', 'model', 'cpu', 'ram', 'hard_disk', 'os', 'status', 'pengguna_ic',
     ];
 
     // Relationship: An asset belongs to a specific Pengguna

@@ -14,12 +14,12 @@ class TicketVerificationAlert extends Mailable implements ShouldQueue
 {
     use Queueable, SerializesModels;
 
-
     public $ticket;
+
     public $subKategori;
 
     // Create a new message instance
-    public function __construct(Tiket $ticket,$subKategori = null)
+    public function __construct(Tiket $ticket, $subKategori = null)
     {
         $this->ticket = $ticket;
         $this->subKategori = $subKategori;
@@ -29,7 +29,7 @@ class TicketVerificationAlert extends Mailable implements ShouldQueue
     public function envelope(): Envelope
     {
         return new Envelope(
-            subject: '[S2P] Pengesahan Kategori Diperlukan: Tiket #' . $this->ticket->id_tiket,
+            subject: '[S2P] Pengesahan Kategori Diperlukan: Tiket #'.$this->ticket->id_tiket,
         );
     }
 
