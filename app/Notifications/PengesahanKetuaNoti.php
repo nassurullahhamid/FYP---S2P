@@ -11,7 +11,9 @@ class PengesahanKetuaNoti extends Notification
     use Queueable;
 
     protected $ticket;
+
     protected $namaPenghantar;
+
     protected $isUntukKUTD;
 
     public function __construct($ticket, $namaPenghantar, $isUntukKUTD = false)
@@ -49,42 +51,42 @@ class PengesahanKetuaNoti extends Notification
 
         if ($statusTiket === 'lkk perlu pembetulan') {
             $tajuk = 'Laporan LKK Perlu Pembetulan';
-            $pesanan = 'Tiket #' . $id_tiket . ' dipulangkan untuk pembetulan LKK. Sila semak dan kemaskini segera.';
+            $pesanan = 'Tiket #'.$id_tiket.' dipulangkan untuk pembetulan LKK. Sila semak dan kemaskini segera.';
 
         } elseif ($statusTiket === 'menunggu validasi') {
             $tajuk = 'Validasi Kelulusan LKK Diperlukan';
-            $pesanan = 'Laporan LKK Tiket #' . $id_tiket . ' telah lengkap disahkan. Sila lakukan validasi kelulusan akhir.';
+            $pesanan = 'Laporan LKK Tiket #'.$id_tiket.' telah lengkap disahkan. Sila lakukan validasi kelulusan akhir.';
 
         } elseif ($statusTiket === 'dalam tindakan pegawai' && $kategori === 'Transformasi Digital' && str_contains($subKategoriLower, 'pembekalan')) {
             $tajuk = 'Tindakan Teknikal LKK Pembekalan ICT';
-            $pesanan = 'Butiran Tiket #' . $id_tiket . ' telah disahkan oleh KUPP. Sila lengkapkan laporan teknikal.';
+            $pesanan = 'Butiran Tiket #'.$id_tiket.' telah disahkan oleh KUPP. Sila lengkapkan laporan teknikal.';
 
         } elseif ($statusTiket === 'menunggu kelulusan') {
             $tajuk = 'Kelulusan Peminjaman Diperlukan';
-            $pesanan = 'Permohonan peminjaman peralatan bagi Tiket #' . $id_tiket . ' sedang menunggu tindakan kelulusan anda.';
+            $pesanan = 'Permohonan peminjaman peralatan bagi Tiket #'.$id_tiket.' sedang menunggu tindakan kelulusan anda.';
 
         } elseif ($statusTiket === 'menunggu pengesahan') {
             if (str_contains($subKategoriLower, 'peminjaman')) {
                 $tajuk = 'Pengesahan Peminjaman Peralatan ICT';
-                $pesanan = 'Tiket peminjaman #' . $id_tiket . ' memerlukan pengesahan & penutupan tiket.';
+                $pesanan = 'Tiket peminjaman #'.$id_tiket.' memerlukan pengesahan & penutupan tiket.';
             } elseif ($subKategori === 'Pemodenan Bilik Mesyuarat') {
                 $tajuk = 'Semakan LKK TD Diperlukan';
-                $pesanan = 'Laporan LKK bagi Tiket #' . $id_tiket . ' telah diisi. Sila buat semakan dan pengesahan lanjut.';
+                $pesanan = 'Laporan LKK bagi Tiket #'.$id_tiket.' telah diisi. Sila buat semakan dan pengesahan lanjut.';
             } else {
                 $tajuk = 'Semakan Laporan LKK Diperlukan';
-                $pesanan = 'Laporan kerja bagi tiket #' . $id_tiket . ' telah dihantar oleh (' . $this->namaPenghantar . ') untuk semakan dan pengesahan.';
+                $pesanan = 'Laporan kerja bagi tiket #'.$id_tiket.' telah dihantar oleh ('.$this->namaPenghantar.') untuk semakan dan pengesahan.';
             }
 
         } else {
             $tajuk = 'Notifikasi Sistem Tiket';
-            $pesanan = 'Terdapat kemaskini atau tindakan diperlukan pada Tiket #' . $id_tiket . ' (Oleh: ' . $this->namaPenghantar . ').';
+            $pesanan = 'Terdapat kemaskini atau tindakan diperlukan pada Tiket #'.$id_tiket.' (Oleh: '.$this->namaPenghantar.').';
         }
 
         return [
             'id_tiket' => $id_tiket,
-            'tajuk'    => $tajuk,
-            'pesanan'  => $pesanan,
-            'url'      => '/tickets/' . $id_tiket,
+            'tajuk' => $tajuk,
+            'pesanan' => $pesanan,
+            'url' => '/tickets/'.$id_tiket,
         ];
     }
 }

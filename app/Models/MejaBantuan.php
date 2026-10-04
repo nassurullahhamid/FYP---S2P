@@ -8,13 +8,14 @@ use Illuminate\Database\Eloquent\Relations\BelongsTo;
 class MejaBantuan extends Model
 {
     protected $table = 'meja_bantuan';
+
     protected $primaryKey = 'id_mb';
 
     protected $fillable = [
         'id_tiket',
         'sub_kategori',
         'serial_no',
-        'kuantiti_dipinjam'
+        'kuantiti_dipinjam',
     ];
 
     public function tiket(): BelongsTo

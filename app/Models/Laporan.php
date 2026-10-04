@@ -10,6 +10,7 @@ class Laporan extends Model
     use HasFactory;
 
     protected $table = 'laporan';
+
     protected $primaryKey = 'id_laporan';
 
     protected $fillable = [
@@ -42,6 +43,4 @@ class Laporan extends Model
     {
         return $this->belongsTo(Pengguna::class, 'pengguna_ic', 'no_ic');
     }
-
-
 }

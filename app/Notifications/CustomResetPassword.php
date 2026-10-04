@@ -3,8 +3,8 @@
 namespace App\Notifications;
 
 use Illuminate\Bus\Queueable;
-use Illuminate\Notifications\Notification;
 use Illuminate\Notifications\Messages\MailMessage;
+use Illuminate\Notifications\Notification;
 
 class CustomResetPassword extends Notification
 {
@@ -32,7 +32,7 @@ class CustomResetPassword extends Notification
 
         return (new MailMessage)
             ->subject('S2P: Permohonan Tukar Kata Laluan')
-            ->greeting('Hai ' . ($notifiable->nama ?? 'Pengguna') . '!')
+            ->greeting('Hai '.($notifiable->nama ?? 'Pengguna').'!')
             ->line('Kami menerima permohonan untuk menukar kata laluan akaun S2P anda.')
             ->action('Tukar Kata Laluan', $url)
             ->line('Pautan ini akan luput dalam masa 60 minit sahaja.')

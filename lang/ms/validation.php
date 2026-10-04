@@ -198,15 +198,15 @@ return [
     */
 
     'attributes' => [
-    'no_ic' => 'Nombor Kad Pengenalan',
-    'nama' => 'Nama',
-    'emel' => 'Alamat e-mel',
-    'no_telefon' => 'Nombor telefon',
-    'jawatan' => 'Jawatan',
-    'gred' => 'Gred',
-    'peranan' => 'Peranan',
-    'status_pengguna' => 'Status pengguna',
-    'password' => 'Kata laluan',
-    'password_confirmation' => 'Pengesahan kata laluan',
-],
+        'no_ic' => 'Nombor Kad Pengenalan',
+        'nama' => 'Nama',
+        'emel' => 'Alamat e-mel',
+        'no_telefon' => 'Nombor telefon',
+        'jawatan' => 'Jawatan',
+        'gred' => 'Gred',
+        'peranan' => 'Peranan',
+        'status_pengguna' => 'Status pengguna',
+        'password' => 'Kata laluan',
+        'password_confirmation' => 'Pengesahan kata laluan',
+    ],
 ];
