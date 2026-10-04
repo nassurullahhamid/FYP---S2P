@@ -193,7 +193,7 @@ export default function InfoTiket({ auth, backUrl, ticket, senaraiPengguna, sena
         'laporan perlu pembetulan',
         'menunggu semakan laporan',
         'sedia diverifikasi',
-        'pembetulan ketua',
+        'pembetulan laporan',
         'menunggu validasi',
         'selesai',
     ].includes(statusFormat);
@@ -205,7 +205,7 @@ export default function InfoTiket({ auth, backUrl, ticket, senaraiPengguna, sena
                 && [
                     'menunggu semakan',
                     'menunggu semakan laporan',
-                    'pembetulan ketua',
+                    'pembetulan laporan',
                 ].includes(statusFormat)
             )
             ||
@@ -234,7 +234,7 @@ export default function InfoTiket({ auth, backUrl, ticket, senaraiPengguna, sena
             && [
                 'menunggu semakan laporan',
                 'sedia diverifikasi',
-                'pembetulan ketua',
+                'pembetulan laporan',
             ].includes(statusFormat)
         )
         ||
@@ -244,7 +244,7 @@ export default function InfoTiket({ auth, backUrl, ticket, senaraiPengguna, sena
                 && [
                     'menunggu semakan',
                     'menunggu semakan laporan',
-                    'pembetulan ketua',
+                    'pembetulan laporan',
                 ].includes(statusFormat)
             )
             ||
@@ -1370,7 +1370,7 @@ export default function InfoTiket({ auth, backUrl, ticket, senaraiPengguna, sena
                                                         isPembekalanV2
                                                         && [
                                                             'menunggu semakan laporan',
-                                                            'pembetulan ketua',
+                                                            'pembetulan laporan',
                                                         ].includes(statusFormat) ? (
                                                             <BorangLKKPembekalanKUPPV2
                                                                 ticket={ticket}

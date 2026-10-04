@@ -3,6 +3,9 @@
 namespace Tests\Feature\Workflow;
 
 use App\Models\Pengguna;
+use App\Notifications\WorkflowModernizationChiefCorrectionNotification;
+use App\Notifications\WorkflowModernizationValidationNotification;
+use App\Notifications\WorkflowReportReviewNotification;
 use Illuminate\Foundation\Testing\DatabaseTransactions;
 use Illuminate\Http\UploadedFile;
 use Illuminate\Support\Facades\DB;
@@ -33,13 +36,33 @@ class ModernizationWorkflowV2Test extends TestCase
 
         $this->assignTicket($users['kutd'], $ticketId, $users['technician']);
         $this->assertTicketStatus($ticketId, 'Dalam Tindakan');
+        $this->assertDatabaseHas('jejak_tiket', [
+            'id_tiket' => $ticketId,
+            'aktiviti' => 'DIJADUAL',
+            'nama_pelaku' => $users['kutd']->nama,
+        ]);
 
         $this->submitReport($users['technician'], $ticketId, 'Keadaan awal lengkap.');
         $this->assertTicketStatus($ticketId, 'Menunggu Semakan Laporan');
 
+        Notification::assertSentTo(
+            $users['kupp'],
+            WorkflowReportReviewNotification::class,
+            static fn (
+                WorkflowReportReviewNotification $notification
+            ): bool => $notification->targetRole === 'ketua_upp'
+        );
+
         $this->saveLkk($users['kupp'], $ticketId);
         $this->verifyLkk($users['kupp'], $ticketId);
         $this->assertTicketStatus($ticketId, 'Menunggu Validasi');
+
+        Notification::assertSentTo(
+            $users['kw'],
+            WorkflowModernizationValidationNotification::class,
+            fn ($notification): bool => $notification->toArray($users['kw'])['target_role']
+                    === 'ketua_wilayah'
+        );
 
         $this->actingAs($users['kw'])
             ->post(route('tickets.workflow.validateModernizationLkk', $ticketId), [
@@ -102,14 +125,27 @@ class ModernizationWorkflowV2Test extends TestCase
             ])
             ->assertSessionHasNoErrors();
 
-        $this->assertTicketStatus($ticketId, 'Pembetulan Ketua');
+        $this->assertTicketStatus($ticketId, 'Pembetulan Laporan');
+
+        Notification::assertSentTo(
+            $users['kupp'],
+            WorkflowModernizationChiefCorrectionNotification::class,
+            fn ($notification): bool => $notification->toArray($users['kupp'])['target_role']
+                    === 'ketua_upp'
+        );
 
         $this->saveLkk($users['kupp'], $ticketId, 'Rumusan selepas pembetulan Ketua Wilayah.');
-        $this->verifyLkk($users['kupp'], $ticketId);
         $this->assertTicketStatus($ticketId, 'Menunggu Validasi');
 
+        Notification::assertSentTo(
+            $users['kw'],
+            WorkflowModernizationValidationNotification::class,
+            fn ($notification): bool => $notification->toArray($users['kw'])['target_role']
+                    === 'ketua_wilayah'
+        );
+
         $this->assertSame(
-            2,
+            0,
             DB::table('jejak_tiket')
                 ->where('id_tiket', $ticketId)
                 ->where('aktiviti', 'PEMBETULAN DIMINTA')

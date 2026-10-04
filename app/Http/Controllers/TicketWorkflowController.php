@@ -3319,14 +3319,22 @@ class TicketWorkflowController extends Controller
                         'INFO'
                     );
 
+                    $assignedPicIds = DB::table('tugasan_tiket')
+                        ->where('id_tiket', $id_tiket)
+                        ->pluck('no_ic')
+                        ->map(
+                            static fn (mixed $identity): string => (string) $identity
+                        )
+                        ->all();
+
                     DB::table('notifications')
                         ->where(
                             'notifiable_type',
                             $technician->getMorphClass()
                         )
-                        ->where(
+                        ->whereIn(
                             'notifiable_id',
-                            (string) $technician->getKey()
+                            $assignedPicIds
                         )
                         ->whereNull('read_at')
                         ->where(
@@ -3397,13 +3405,21 @@ class TicketWorkflowController extends Controller
                     ['id_tiket' => $ticket->id_tiket]
                 );
             } else {
-                Notification::send(
-                    $reviewers,
+                $reviewNotification =
                     new WorkflowReportReviewNotification(
                         $ticket,
                         $technician->nama,
                         $subCategory
-                    )
+                    );
+
+                $reviewNotification->targetRole = config(
+                    's2p_workflow.flows.pemodenan.pic_submission_role',
+                    'ketua_upp'
+                );
+
+                Notification::send(
+                    $reviewers,
+                    $reviewNotification
                 );
             }
         } catch (\Throwable $exception) {
@@ -3426,7 +3442,7 @@ class TicketWorkflowController extends Controller
             )
             ->with(
                 'success',
-                'Laporan Pemodenan berjaya dihantar kepada KUPP.'
+                'Maklumat laporan telah dikemaskini.'
             );
     }
 
@@ -3437,12 +3453,12 @@ class TicketWorkflowController extends Controller
         $validated = $request->validated();
         $preparer = $request->user();
 
-        $ticket = DB::transaction(
+        [$ticket, $validators, $isChiefCorrection, $subCategory] = DB::transaction(
             function () use (
                 $id_tiket,
                 $validated,
                 $preparer
-            ): Tiket {
+            ): array {
                 $ticket = Tiket::query()
                     ->where('id_tiket', $id_tiket)
                     ->lockForUpdate()
@@ -3453,11 +3469,10 @@ class TicketWorkflowController extends Controller
                         's2p_workflow.statuses.report_review',
                         'Menunggu Semakan Laporan'
                     ),
-                    config(
-                        's2p_workflow.statuses.chief_correction',
-                        'Pembetulan Ketua'
-                    ),
+                    'Pembetulan Laporan',
                 ];
+
+                $isChiefCorrection = $ticket->status_tiket === 'Pembetulan Laporan';
 
                 if (
                     ! in_array(
@@ -3498,6 +3513,24 @@ class TicketWorkflowController extends Controller
                     ]);
                 }
 
+                $subCategory = trim((string) $digitalRecord->sub_kategori);
+
+                $validators = collect();
+
+                if ($isChiefCorrection) {
+                    $validators = Pengguna::query()
+                        ->whereIn('peranan', ['ketua_wilayah', 'Ketua Wilayah'])
+                        ->where('status_pengguna', 'Aktif')
+                        ->lockForUpdate()
+                        ->get();
+
+                    if ($validators->isEmpty()) {
+                        throw ValidationException::withMessages([
+                            'sistem' => 'Tiada Ketua Wilayah aktif untuk menerima validasi.',
+                        ]);
+                    }
+                }
+
                 $report = DB::table('laporan')
                     ->where('id_tiket', $id_tiket)
                     ->lockForUpdate()
@@ -3532,6 +3565,26 @@ class TicketWorkflowController extends Controller
                         'updated_at' => now(),
                     ]);
 
+                if ($isChiefCorrection) {
+                    $ticket->update([
+                        'status_tiket' => config(
+                            's2p_workflow.statuses.validation',
+                            'Menunggu Validasi'
+                        ),
+                        'disahkan_oleh_ic' => $preparer->no_ic,
+                        'tarikh_tutup' => null,
+                    ]);
+
+                    $ticket->rekodLog(
+                        config(
+                            's2p_workflow.trail_events.verified',
+                            'DIVERIFIKASI'
+                        ),
+                        'Oleh '.$preparer->nama,
+                        'LULUS'
+                    );
+                }
+
                 DB::table('notifications')
                     ->where(
                         'notifiable_type',
@@ -3552,10 +3605,37 @@ class TicketWorkflowController extends Controller
                         'updated_at' => now(),
                     ]);
 
-                return $ticket->fresh();
+                return [
+                    $ticket->fresh(),
+                    $validators,
+                    $isChiefCorrection,
+                    $subCategory,
+                ];
             },
             3
         );
+
+        if ($isChiefCorrection) {
+            try {
+                Notification::send(
+                    $validators,
+                    new WorkflowModernizationValidationNotification(
+                        $ticket,
+                        $preparer->nama,
+                        $subCategory
+                    )
+                );
+            } catch (\Throwable $exception) {
+                Log::error(
+                    'LKK Pemodenan dikemas kini tetapi notifikasi Ketua Wilayah gagal.',
+                    [
+                        'id_tiket' => $ticket->id_tiket,
+                        'validator_ids' => $validators->pluck('no_ic')->all(),
+                        'message' => $exception->getMessage(),
+                    ]
+                );
+            }
+        }
 
         return redirect()
             ->route(
@@ -3564,7 +3644,7 @@ class TicketWorkflowController extends Controller
             )
             ->with(
                 'success',
-                'Anggaran kos dan rumusan laporan berjaya dikemaskini.'
+                'Maklumat laporan telah dikemaskini.'
             );
     }
 
@@ -3923,10 +4003,7 @@ class TicketWorkflowController extends Controller
                     'Menunggu Semakan Laporan'
                 );
 
-                $chiefCorrectionStatus = config(
-                    's2p_workflow.statuses.chief_correction',
-                    'Pembetulan Ketua'
-                );
+                $chiefCorrectionStatus = 'Pembetulan Laporan';
 
                 $allowedStatuses = $isCorrection
                     ? [$reportReviewStatus]
@@ -3993,14 +4070,6 @@ class TicketWorkflowController extends Controller
                         'ulasan_semakan' => $validated['ulasan'],
                     ]);
 
-                    $ticket->rekodLog(
-                        config(
-                            's2p_workflow.trail_events.correction_requested',
-                            'PEMBETULAN DIMINTA'
-                        ),
-                        'Oleh '.$reviewer->nama,
-                        'PEMBETULAN'
-                    );
                 } else {
                     $requiredFields = [
                         'pendahuluan',
@@ -4138,8 +4207,8 @@ class TicketWorkflowController extends Controller
             ->with(
                 'success',
                 $isCorrection
-                    ? 'Laporan dikembalikan kepada Juruteknik untuk pembetulan.'
-                    : 'LKK berjaya diverifikasi dan dihantar kepada Ketua Wilayah.'
+                    ? 'Dihantar ke PIC untuk tindakan sewajarnya.'
+                    : 'Laporan telah diverifikasi.'
             );
     }
 
@@ -4480,22 +4549,11 @@ class TicketWorkflowController extends Controller
 
                 if ($isCorrection) {
                     $ticket->update([
-                        'status_tiket' => config(
-                            's2p_workflow.statuses.chief_correction',
-                            'Pembetulan Ketua'
-                        ),
+                        'status_tiket' => 'Pembetulan Laporan',
                         'ulasan_semakan' => $validated['ulasan'],
                         'tarikh_tutup' => null,
                     ]);
 
-                    $ticket->rekodLog(
-                        config(
-                            's2p_workflow.trail_events.correction_requested',
-                            'PEMBETULAN DIMINTA'
-                        ),
-                        'Oleh '.$validator->nama,
-                        'PEMBETULAN'
-                    );
                 } else {
                     DB::table('laporan')
                         ->where('id_tiket', $id_tiket)
@@ -4594,8 +4652,8 @@ class TicketWorkflowController extends Controller
             ->with(
                 'success',
                 $isCorrection
-                    ? 'LKK dipulangkan kepada KUPP untuk pembetulan.'
-                    : 'LKK berjaya divalidasi dan tiket telah ditutup.'
+                    ? 'Dihantar ke KUPP untuk tindakan sewajarnya.'
+                    : 'Laporan telah divalidasi.'
             );
     }
 
@@ -5141,7 +5199,7 @@ class TicketWorkflowController extends Controller
             )
             ->with(
                 'success',
-                'Maklumat kajian berjaya dikemaskini dan dihantar kepada KUTD.'
+                'Maklumat kajian telah dikemaskini.'
             );
     }
 
@@ -5272,6 +5330,12 @@ class TicketWorkflowController extends Controller
                     'ulasan_semakan' => null,
                 ]);
 
+                $ticket->rekodLog(
+                    'DIJADUAL',
+                    'Oleh '.$assigner->nama,
+                    'LULUS'
+                );
+
                 /*
                  * Peringkat KUTD tidak menghasilkan DISEMAK kedua.
                  * Jejak DISEMAK telah direkod ketika tindakan KUPP.
@@ -5334,7 +5398,7 @@ class TicketWorkflowController extends Controller
             )
             ->with(
                 'success',
-                'Lawatan berjaya dijadualkan dan Juruteknik telah dilantik.'
+                'Laporan tiket telah dikemaskini.'
             );
     }
 

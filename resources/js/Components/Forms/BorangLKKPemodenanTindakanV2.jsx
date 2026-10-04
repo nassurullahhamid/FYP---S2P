@@ -2,7 +2,6 @@ import React, { useState } from 'react';
 import { router } from '@inertiajs/react';
 import {
     CheckCircle2,
-    DollarSign,
     Plus,
     RotateCcw,
     Send,
@@ -88,7 +87,7 @@ export default function BorangLKKPemodenanTindakanV2({
     const canKuppEdit =
         [
             'menunggu semakan laporan',
-            'pembetulan ketua',
+            'pembetulan laporan',
         ].includes(status)
         && isKUPP;
 
@@ -209,7 +208,7 @@ export default function BorangLKKPemodenanTindakanV2({
         setGambarCadangan(file);
     };
 
-    const [kosItems, setKosItems] = useState(
+    const [kosItems, setKosItems] = useState(() =>
         parseRows(
             laporan.kos_items,
             [
@@ -219,7 +218,14 @@ export default function BorangLKKPemodenanTindakanV2({
                     harga_seunit: '',
                 },
             ]
-        )
+        ).map(row => ({
+            ...row,
+            kuantiti: row.kuantiti ?? '',
+            harga_seunit:
+                row.harga_seunit
+                ?? row.anggaran
+                ?? '',
+        }))
     );
 
     const [rumusan, setRumusan] = useState(
@@ -301,7 +307,7 @@ export default function BorangLKKPemodenanTindakanV2({
                 gambar_tapak: gambarTapak,
                 gambar_cadangan: gambarCadangan,
             },
-            'Laporan berjaya dihantar kepada KUPP.',
+            'Maklumat laporan telah dikemaskini.',
             true
         );
     };
@@ -345,33 +351,14 @@ export default function BorangLKKPemodenanTindakanV2({
                         ),
                 rumusan: String(rumusan).trim(),
             },
-            'Anggaran kos dan rumusan berjaya dikemaskini.'
+            'Maklumat laporan telah dikemaskini.'
         );
     };
 
     const reviewKupp = action => {
         const comment = String(ulasan).trim();
 
-        if (
-            action === 'PEMBETULAN'
-            && comment === ''
-        ) {
-            alert('Sila masukkan ulasan pembetulan.');
-
-            return;
-        }
-
-        if (
-            !window.confirm(
-                action === 'PEMBETULAN'
-                    ? 'Kembalikan laporan kepada Juruteknik?'
-                    : 'Verifikasi dan hantar LKK kepada Ketua Wilayah?'
-            )
-        ) {
-            return;
-        }
-
-        send(
+send(
             'tickets.workflow.reviewModernizationLkk',
             {
                 tindakan: action,
@@ -381,8 +368,8 @@ export default function BorangLKKPemodenanTindakanV2({
                         : null,
             },
             action === 'PEMBETULAN'
-                ? 'Laporan dikembalikan kepada Juruteknik.'
-                : 'LKK berjaya diverifikasi.'
+                ? 'Dihantar ke PIC untuk tindakan sewajarnya.'
+                : 'Laporan telah diverifikasi.'
         );
     };
 
@@ -390,19 +377,9 @@ export default function BorangLKKPemodenanTindakanV2({
         const comment = String(ulasan).trim();
 
         if (
-            action === 'PEMBETULAN'
-            && comment === ''
-        ) {
-            alert('Sila masukkan ulasan pembetulan.');
-
-            return;
-        }
-
-        if (
-            !window.confirm(
-                action === 'PEMBETULAN'
-                    ? 'Kembalikan LKK kepada KUPP?'
-                    : 'Validasi LKK dan tutup tiket?'
+            action !== 'PEMBETULAN'
+            && !window.confirm(
+                'Adakah laporan ingin divalidasi?'
             )
         ) {
             return;
@@ -421,8 +398,8 @@ export default function BorangLKKPemodenanTindakanV2({
                         : null,
             },
             action === 'PEMBETULAN'
-                ? 'LKK dikembalikan kepada KUPP.'
-                : 'LKK berjaya divalidasi dan tiket ditutup.'
+                ? 'Dihantar ke KUPP untuk tindakan sewajarnya.'
+                : 'Laporan telah divalidasi.'
         );
     };
 
@@ -433,9 +410,6 @@ export default function BorangLKKPemodenanTindakanV2({
                     Laporan Kajian Keperluan Pemodenan Bilik Mesyuarat
                 </h2>
 
-                <p className="mt-1 text-[11px] text-slate-500">
-                    Workflow V2 · Status: {ticket.status_tiket}
-                </p>
             </div>
 
             {Object.keys(errors).length > 0 && (
@@ -643,141 +617,157 @@ export default function BorangLKKPemodenanTindakanV2({
                 className="bg-white p-6 rounded-2xl border border-gray-200 shadow-sm space-y-4"
             >
                 <div className="flex items-center gap-2 text-blue-900 border-b pb-2">
-                    <DollarSign size={16} />
-
                     <h3 className="font-black uppercase">
                         Anggaran Kos dan Rumusan
                     </h3>
                 </div>
 
-                {kosItems.map((row, index) => (
-                    <div
-                        key={`kos-${index}`}
-                        className="grid grid-cols-1 md:grid-cols-[2fr_1fr_1fr_auto] gap-2"
-                    >
-                        <input
-                            value={row.item || ''}
-                            onChange={event =>
-                                updateCost(
-                                    index,
-                                    'item',
-                                    event.target.value
-                                )
-                            }
-                            disabled={!canKuppEdit}
-                            required={canKuppEdit}
-                            placeholder="Item"
-                            className="border-gray-200 rounded-xl disabled:bg-gray-50"
-                        />
+                <div className="border border-gray-200 rounded-xl overflow-hidden">
+                    <div className="overflow-x-auto">
+                        <table className="w-full min-w-[720px] text-left border-collapse">
+                            <thead className="bg-gray-900 text-white text-[9px] uppercase tracking-wider">
+                                <tr>
+                                    <th className="p-4 w-1/2">Item</th>
+                                    <th className="p-3 w-24 text-center">Kuantiti</th>
+                                    <th className="p-3 w-40 text-right">Anggaran Kos (RM)</th>
+                                    <th className="p-3 w-40 text-right">Jumlah (RM)</th>
+                                    {canKuppEdit && (
+                                        <th className="p-3 w-20 text-center">Tindakan</th>
+                                    )}
+                                </tr>
+                            </thead>
 
-                        <input
-                            type="number"
-                            min="1"
-                            value={row.kuantiti || ''}
-                            onChange={event =>
-                                updateCost(
-                                    index,
-                                    'kuantiti',
-                                    event.target.value
-                                )
-                            }
-                            disabled={!canKuppEdit}
-                            required={canKuppEdit}
-                            placeholder="Kuantiti"
-                            className="border-gray-200 rounded-xl disabled:bg-gray-50"
-                        />
+                            <tbody className="divide-y divide-gray-100 text-xs font-semibold">
+                                {kosItems.map((row, index) => {
+                                    const quantity = Number(row.kuantiti) || 0;
+                                    const unitPrice = Number(row.harga_seunit) || 0;
+                                    const rowTotal = quantity * unitPrice;
 
-                        <input
-                            type="number"
-                            min="0"
-                            step="0.01"
-                            value={row.harga_seunit || ''}
-                            onChange={event =>
-                                updateCost(
-                                    index,
-                                    'harga_seunit',
-                                    event.target.value
-                                )
-                            }
-                            disabled={!canKuppEdit}
-                            required={canKuppEdit}
-                            placeholder="Harga seunit"
-                            className="border-gray-200 rounded-xl disabled:bg-gray-50"
-                        />
+                                    return (
+                                        <tr key={`kos-${index}`} className="hover:bg-gray-50/50">
+                                            <td className="p-2">
+                                                <input
+                                                    value={row.item || ''}
+                                                    onChange={event => updateCost(index, 'item', event.target.value)}
+                                                    disabled={!canKuppEdit}
+                                                    required={canKuppEdit}
+                                                    placeholder="Sila nyatakan item..."
+                                                    className="w-full h-9 border-gray-200 rounded-lg disabled:bg-transparent disabled:border-transparent"
+                                                />
+                                            </td>
+                                            <td className="p-2">
+                                                <input
+                                                    type="number"
+                                                    min="1"
+                                                    value={row.kuantiti || ''}
+                                                    onChange={event => updateCost(index, 'kuantiti', event.target.value)}
+                                                    disabled={!canKuppEdit}
+                                                    required={canKuppEdit}
+                                                    className="w-full h-9 text-center border-gray-200 rounded-lg disabled:bg-transparent disabled:border-transparent"
+                                                />
+                                            </td>
+                                            <td className="p-2">
+                                                <input
+                                                    type="number"
+                                                    min="0"
+                                                    step="0.01"
+                                                    value={row.harga_seunit || ''}
+                                                    onChange={event => updateCost(index, 'harga_seunit', event.target.value)}
+                                                    disabled={!canKuppEdit}
+                                                    required={canKuppEdit}
+                                                    className="w-full h-9 text-right border-gray-200 rounded-lg disabled:bg-transparent disabled:border-transparent"
+                                                />
+                                            </td>
+                                            <td className="p-3 text-right font-black bg-slate-50/30">
+                                                {rowTotal.toLocaleString('en-US', {
+                                                    minimumFractionDigits: 2,
+                                                    maximumFractionDigits: 2,
+                                                })}
+                                            </td>
+                                            {canKuppEdit && (
+                                                <td className="p-2 text-center">
+                                                    <button
+                                                        type="button"
+                                                        disabled={kosItems.length <= 1}
+                                                        onClick={() => setKosItems(kosItems.filter((_, rowIndex) => rowIndex !== index))}
+                                                        className="p-2 text-red-500 disabled:opacity-30"
+                                                    >
+                                                        <Trash2 size={14} />
+                                                    </button>
+                                                </td>
+                                            )}
+                                        </tr>
+                                    );
+                                })}
 
-                        {canKuppEdit && (
+                                <tr className="bg-blue-50/60 font-black text-blue-950">
+                                    <td colSpan="3" className="p-3 text-right uppercase tracking-wider text-[10px]">
+                                        Jumlah Keseluruhan:
+                                    </td>
+                                    <td className="p-3 text-right text-sm">
+                                        RM {kosItems.reduce(
+                                            (total, row) => total
+                                                + ((Number(row.kuantiti) || 0)
+                                                    * (Number(row.harga_seunit) || 0)),
+                                            0
+                                        ).toLocaleString('en-US', {
+                                            minimumFractionDigits: 2,
+                                            maximumFractionDigits: 2,
+                                        })}
+                                    </td>
+                                    {canKuppEdit && <td />}
+                                </tr>
+                            </tbody>
+                        </table>
+                    </div>
+
+                    {canKuppEdit && (
+                        <div className="p-2 bg-gray-50 border-t border-gray-200">
                             <button
                                 type="button"
-                                disabled={kosItems.length <= 1}
-                                onClick={() =>
-                                    setKosItems(
-                                        kosItems.filter(
-                                            (_, rowIndex) =>
-                                                rowIndex !== index
-                                        )
-                                    )
-                                }
-                                className="p-3 text-red-500 disabled:opacity-30"
+                                onClick={() => setKosItems([
+                                    ...kosItems,
+                                    { item: '', kuantiti: '', harga_seunit: '' },
+                                ])}
+                                className="inline-flex items-center gap-1.5 px-3 py-1.5 text-blue-600 bg-white border border-blue-200 hover:bg-blue-50 rounded-lg text-[10px] uppercase font-black shadow-sm"
                             >
-                                <Trash2 size={16} />
+                                <Plus size={12} />
+                                Tambah Item Kos
                             </button>
-                        )}
-                    </div>
-                ))}
+                        </div>
+                    )}
+                </div>
 
-                {canKuppEdit && (
-                    <button
-                        type="button"
-                        onClick={() =>
-                            setKosItems([
-                                ...kosItems,
-                                {
-                                    item: '',
-                                    kuantiti: '',
-                                    harga_seunit: '',
-                                },
-                            ])
-                        }
-                        className="inline-flex items-center gap-2 px-3 py-2 bg-blue-50 text-blue-700 rounded-xl"
-                    >
-                        <Plus size={14} />
-                        Tambah Item Kos
-                    </button>
-                )}
-
-                <textarea
-                    value={rumusan}
-                    onChange={event =>
-                        setRumusan(event.target.value)
-                    }
-                    disabled={!canKuppEdit}
-                    required={canKuppEdit}
-                    placeholder="Rumusan laporan"
-                    className="w-full min-h-[110px] border-gray-200 rounded-xl p-3 disabled:bg-gray-50"
-                />
+                <div className="space-y-2 relative">
+                    <label className="block text-xs font-black text-blue-900 uppercase tracking-wider">
+                        Rumusan
+                    </label>
+                    <textarea
+                        rows={5}
+                        value={rumusan}
+                        onChange={event => setRumusan(event.target.value)}
+                        disabled={!canKuppEdit}
+                        required={canKuppEdit}
+                        maxLength={2000}
+                        placeholder="Sila taip rumusan di sini..."
+                        className="w-full p-3.5 text-xs border border-gray-200 rounded-xl disabled:bg-gray-50"
+                    />
+                    <span className="absolute bottom-3 right-3 text-[10px] text-gray-400 font-bold">
+                        {String(rumusan || '').length} / 2000
+                    </span>
+                </div>
 
                 <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
                     <div className="p-4 bg-blue-50 border border-blue-100 rounded-xl">
-                        <p className="uppercase text-[10px] text-blue-700">
-                            Disediakan Oleh
-                        </p>
-
+                        <p className="uppercase text-[10px] text-blue-700">Disediakan Oleh</p>
                         <p className="mt-1 uppercase font-black text-blue-950">
-                            {laporan.disediakan_oleh
-                                || (canKuppEdit
-                                    ? currentUser.nama
-                                    : 'Belum direkod')}
+                            {laporan.disediakan_oleh || (canKuppEdit ? currentUser.nama : 'Belum direkod')}
                         </p>
                     </div>
-
                     <div className="p-4 bg-slate-50 border border-slate-200 rounded-xl">
-                        <p className="uppercase text-[10px] text-slate-500">
-                            Disemak Oleh
-                        </p>
-
+                        <p className="uppercase text-[10px] text-slate-500">Disemak Oleh</p>
                         <p className="mt-1 uppercase font-black text-slate-800">
-                            {laporan.disemak_oleh
-                                || 'Akan direkod oleh Ketua Wilayah'}
+                            {laporan.disemak_oleh || 'Akan direkod oleh Ketua Wilayah'}
                         </p>
                     </div>
                 </div>
@@ -785,44 +775,38 @@ export default function BorangLKKPemodenanTindakanV2({
                 {canKuppEdit && (
                     <div className="flex justify-end pt-3 border-t">
                         <button
-                            type="submit"
+                            type="button"
                             disabled={processing}
+                            onClick={submitKuppReport}
                             className="inline-flex items-center gap-2 px-5 py-3 bg-blue-600 hover:bg-blue-700 disabled:bg-gray-300 text-white uppercase font-black rounded-xl"
                         >
                             <Send size={14} />
-                            {processing
-                                ? 'Memproses...'
-                                : 'KEMASKINI TIKET'}
+                            {processing ? 'Memproses...' : 'KEMASKINI TIKET'}
                         </button>
                     </div>
                 )}
             </form>
-
             {(canKuppEdit || canKwValidate) && (
                 <div className="bg-white p-6 rounded-2xl border border-gray-200 shadow-sm space-y-4">
-                    {canKwValidate && (
-                        <textarea
-                            value={ulasan}
-                            onChange={event =>
-                                setUlasan(event.target.value)
-                            }
-                            placeholder="Ulasan—wajib untuk semakan"
-                            className="w-full min-h-[90px] border-gray-200 rounded-xl p-3"
-                        />
-                    )}
+                    <textarea
+                        value={ulasan}
+                        onChange={event => setUlasan(event.target.value)}
+                        placeholder="Ulasan (Jika Ada)"
+                        className="w-full min-h-[90px] border-gray-200 rounded-xl p-3"
+                    />
 
                     <div className="flex flex-col sm:flex-row justify-end gap-3">
-                        {canKwValidate && (
+                        {(canKuppEdit || canKwValidate) && (
                             <button
                                 type="button"
                                 disabled={processing}
-                                onClick={() =>
-                                    validateKw('PEMBETULAN')
-                                }
+                                onClick={() => canKuppEdit
+                                    ? reviewKupp('PEMBETULAN')
+                                    : validateKw('PEMBETULAN')}
                                 className="inline-flex items-center justify-center gap-2 px-5 py-3 bg-amber-500 hover:bg-amber-600 disabled:bg-gray-300 text-white uppercase font-black rounded-xl"
                             >
                                 <RotateCcw size={14} />
-                                SEMAKAN
+                                PEMBETULAN LAPORAN
                             </button>
                         )}
 
@@ -830,13 +814,11 @@ export default function BorangLKKPemodenanTindakanV2({
                             <button
                                 type="button"
                                 disabled={processing}
-                                onClick={() =>
-                                    reviewKupp('VERIFIKASI')
-                                }
+                                onClick={() => reviewKupp('VERIFIKASI')}
                                 className="inline-flex items-center justify-center gap-2 px-5 py-3 bg-emerald-600 hover:bg-emerald-700 disabled:bg-gray-300 text-white uppercase font-black rounded-xl"
                             >
                                 <ShieldCheck size={14} />
-                                VERIFIKASI TIKET
+                                VERIFIKASI
                             </button>
                         )}
 
@@ -844,13 +826,11 @@ export default function BorangLKKPemodenanTindakanV2({
                             <button
                                 type="button"
                                 disabled={processing}
-                                onClick={() =>
-                                    validateKw('VALIDASI')
-                                }
+                                onClick={() => validateKw('VALIDASI')}
                                 className="inline-flex items-center justify-center gap-2 px-5 py-3 bg-emerald-600 hover:bg-emerald-700 disabled:bg-gray-300 text-white uppercase font-black rounded-xl"
                             >
                                 <CheckCircle2 size={14} />
-                                VALIDASI TIKET
+                                VALIDASI
                             </button>
                         )}
                     </div>

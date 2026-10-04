@@ -41,6 +41,7 @@ class WorkflowModernizationChiefCorrectionNotification extends Notification
                 $this->reviewComment
             ),
             'icon' => 'RotateCcw',
+            'target_role' => 'ketua_upp',
             'url' => route(
                 'tickets.show',
                 [
