@@ -119,7 +119,7 @@ export default function BorangLKKPembekalanICTV2({ ticket, senaraiPegawai = [], 
         masa_lawatan: ticket.masa_lawatan || ticket.transformasi_digital?.masa_lawatan || '',
         catatan_lawatan:
             ticket.transformasi_digital?.catatan_lawatan || '',
-        pic_ic: ticket.pic_ic || (ticket.petugas?.map(p => p.no_ic) || ['']),
+        pic_ic: allPicList.length > 0 ? [...new Set(allPicList)] : [''],
         hasil_kajian: parseArrayData(laporanSemasa.hasil_kajian, [{ nama_pemohon: '', jawatan_pemohon: '', keadaan_semasa: '', justifikasi_cadangan: '', anggaran_kos: 0 }]),
         kos_items: parseArrayData(laporanSemasa.kos_items, [{ jenis_peralatan: '', kuantiti: 1, anggaran_kos: 0, jumlah: 0 }]),
         rumusan: laporanSemasa.rumusan || '',
@@ -236,7 +236,7 @@ export default function BorangLKKPembekalanICTV2({ ticket, senaraiPegawai = [], 
                 preserveScroll: true,
                 onSuccess: () => {
                     alert(
-                        'Tiket Pembekalan berjaya dikemaskini.'
+                        'Maklumat kajian telah dikemaskini.'
                     );
                 },
                 onError: (errors) => {
@@ -290,7 +290,7 @@ export default function BorangLKKPembekalanICTV2({ ticket, senaraiPegawai = [], 
                     </div>
                     <div className="space-y-1">
                         <label className="text-[10px] uppercase text-gray-400 font-black">Tarikh Permohonan</label>
-                        <input type="date" readOnly value={data.pendahuluan.tarikh_terima} className="w-full h-10 rounded-xl text-xs bg-gray-100 border-transparent text-gray-600 cursor-not-allowed font-bold" />
+                        <input type="date" readOnly={!isKUPP_Fasa1} value={data.pendahuluan.tarikh_terima} onChange={e => kemaskiniMeta('tarikh_terima', e.target.value)} className={`w-full h-10 rounded-xl text-xs ${isKUPP_Fasa1 ? 'bg-white border-gray-200 focus:ring-blue-500' : 'bg-gray-50 border-gray-200 cursor-not-allowed text-gray-600'}`} required />
                     </div>
 
                     <div className="space-y-1">

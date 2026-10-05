@@ -74,24 +74,24 @@ class TicketController extends Controller
             } elseif ($status === 'proses' || $status === 'dalam_tindakan') {
                 $query->whereIn('status_tiket', [
                     'Dalam Tindakan Pegawai',
-                    'Menunggu Pengesahan',
                     'LKK Perlu Pembetulan',
-                    'Menunggu Validasi',
-                    'Menunggu Semakan',
                     'Dalam Tindakan',
-                    'Menunggu Semakan Laporan',
                     'Laporan Perlu Pembetulan',
                     'Sedia Diverifikasi',
                     'Pembetulan Ketua',
+                    'Pembetulan Laporan',
+                    'Menunggu Validasi',
                 ]);
             } elseif ($status === 'belum_tindakan') {
                 $query->whereIn('status_tiket', [
                     'Menunggu Klasifikasi',
                     'Menunggu Semakan Dokumen',
-                    'Menunggu Kelulusan',
                     'Tugasan UTD',
                     'Tugasan UPP',
+                    'Menunggu Pengesahan',
                     'Menunggu Semakan',
+                    'Menunggu Semakan Laporan',
+                    'Menunggu Kelulusan',
                 ]);
             } else {
                 if (! is_array($status)) {

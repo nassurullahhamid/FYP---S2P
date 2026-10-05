@@ -3,10 +3,12 @@
 namespace Tests\Feature\Workflow;
 
 use App\Models\Pengguna;
+use App\Notifications\WorkflowAssignmentNotification;
 use Illuminate\Foundation\Testing\DatabaseTransactions;
 use Illuminate\Support\Facades\DB;
 use Illuminate\Support\Facades\Hash;
 use Illuminate\Support\Facades\Notification;
+use Illuminate\Support\Str;
 use Tests\TestCase;
 
 class ProcurementWorkflowV2Test extends TestCase
@@ -307,6 +309,137 @@ class ProcurementWorkflowV2Test extends TestCase
         );
     }
 
+    public function test_all_assigned_pic_notifications_are_cleared_when_one_pic_acts(): void
+    {
+        $admin = $this->createUser(
+            '882000000001',
+            'Admin Notifikasi',
+            'admin'
+        );
+
+        $kupp = $this->createUser(
+            '882000000002',
+            'KUPP Notifikasi',
+            'ketua_upp'
+        );
+
+        $kutd = $this->createUser(
+            '882000000003',
+            'KUTD Notifikasi',
+            'ketua_utd'
+        );
+
+        $firstTechnician = $this->createUser(
+            '882000000004',
+            'Juruteknik Pertama',
+            'juruteknik'
+        );
+
+        $secondTechnician = $this->createUser(
+            '882000000005',
+            'Juruteknik Kedua',
+            'juruteknik'
+        );
+
+        $ticketId = 'TEST-PROCUREMENT-V2-NOTIFICATION';
+
+        $this->createTicket(
+            $ticketId,
+            $admin,
+            'Pembekalan Peralatan ICT',
+            'Menunggu Semakan'
+        );
+
+        $this->actingAs($kupp)
+            ->post(
+                route(
+                    'tickets.workflow.reviewProcurement',
+                    ['id_tiket' => $ticketId]
+                ),
+                $this->procurementReviewPayload()
+            )
+            ->assertSessionHasNoErrors();
+
+        $this->actingAs($kutd)
+            ->post(
+                route(
+                    'tickets.workflow.assignProcurement',
+                    ['id_tiket' => $ticketId]
+                ),
+                [
+                    'tarikh_lawatan' => now()
+                        ->addDay()
+                        ->toDateString(),
+                    'masa_lawatan' => '10:00',
+                    'catatan_lawatan' => 'Ujian notifikasi berbilang PIC.',
+                    'senarai_pic_ic' => [
+                        $firstTechnician->no_ic,
+                        $secondTechnician->no_ic,
+                    ],
+                ]
+            )
+            ->assertSessionHasNoErrors();
+
+        Notification::assertSentTo(
+            $firstTechnician,
+            WorkflowAssignmentNotification::class
+        );
+
+        Notification::assertSentTo(
+            $secondTechnician,
+            WorkflowAssignmentNotification::class
+        );
+
+        $notificationIds = [];
+
+        foreach (
+            [
+                $firstTechnician,
+                $secondTechnician,
+            ] as $assignedTechnician
+        ) {
+            $notificationId = (string) Str::uuid();
+            $notificationIds[] = $notificationId;
+
+            DB::table('notifications')->insert([
+                'id' => $notificationId,
+                'type' => WorkflowAssignmentNotification::class,
+                'notifiable_type' => $assignedTechnician->getMorphClass(),
+                'notifiable_id' => (string) $assignedTechnician->getKey(),
+                'data' => json_encode(
+                    ['id_tiket' => $ticketId],
+                    JSON_THROW_ON_ERROR
+                ),
+                'read_at' => null,
+                'created_at' => now(),
+                'updated_at' => now(),
+            ]);
+        }
+
+        $this->actingAs($firstTechnician)
+            ->post(
+                route(
+                    'tickets.workflow.submitProcurementReport',
+                    ['id_tiket' => $ticketId]
+                ),
+                $this->procurementReportPayload()
+            )
+            ->assertSessionHasNoErrors();
+
+        foreach ($notificationIds as $notificationId) {
+            $this->assertNotNull(
+                DB::table('notifications')
+                    ->where('id', $notificationId)
+                    ->value('read_at')
+            );
+        }
+
+        $this->assertDatabaseHas('tiket', [
+            'id_tiket' => $ticketId,
+            'status_tiket' => 'Menunggu Semakan Laporan',
+        ]);
+    }
+
     public function test_procurement_v2_supports_both_correction_paths(): void
     {
         $admin = $this->createUser(
@@ -470,7 +603,7 @@ class ProcurementWorkflowV2Test extends TestCase
 
         $this->assertDatabaseHas('tiket', [
             'id_tiket' => $ticketId,
-            'status_tiket' => 'Pembetulan Ketua',
+            'status_tiket' => 'Pembetulan Laporan',
             'ulasan_semakan' => 'Sila semak semula rumusan kos.',
         ]);
 
@@ -512,6 +645,11 @@ class ProcurementWorkflowV2Test extends TestCase
             'id_tiket' => $ticketId,
             'status_tiket' => 'Menunggu Validasi',
             'ulasan_semakan' => null,
+        ]);
+
+        $this->assertDatabaseMissing('jejak_tiket', [
+            'id_tiket' => $ticketId,
+            'aktiviti' => 'PEMBETULAN DIMINTA',
         ]);
     }
 

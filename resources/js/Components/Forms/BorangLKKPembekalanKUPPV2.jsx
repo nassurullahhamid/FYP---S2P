@@ -61,7 +61,7 @@ export default function BorangLKKPembekalanKUPPV2({
         'menunggu semakan laporan';
 
     const isChiefCorrection =
-        statusFormat === 'pembetulan ketua';
+        statusFormat === 'pembetulan laporan';
 
     const canEdit =
         isKUPP
@@ -213,8 +213,7 @@ export default function BorangLKKPembekalanKUPPV2({
                 preserveScroll: true,
                 onSuccess: () => {
                     alert(
-                        'Anggaran kos dan rumusan ' +
-                        'berjaya dikemaskini.'
+                        'Maklumat laporan telah dikemaskini.'
                     );
                 },
                 onError: () => {
@@ -257,8 +256,8 @@ export default function BorangLKKPembekalanKUPPV2({
 
         const confirmationMessage =
             action === 'VERIFIKASI'
-                ? 'Hantar LKK ini kepada Ketua Wilayah untuk validasi?'
-                : 'Kembalikan laporan ini kepada Juruteknik untuk pembetulan?';
+                ? 'Adakah laporan disahkan untuk diverifikasi?'
+                : 'Laporan perlu dihantar semula kepada PIC?';
 
         if (!window.confirm(confirmationMessage)) {
             return;
@@ -283,8 +282,8 @@ export default function BorangLKKPembekalanKUPPV2({
                 onSuccess: () => {
                     alert(
                         action === 'VERIFIKASI'
-                            ? 'LKK berjaya diverifikasi dan dihantar kepada Ketua Wilayah.'
-                            : 'Laporan dikembalikan kepada Juruteknik.'
+                            ? 'Laporan telah diverifikasi.'
+                            : 'Telah dihantar kepada PIC untuk tindakan yang sewajarnya.'
                     );
                 },
                 onError: (responseErrors) => {
@@ -645,7 +644,7 @@ export default function BorangLKKPembekalanKUPPV2({
             {isReportReview && (
                 <div className="rounded-2xl border border-amber-200 bg-amber-50 p-5 shadow-sm">
                     <label className="mb-2 block text-xs font-black uppercase tracking-wider text-amber-900">
-                        Ulasan Pembetulan
+                        Ulasan (Jika Ada)
                     </label>
 
                     <textarea
@@ -660,7 +659,7 @@ export default function BorangLKKPembekalanKUPPV2({
                             || reviewProcessing
                         }
                         maxLength={2000}
-                        placeholder="Wajib diisi jika memilih SEMAKAN..."
+                        placeholder="Perkara"
                         className="min-h-[90px] w-full rounded-xl border-amber-200 bg-white text-xs font-semibold"
                     />
                 </div>
@@ -714,7 +713,7 @@ export default function BorangLKKPembekalanKUPPV2({
                         className="inline-flex h-11 items-center gap-2 rounded-xl border border-amber-300 bg-amber-50 px-5 text-[10px] font-black uppercase text-amber-800 shadow-sm hover:bg-amber-100 disabled:cursor-not-allowed disabled:opacity-50"
                     >
                         <AlertTriangle size={14} />
-                        SEMAKAN
+                        PEMBETULAN LAPORAN
                     </button>
                 )}
 
