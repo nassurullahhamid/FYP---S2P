@@ -399,7 +399,7 @@ class NetworkWorkflowV2Test extends TestCase
 
         $this->assertTicketStatus(
             $ticketId,
-            'Pembetulan Ketua'
+            'Pembetulan Laporan'
         );
         $this->assertDatabaseMissing('jejak_tiket', [
             'id_tiket' => $ticketId,

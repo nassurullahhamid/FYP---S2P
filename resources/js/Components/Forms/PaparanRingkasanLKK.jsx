@@ -149,6 +149,14 @@ export default function PaparanRingkasanLKK({ ticket, auth, senaraiPegawai }) {
             return;
         }
 
+        if (
+            action !== 'PEMBETULAN'
+            && !confirm(
+                'Adakah anda ingin validasi laporan ini?'
+            )
+        ) {
+            return;
+        }
 
         router.post(
             route(
@@ -168,7 +176,7 @@ export default function PaparanRingkasanLKK({ ticket, auth, senaraiPegawai }) {
                     alert(
                         action === 'PEMBETULAN'
                             ? 'Dihantar ke KUTD untuk tindakan sewajarnya.'
-                            : 'Laporan telah divalidasi.'
+                            : 'Laporan telah berjaya divalidasi.'
                     );
 
                     setUlasanKetua('');
@@ -257,7 +265,7 @@ export default function PaparanRingkasanLKK({ ticket, auth, senaraiPegawai }) {
                                         senaraiUlasanRingkasan.map((item, idx) => (
                                             <div key={idx} className="flex items-start gap-1.5 animate-in fade-in duration-150">
                                                 <span className="text-gray-400 font-black w-5 select-none">{idx + 1}.</span>
-                                                <span className="text-slate-700 font-semibold text-justify leading-relaxed uppercase whitespace-pre-line">
+                                                <span className="text-slate-700 font-semibold text-justify leading-relaxed whitespace-pre-line">
                                                     {item.teks}
                                                 </span>
                                             </div>
@@ -274,7 +282,7 @@ export default function PaparanRingkasanLKK({ ticket, auth, senaraiPegawai }) {
                                         senaraiCadanganRingkasan.map((item, idx) => (
                                             <div key={idx} className="flex items-start gap-1.5 animate-in fade-in duration-150">
                                                 <span className="text-gray-400 font-black w-5 select-none">{idx + 1}.</span>
-                                                <span className="text-slate-700 font-semibold text-justify leading-relaxed uppercase whitespace-pre-line">
+                                                <span className="text-slate-700 font-semibold text-justify leading-relaxed whitespace-pre-line">
                                                     {item.teks}
                                                 </span>
                                             </div>
@@ -728,11 +736,11 @@ export default function PaparanRingkasanLKK({ ticket, auth, senaraiPegawai }) {
                 <div className="bg-blue-50/60 p-5 rounded-2xl border border-blue-200/80 shadow-sm space-y-4">
                     <div className="flex items-center gap-2">
                         <div className="p-1.5 bg-blue-100 text-blue-700 rounded-lg"><ShieldCheck size={14} /></div>
-                        <h4 className="text-xs font-black text-blue-900 uppercase tracking-wider">ULASAN (Jika Ada)</h4>
+                        <h4 className="text-xs font-black text-blue-900 tracking-wider">ULASAN (Jika Ada)</h4>
                     </div>
                     <div className="space-y-2">
 
-                        <textarea value={ulasanKetua} onChange={(e) => setUlasanKetua(e.target.value)} placeholder="Tulis ulasan validasi di sini..." className="w-full p-3 bg-white border border-gray-200 rounded-xl text-xs font-medium text-slate-800 focus:outline-none" rows={3} />
+                        <textarea value={ulasanKetua} onChange={(e) => setUlasanKetua(e.target.value)} placeholder="Perkara" className="w-full p-3 bg-white border border-gray-200 rounded-xl text-xs font-medium text-slate-800 focus:outline-none" rows={3} />
                     </div>
                     <div className="flex justify-end gap-2 pt-2 border-t border-blue-200/40">
                         <button

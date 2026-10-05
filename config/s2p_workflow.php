@@ -27,7 +27,7 @@ return [
         'pic_correction' => 'Laporan Perlu Pembetulan',
         'ready_for_verification' => 'Sedia Diverifikasi',
         'validation' => 'Menunggu Validasi',
-        'chief_correction' => 'Pembetulan Ketua',
+        'chief_correction' => 'Pembetulan Laporan',
         'completed' => 'Selesai',
     ],
 

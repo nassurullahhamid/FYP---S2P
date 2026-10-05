@@ -84,7 +84,6 @@ class HandleInertiaRequests extends Middleware
                                 'Menunggu Kelulusan',
                                 'Menunggu Semakan Laporan',
                                 'Pembetulan Laporan',
-                                'Pembetulan Ketua',
                             ]);
                         })
                         ->when($isKUTD, function ($query) {
@@ -98,7 +97,7 @@ class HandleInertiaRequests extends Middleware
                                 'Menunggu Semakan Laporan',
                                 'Pembetulan Laporan',
                                 'Sedia Diverifikasi',
-                                'Pembetulan Ketua',
+                                'Pembetulan Laporan',
                             ]);
                         })
                         ->when($isKW, function ($query) {

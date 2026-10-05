@@ -78,7 +78,6 @@ class TicketController extends Controller
                     'Dalam Tindakan',
                     'Laporan Perlu Pembetulan',
                     'Sedia Diverifikasi',
-                    'Pembetulan Ketua',
                     'Pembetulan Laporan',
                     'Menunggu Validasi',
                 ]);

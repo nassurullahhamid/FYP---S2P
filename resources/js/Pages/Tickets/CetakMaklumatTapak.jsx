@@ -280,7 +280,7 @@ export default function CetakMaklumatTapak({ ticket }) {
                     <p className="text-[10px] mb-1.5 text-black">(Ringkasan keadaan semasa, keperluan rangkaian, serta cadangan pelaksanaan)</p>
                     <div className="border border-black min-h-[80px] text-xs">
                         {kr.rumusan ? (
-                            <div className="p-2 whitespace-pre-wrap leading-relaxed uppercase">{kr.rumusan}</div>
+                            <div className="p-2 whitespace-pre-wrap leading-relaxed">{kr.rumusan}</div>
                         ) : (
                             <div className="flex flex-col h-full justify-around py-3 px-2 space-y-6">
                                 <div className="border-b border-black w-full"></div>
@@ -293,11 +293,11 @@ export default function CetakMaklumatTapak({ ticket }) {
 
                 {/* 4. Visit remarks */}
                 <div>
-                    <h3 className="text-xs font-bold mb-0.5 text-black">4. ULASAN LAWATAN</h3>
+                    <h3 className="text-xs font-bold mb-0.5 text-black">4. ULASAN TEKNIKAL</h3>
                     <p className="text-xs mb-1.5 text-black">Disokong / Tidak Disokong:</p>
                     <div className="border border-black min-h-[60px] text-xs">
                         {ulasanList.length > 0 ? (
-                            <div className="p-2 leading-relaxed uppercase space-y-1">
+                            <div className="p-2 leading-relaxed space-y-1">
                                 {ulasanList.map((ulasan, idx) => {
                                     // Extract string value if item is an object
                                     let text = typeof ulasan === 'object' && ulasan !== null

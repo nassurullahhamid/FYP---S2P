@@ -191,7 +191,7 @@ export default function FormMaklumatTapak({ ticket, auth, senaraiPengguna }) {
             forceFormData: true,
             onSuccess: () => {
                 alert(
-                    'Laporan lawatan tapak telah dikemaskini.'
+                    'Maklumat Laporan telah berjaya dikemaskini.'
                 );
                 setIsEditing(false);
             },
@@ -421,14 +421,14 @@ export default function FormMaklumatTapak({ ticket, auth, senaraiPengguna }) {
                         {/* Section 5: Visit Technical Comments */}
                         <div className="space-y-3.5">
                             <h5 className="text-[10px] uppercase tracking-wider text-blue-900 font-black mb-1 flex items-center gap-1.5">
-                                <FileText size={14} /> Ulasan Lawatan
+                                <FileText size={14} /> Ulasan Teknikal
                             </h5>
                             <div className="p-4 bg-gray-50/80 border border-gray-100 rounded-xl text-xs font-semibold text-gray-700 space-y-2.5 shadow-inner min-h-[100px]">
                                 {data.ulasan_teknikal && data.ulasan_teknikal.length > 0 && data.ulasan_teknikal[0].teks ? (
                                     data.ulasan_teknikal.map((item, idx) => (
                                         <div key={idx} className="flex items-start gap-1">
                                             <span className="text-gray-400 font-black w-5">{idx + 1}.</span>
-                                            <span className="text-gray-800 uppercase leading-relaxed">{item.teks}</span>
+                                            <span className="text-gray-800 leading-relaxed">{item.teks}</span>
                                         </div>
                                     ))
                                 ) : (
@@ -714,7 +714,7 @@ export default function FormMaklumatTapak({ ticket, auth, senaraiPengguna }) {
             {/* Dynamic technical review inputs */}
             <div className="bg-white p-6 md:p-8 rounded-2xl border border-gray-200/70 shadow-sm space-y-4 w-full">
                 <h3 className="text-blue-800 font-black text-xs uppercase tracking-wider pl-1 flex items-center gap-1.5">
-                     Ulasan Lawatan <span className="text-red-500 font-bold ml-1">*</span>
+                     Ulasan Teknikal <span className="text-red-500 font-bold ml-1">*</span>
                 </h3>
 
                 <div className="space-y-2">

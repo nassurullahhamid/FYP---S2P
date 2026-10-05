@@ -58,7 +58,7 @@ export default function KetuaWilayahDashboard({ auth, kpiUmum, statsKategori, re
                     'Menunggu Semakan Laporan',
                     'Laporan Perlu Pembetulan',
                     'Sedia Diverifikasi',
-                    'Pembetulan Ketua',
+                    'Pembetulan Laporan',
                 ] })
         },
         {
@@ -164,7 +164,7 @@ export default function KetuaWilayahDashboard({ auth, kpiUmum, statsKategori, re
                     'Menunggu Semakan Laporan',
                     'Laporan Perlu Pembetulan',
                     'Sedia Diverifikasi',
-                    'Pembetulan Ketua',
+                    'Pembetulan Laporan',
                 ] })}
                                         className="flex items-center justify-between p-2.5 bg-blue-50/50 rounded-xl border border-blue-100 hover:bg-blue-100/50 transition-colors group"
                                     >

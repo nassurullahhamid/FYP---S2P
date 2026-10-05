@@ -19,7 +19,7 @@ export default function BorangLKKRangkaian({ ticket, senaraiKosSelamat, existing
     const isMenungguKW = ['menunggu validasi kw', 'menunggu validasi', 'validasi kw'].includes(statusFormat);
 
     const isPembetulan =
-        statusFormat === 'pembetulan ketua';
+        statusFormat === 'pembetulan laporan';
 
     // Form read-only lock state (Only editable by KUTD before it hits KW)
     const isBorangLocked = isSelesai || isMenungguKW || !isKUTD;
@@ -179,6 +179,13 @@ export default function BorangLKKRangkaian({ ticket, senaraiKosSelamat, existing
         e.preventDefault();
         if (isBorangLocked || isSubmitting) return;
 
+        if (
+            !confirm(
+                'Adakah anda ingin verifikasi laporan ini?'
+            )
+        ) {
+            return;
+        }
 
         const submissionRoute = route(
             'tickets.workflow.saveNetworkLkk',
@@ -201,7 +208,7 @@ export default function BorangLKKRangkaian({ ticket, senaraiKosSelamat, existing
                 onFinish: () => setIsSubmitting(false),
                 onSuccess: () => {
                     alert(
-                        'Laporan telah diverifikasi.'
+                        'Laporan telah berjaya diverifikasi.'
                     );
                 },
                 onError: (submissionErrors) => {
@@ -246,7 +253,7 @@ export default function BorangLKKRangkaian({ ticket, senaraiKosSelamat, existing
                 forceFormData: true,
                 onFinish: () => setIsSubmitting(false),
                 onSuccess: () => alert(
-                    'Draf laporan LKK telah berjaya disimpan!'
+                    'Maklumat Laporan telah berjaya dikemaskini.'
                 ),
                 onError: (draftErrors) => {
                     console.error(
@@ -369,7 +376,7 @@ export default function BorangLKKRangkaian({ ticket, senaraiKosSelamat, existing
                                 <span className="text-gray-400 font-black w-5 select-none">
                                     {idx + 1}.
                                 </span>
-                                <span className="text-gray-800 uppercase font-semibold leading-relaxed whitespace-pre-wrap">
+                                <span className="text-gray-800 font-semibold leading-relaxed whitespace-pre-wrap">
                                     {item.teks}
                                 </span>
                             </div>
@@ -663,7 +670,7 @@ export default function BorangLKKRangkaian({ ticket, senaraiKosSelamat, existing
             {!isBorangLocked && (
                 <div className="flex justify-end items-center gap-3 pt-4 border-t border-gray-100">
                     <button type="button" disabled={isSubmitting} onClick={handleSaveDraft} className="flex items-center justify-center gap-2 bg-white hover:bg-gray-50 text-slate-700 font-extrabold text-xs uppercase tracking-wider px-5 h-11 border border-gray-200 rounded-xl shadow-sm transition-all cursor-pointer">
-                        <Save size={15} /> Simpan Draf
+                        <Save size={15} /> KEMASKINI TIKET
                     </button>
                     <button type="submit" disabled={isSubmitting} className="flex items-center justify-center gap-2 bg-blue-600 hover:bg-blue-700 text-white font-extrabold text-xs uppercase tracking-wider px-6 h-11 rounded-xl shadow-md transition-all cursor-pointer">
                         <Send size={14} /> {isSubmitting ? 'Memproses...' : 'VERIFIKASI'}
