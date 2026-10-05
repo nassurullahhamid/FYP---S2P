@@ -447,7 +447,7 @@ export default function InfoTiket({ auth, backUrl, ticket, senaraiPengguna, sena
                     : semakanNetworkV2
                         ? 'Tiket telah disemak.'
                         : semakanHelpdeskV2
-                            ? 'Tiket berjaya disemak dan petugas telah dilantik.'
+                            ? 'Tiket telah berjaya dikemaskini.'
                             : 'Tiket telah berjaya dikemaskini!'
             ),
             onError: () => {
@@ -474,7 +474,7 @@ export default function InfoTiket({ auth, backUrl, ticket, senaraiPengguna, sena
         post(submissionRoute, {
             preserveScroll: true,
             onSuccess: () => alert(
-                'Catatan tindakan berjaya dihantar untuk pengesahan!'
+                'Tiket telah berjaya dikemaskini.'
             ),
             onError: (err) => {
                 Object.values(err).forEach(
@@ -1163,7 +1163,7 @@ export default function InfoTiket({ auth, backUrl, ticket, senaraiPengguna, sena
 
                                     {isDalamTindakan && isCurrentUserPIC && isMB && !dataKelulusan && (
                                         <div className="bg-white rounded-2xl border border-gray-200 shadow-sm overflow-hidden">
-                                            <div className="px-5 py-3.5 bg-[#002b66] text-white"><h4 className="text-[10px] font-black uppercase">Catatan Penutupan <span className="text-red-500 font-bold ml-1">*</span></h4></div>
+                                            <div className="px-5 py-3.5 bg-[#002b66] text-white"><h4 className="text-[10px] font-black uppercase">CATATAN TEKNIKAL <span className="text-red-500 font-bold ml-1">*</span></h4></div>
                                             <form onSubmit={handlePicSubmit} className="p-5 space-y-4 text-xs font-bold">
                                                 <textarea
                                                     value={data.catatan_penutupan}
@@ -1203,13 +1203,13 @@ export default function InfoTiket({ auth, backUrl, ticket, senaraiPengguna, sena
                                                 {isKUTD && (
                                                     <div className="space-y-2">
                                                         <label className="block text-[10px] font-black text-gray-500 uppercase tracking-wide">
-                                                            Ulasan Pengesahan
+                                                            ULASAN (Jika Ada)
                                                         </label>
 
                                                         <textarea
                                                             value={data.ulasan}
                                                             onChange={e => setData('ulasan', e.target.value)}
-                                                            placeholder="Masukkan ulasan sekiranya perlu..."
+                                                            placeholder="Perkara"
                                                             maxLength={2000}
                                                             rows={3}
                                                             className="w-full p-3 bg-white border border-gray-200 rounded-xl text-xs font-medium text-slate-800 focus:ring-2 focus:ring-emerald-500/20 focus:outline-none"
@@ -1234,7 +1234,7 @@ export default function InfoTiket({ auth, backUrl, ticket, senaraiPengguna, sena
                                                             <button
                                                                 type="button"
                                                                 onClick={() => {
-                                                                    if (confirm("Adakah anda pasti untuk mengesahkan laporan dan menutup tiket?")) {
+                                                                    if (confirm("Adakah anda ingin mengesahkan tiket ini?")) {
                                                                         const confirmationRoute = route(
                                                                             'tickets.workflow.confirmHelpdesk',
                                                                             ticket.id_tiket
@@ -1250,7 +1250,7 @@ export default function InfoTiket({ auth, backUrl, ticket, senaraiPengguna, sena
                                                                             {
                                                                                 preserveScroll: true,
                                                                                 onSuccess: () => alert(
-                                                                                    "Tiket telah berjaya ditutup!"
+                                                                                    "Tiket telah Berjaya disahkan."
                                                                                 ),
                                                                                 onError: (confirmationErrors) => {
                                                                                     Object.values(

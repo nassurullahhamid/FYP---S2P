@@ -138,7 +138,7 @@ export default function BorangPeminjamanPeralatan({ ticket, senaraiAset, senarai
 
     // Submit loan form to Manager for verification
     const handleHantarSemuaKeKUTD = () => {
-        if (!confirm("Adakah anda pasti untuk menghantar borang peminjaman untuk pengesahan?")) return;
+        if (!confirm("Adakah anda ingin mengesahkan tiket ini?")) return;
 
         const submitLoanRoute = route(
             'tickets.workflow.submitLoan',
@@ -147,7 +147,7 @@ export default function BorangPeminjamanPeralatan({ ticket, senaraiAset, senarai
 
         router.post(submitLoanRoute, {}, {
             preserveScroll: true,
-            onSuccess: () => alert("Tiket peminjaman berjaya dihantar untuk pengesahan!"),
+            onSuccess: () => alert("Tiket telah berjaya dikemaskini."),
             onError: (errors) => {
                 alert(
                     "Tiket tidak dapat dihantar.\nSebab: "
@@ -166,7 +166,7 @@ export default function BorangPeminjamanPeralatan({ ticket, senaraiAset, senarai
     const handlePengesahanPeminjamanV2 = () => {
         if (
             !confirm(
-                "Adakah anda pasti untuk mengesahkan dan menutup tiket peminjaman ini?"
+                "Adakah anda ingin mengesahkan tiket ini?"
             )
         ) {
             return;
@@ -184,7 +184,7 @@ export default function BorangPeminjamanPeralatan({ ticket, senaraiAset, senarai
                 preserveScroll: true,
                 onSuccess: () => {
                     alert(
-                        "Tiket peminjaman berjaya disahkan dan ditutup!"
+                        "Tiket telah Berjaya disahkan."
                     );
                     setUlasanPengesahan('');
                 },
@@ -655,19 +655,11 @@ export default function BorangPeminjamanPeralatan({ ticket, senaraiAset, senarai
                                 </h4>
                             </div>
 
-                            <p className="text-xs font-medium text-emerald-900/80 leading-relaxed">
-                                Semak maklumat peralatan dan borang peminjaman sebelum mengesahkan penutupan tiket.
-                            </p>
-
-                            <div className="space-y-2">
-                                <label className="text-[10px] uppercase font-black text-slate-500 tracking-wide block">
-                                    Ulasan Pengesahan:
-                                </label>
-
-                                <textarea
+<div className="space-y-2">
+<textarea
                                     value={ulasanPengesahan}
                                     onChange={(e) => setUlasanPengesahan(e.target.value)}
-                                    placeholder="Masukkan ulasan sekiranya perlu..."
+                                    placeholder="Perkara"
                                     maxLength={2000}
                                     className="w-full p-3 bg-white border border-gray-200 rounded-xl text-xs font-medium text-slate-800 focus:ring-2 focus:ring-emerald-500/20 focus:outline-none"
                                     rows={3}
