@@ -24,7 +24,9 @@ export default function KetuaUPPDashboard({ auth, stats, recentTickets }) {
             icon: <AlertCircle className="text-amber-600" />,
             bg: 'bg-amber-50',
             border: 'border-amber-100',
-            url: route('tickets.index', { status: ['Menunggu Klasifikasi', 'Menunggu Semakan Dokumen', 'Tugasan UTD', 'Tugasan UPP' ,'Menunggu Kelulusan','Menunggu Pengesahan'] })
+            url: route('tickets.index', {
+                status: 'belum_tindakan',
+            })
         },
         {
             title: 'Tiket Dalam Tindakan',
@@ -32,7 +34,9 @@ export default function KetuaUPPDashboard({ auth, stats, recentTickets }) {
             icon: <Clock className="text-blue-600" />,
             bg: 'bg-blue-50',
             border: 'border-blue-100',
-            url: route('tickets.index', { status: ['Dalam Tindakan Pegawai' , 'Menunggu Pengesahan', 'Menunggu Semakan' ,'LKK Perlu Pembetulan', 'Menunggu Validasi'] })
+            url: route('tickets.index', {
+                status: 'dalam_tindakan',
+            })
         },
         {
             title: 'Tiket Selesai',
@@ -97,7 +101,10 @@ export default function KetuaUPPDashboard({ auth, stats, recentTickets }) {
                                     <div className="space-y-3">
                                         {/* Belum Diambil Tindakan */}
                                         <Link
-                                            href={route('tickets.index', { kategori: namaModul, status: ['Menunggu Klasifikasi', 'Menunggu Semakan Dokumen', 'Tugasan UTD', 'Tugasan UPP'] })}
+                                            href={route('tickets.index', {
+                                                kategori: namaModul,
+                                                status: 'belum_tindakan',
+                                            })}
                                             className="flex items-center justify-between p-4 bg-amber-50/50 rounded-2xl border border-amber-100 hover:bg-amber-100/50 transition-colors group"
                                         >
                                             <div className="flex items-center gap-4">

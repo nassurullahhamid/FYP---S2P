@@ -2852,25 +2852,37 @@ class TicketWorkflowController extends Controller
                     'INFO'
                 );
 
-                DB::table('notifications')
-                    ->where(
-                        'notifiable_type',
-                        $technician->getMorphClass()
+                $assignedTechnicianIds = DB::table(
+                    'tugasan_tiket'
+                )
+                    ->where('id_tiket', $id_tiket)
+                    ->pluck('no_ic')
+                    ->map(
+                        static fn (mixed $identityNumber): string => (string) $identityNumber
                     )
-                    ->where(
-                        'notifiable_id',
-                        (string) $technician->getKey()
-                    )
-                    ->whereNull('read_at')
-                    ->where(
-                        'data',
-                        'LIKE',
-                        '%'.$id_tiket.'%'
-                    )
-                    ->update([
-                        'read_at' => now(),
-                        'updated_at' => now(),
-                    ]);
+                    ->all();
+
+                if ($assignedTechnicianIds !== []) {
+                    DB::table('notifications')
+                        ->where(
+                            'notifiable_type',
+                            $technician->getMorphClass()
+                        )
+                        ->whereIn(
+                            'notifiable_id',
+                            $assignedTechnicianIds
+                        )
+                        ->whereNull('read_at')
+                        ->where(
+                            'data',
+                            'LIKE',
+                            '%'.$id_tiket.'%'
+                        )
+                        ->update([
+                            'read_at' => now(),
+                            'updated_at' => now(),
+                        ]);
+                }
 
                 $reviewers = Pengguna::query()
                     ->where(
@@ -2923,7 +2935,7 @@ class TicketWorkflowController extends Controller
             )
             ->with(
                 'success',
-                'Laporan hasil kajian berjaya dihantar kepada KUPP.'
+                'Maklumat kajian telah dikemaskini.'
             );
     }
 
@@ -2950,10 +2962,7 @@ class TicketWorkflowController extends Controller
                         's2p_workflow.statuses.report_review',
                         'Menunggu Semakan Laporan'
                     ),
-                    config(
-                        's2p_workflow.statuses.chief_correction',
-                        'Pembetulan Ketua'
-                    ),
+                    'Pembetulan Laporan',
                 ];
 
                 if (
@@ -3032,7 +3041,7 @@ class TicketWorkflowController extends Controller
             )
             ->with(
                 'success',
-                'Anggaran kos dan rumusan Pembekalan berjaya dikemaskini.'
+                'Maklumat laporan telah dikemaskini.'
             );
     }
 
@@ -3714,10 +3723,7 @@ class TicketWorkflowController extends Controller
                     'Menunggu Semakan Laporan'
                 );
 
-                $chiefCorrectionStatus = config(
-                    's2p_workflow.statuses.chief_correction',
-                    'Pembetulan Ketua'
-                );
+                $chiefCorrectionStatus = 'Pembetulan Laporan';
 
                 $allowedStatuses = $isCorrection
                     ? [$reportReviewStatus]
@@ -3784,14 +3790,6 @@ class TicketWorkflowController extends Controller
                         'ulasan_semakan' => $validated['ulasan'],
                     ]);
 
-                    $ticket->rekodLog(
-                        config(
-                            's2p_workflow.trail_events.correction_requested',
-                            'PEMBETULAN DIMINTA'
-                        ),
-                        'Oleh '.$reviewer->nama,
-                        'PEMBETULAN'
-                    );
                 } else {
                     /*
                      * Struktur wajib borang BPI/B02v1.3:
@@ -3932,8 +3930,8 @@ class TicketWorkflowController extends Controller
             ->with(
                 'success',
                 $isCorrection
-                    ? 'Laporan dikembalikan kepada Juruteknik untuk pembetulan.'
-                    : 'LKK berjaya diverifikasi dan dihantar kepada Ketua Wilayah.'
+                    ? 'Telah dihantar kepada PIC untuk tindakan yang sewajarnya.'
+                    : 'Laporan telah diverifikasi.'
             );
     }
 
@@ -4321,22 +4319,11 @@ class TicketWorkflowController extends Controller
 
                 if ($isCorrection) {
                     $ticket->update([
-                        'status_tiket' => config(
-                            's2p_workflow.statuses.chief_correction',
-                            'Pembetulan Ketua'
-                        ),
+                        'status_tiket' => 'Pembetulan Laporan',
                         'ulasan_semakan' => $validated['ulasan'],
                         'tarikh_tutup' => null,
                     ]);
 
-                    $ticket->rekodLog(
-                        config(
-                            's2p_workflow.trail_events.correction_requested',
-                            'PEMBETULAN DIMINTA'
-                        ),
-                        'Oleh '.$validator->nama,
-                        'PEMBETULAN'
-                    );
                 } else {
                     DB::table('laporan')
                         ->where('id_tiket', $id_tiket)
@@ -4435,8 +4422,8 @@ class TicketWorkflowController extends Controller
             ->with(
                 'success',
                 $isCorrection
-                    ? 'LKK dipulangkan kepada KUPP untuk pembetulan.'
-                    : 'LKK berjaya divalidasi dan tiket telah ditutup.'
+                    ? 'Telah dihantar kepada KUPP untuk tindakan yang sewajarnya.'
+                    : 'Laporan telah divalidasi.'
             );
     }
 
@@ -4832,7 +4819,7 @@ class TicketWorkflowController extends Controller
             )
             ->with(
                 'success',
-                'Butiran Pembekalan berjaya dikemaskini dan dihantar kepada KUTD.'
+                'Maklumat kajian telah dikemaskini.'
             );
     }
 
@@ -4955,6 +4942,12 @@ class TicketWorkflowController extends Controller
                     ),
                     'ulasan_semakan' => null,
                 ]);
+
+                $ticket->rekodLog(
+                    'DIJADUAL',
+                    'Oleh '.$assigner->nama,
+                    'LULUS'
+                );
 
                 DB::table('notifications')
                     ->where(

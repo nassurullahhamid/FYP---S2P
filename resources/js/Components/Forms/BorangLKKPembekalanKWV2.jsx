@@ -3,7 +3,7 @@ import { router } from '@inertiajs/react';
 import {
     AlertTriangle,
     CheckCircle2,
-    ShieldCheck,
+
 } from 'lucide-react';
 import PaparanRingkasanLKK from './PaparanRingkasanLKK';
 
@@ -58,8 +58,8 @@ export default function BorangLKKPembekalanKWV2({
 
         const message =
             action === 'LULUS'
-                ? 'Sahkan validasi dan tutup tiket ini?'
-                : 'Kembalikan LKK ini kepada KUPP untuk pembetulan?';
+                ? 'Adakah laporan disahkan untuk divalidasi?'
+                : 'Laporan dikembalikan semula kepada KUPP?';
 
         if (!window.confirm(message)) {
             return;
@@ -84,8 +84,8 @@ export default function BorangLKKPembekalanKWV2({
                 onSuccess: () => {
                     alert(
                         action === 'LULUS'
-                            ? 'LKK berjaya divalidasi dan tiket telah ditutup.'
-                            : 'LKK dikembalikan kepada KUPP untuk pembetulan.'
+                            ? 'Laporan telah divalidasi.'
+                            : 'Telah dihantar kepada KUPP untuk tindakan yang sewajarnya.'
                     );
                 },
                 onError: (errors) => {
@@ -115,20 +115,6 @@ export default function BorangLKKPembekalanKWV2({
 
     return (
         <div className="space-y-5">
-            <div className="rounded-2xl border border-blue-200 bg-blue-50 p-4 text-xs font-semibold leading-relaxed text-blue-900">
-                <div className="flex items-start gap-2">
-                    <ShieldCheck
-                        size={18}
-                        className="mt-0.5 shrink-0 text-blue-700"
-                    />
-                    <div>
-                        Semak keseluruhan LKK sebelum
-                        memilih SEMAKAN atau VALIDASI.
-                        Tindakan VALIDASI akan menutup
-                        tiket secara automatik.
-                    </div>
-                </div>
-            </div>
 
             <PaparanRingkasanLKK
                 ticket={ticket}
@@ -138,7 +124,7 @@ export default function BorangLKKPembekalanKWV2({
 
             <div className="rounded-2xl border border-gray-200 bg-white p-5 shadow-sm">
                 <label className="mb-2 block text-xs font-black uppercase tracking-wider text-slate-800">
-                    Ulasan Ketua Wilayah
+                    Ulasan
                 </label>
 
                 <textarea
@@ -153,7 +139,7 @@ export default function BorangLKKPembekalanKWV2({
                         || !canValidate
                     }
                     maxLength={2000}
-                    placeholder="Wajib diisi jika memilih SEMAKAN. Ulasan bagi VALIDASI adalah pilihan."
+                    placeholder="Perkara"
                     className="min-h-[110px] w-full rounded-xl border-gray-200 text-xs font-semibold leading-relaxed disabled:cursor-not-allowed disabled:bg-gray-50"
                 />
 
@@ -180,7 +166,7 @@ export default function BorangLKKPembekalanKWV2({
                     className="inline-flex h-11 items-center gap-2 rounded-xl border border-amber-300 bg-amber-50 px-5 text-[10px] font-black uppercase text-amber-800 shadow-sm hover:bg-amber-100 disabled:cursor-not-allowed disabled:opacity-50"
                 >
                     <AlertTriangle size={14} />
-                    SEMAKAN
+                    PEMBETULAN LAPORAN
                 </button>
 
                 <button
