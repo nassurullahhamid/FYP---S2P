@@ -181,6 +181,7 @@ export default function InfoTiket({ auth, backUrl, ticket, senaraiPengguna, sena
     const isDalamTindakan = [
         'dalam tindakan',
         'laporan perlu pembetulan',
+        'menunggu pembetulan',
     ].includes(statusFormat);
     const isSelesai = statusFormat === 'selesai';
     const isValidasiPhase = statusFormat.includes('validasi');
@@ -206,6 +207,7 @@ export default function InfoTiket({ auth, backUrl, ticket, senaraiPengguna, sena
                     'menunggu semakan',
                     'menunggu semakan laporan',
                     'pembetulan laporan',
+                    'menunggu pembetulan',
                 ].includes(statusFormat)
             )
             ||
@@ -219,6 +221,7 @@ export default function InfoTiket({ auth, backUrl, ticket, senaraiPengguna, sena
                 && [
                     'dalam tindakan',
                     'laporan perlu pembetulan',
+                    'menunggu pembetulan',
                 ].includes(statusFormat)
             )
             ||
@@ -245,6 +248,7 @@ export default function InfoTiket({ auth, backUrl, ticket, senaraiPengguna, sena
                     'menunggu semakan',
                     'menunggu semakan laporan',
                     'pembetulan laporan',
+                    'menunggu pembetulan',
                 ].includes(statusFormat)
             )
             ||
@@ -258,6 +262,7 @@ export default function InfoTiket({ auth, backUrl, ticket, senaraiPengguna, sena
                 && [
                     'dalam tindakan',
                     'laporan perlu pembetulan',
+                    'menunggu pembetulan',
                 ].includes(statusFormat)
             )
             ||
@@ -1358,21 +1363,33 @@ export default function InfoTiket({ auth, backUrl, ticket, senaraiPengguna, sena
                                                     />
                                                 ) : (
                                                     isPembekalanV2
-                                                    && [
-                                                        'dalam tindakan',
-                                                        'laporan perlu pembetulan',
-                                                    ].includes(statusFormat) ? (
+                                                    && (
+                                                        [
+                                                            'dalam tindakan',
+                                                            'laporan perlu pembetulan',
+                                                        ].includes(statusFormat)
+                                                        || (
+                                                            statusFormat === 'menunggu pembetulan'
+                                                            && !ticket.disahkan_oleh_ic
+                                                        )
+                                                    ) ? (
                                                         <BorangLKKPembekalanTindakanV2
                                                             ticket={ticket}
                                                             auth={auth}
                                                         />
                                                     ) : (
                                                         isPembekalanV2
-                                                        && [
-                                                            'menunggu semakan laporan',
-                                                            'pembetulan laporan',
-                                                        ].includes(statusFormat) ? (
-                                                            <BorangLKKPembekalanKUPPV2
+                                                            && (
+                                                                [
+                                                                    'menunggu semakan laporan',
+                                                                    'pembetulan laporan',
+                                                                ].includes(statusFormat)
+                                                                || (
+                                                                    statusFormat === 'menunggu pembetulan'
+                                                                    && Boolean(ticket.disahkan_oleh_ic)
+                                                                )
+                                                            ) ? (
+                                                                <BorangLKKPembekalanKUPPV2
                                                                 ticket={ticket}
                                                                 auth={auth}
                                                             />

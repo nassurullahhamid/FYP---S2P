@@ -2753,10 +2753,7 @@ class TicketWorkflowController extends Controller
                         's2p_workflow.statuses.in_progress',
                         'Dalam Tindakan'
                     ),
-                    config(
-                        's2p_workflow.statuses.pic_correction',
-                        'Laporan Perlu Pembetulan'
-                    ),
+                    'Menunggu Pembetulan',
                 ];
 
                 if (
@@ -2935,7 +2932,7 @@ class TicketWorkflowController extends Controller
             )
             ->with(
                 'success',
-                'Maklumat kajian telah dikemaskini.'
+                'Laporan telah berjaya dikemaskini.'
             );
     }
 
@@ -2962,7 +2959,7 @@ class TicketWorkflowController extends Controller
                         's2p_workflow.statuses.report_review',
                         'Menunggu Semakan Laporan'
                     ),
-                    'Pembetulan Laporan',
+                    'Menunggu Pembetulan',
                 ];
 
                 if (
@@ -3041,7 +3038,7 @@ class TicketWorkflowController extends Controller
             )
             ->with(
                 'success',
-                'Maklumat laporan telah dikemaskini.'
+                'Laporan telah berjaya dikemaskini.'
             );
     }
 
@@ -3079,10 +3076,7 @@ class TicketWorkflowController extends Controller
                             's2p_workflow.statuses.in_progress',
                             'Dalam Tindakan'
                         ),
-                        config(
-                            's2p_workflow.statuses.pic_correction',
-                            'Laporan Perlu Pembetulan'
-                        ),
+                        'Menunggu Pembetulan',
                     ];
 
                     if (
@@ -3451,7 +3445,7 @@ class TicketWorkflowController extends Controller
             )
             ->with(
                 'success',
-                'Maklumat laporan telah dikemaskini.'
+                'Laporan telah berjaya dikemaskini.'
             );
     }
 
@@ -3478,10 +3472,10 @@ class TicketWorkflowController extends Controller
                         's2p_workflow.statuses.report_review',
                         'Menunggu Semakan Laporan'
                     ),
-                    'Pembetulan Laporan',
+                    'Menunggu Pembetulan',
                 ];
 
-                $isChiefCorrection = $ticket->status_tiket === 'Pembetulan Laporan';
+                $isChiefCorrection = $ticket->status_tiket === 'Menunggu Pembetulan';
 
                 if (
                     ! in_array(
@@ -3653,7 +3647,7 @@ class TicketWorkflowController extends Controller
             )
             ->with(
                 'success',
-                'Maklumat laporan telah dikemaskini.'
+                'Laporan telah berjaya dikemaskini.'
             );
     }
 
@@ -3723,7 +3717,7 @@ class TicketWorkflowController extends Controller
                     'Menunggu Semakan Laporan'
                 );
 
-                $chiefCorrectionStatus = 'Pembetulan Laporan';
+                $chiefCorrectionStatus = 'Menunggu Pembetulan';
 
                 $allowedStatuses = $isCorrection
                     ? [$reportReviewStatus]
@@ -3783,11 +3777,9 @@ class TicketWorkflowController extends Controller
                     }
 
                     $ticket->update([
-                        'status_tiket' => config(
-                            's2p_workflow.statuses.pic_correction',
-                            'Laporan Perlu Pembetulan'
-                        ),
+                        'status_tiket' => 'Menunggu Pembetulan',
                         'ulasan_semakan' => $validated['ulasan'],
+                        'disahkan_oleh_ic' => null,
                     ]);
 
                 } else {
@@ -3931,7 +3923,7 @@ class TicketWorkflowController extends Controller
                 'success',
                 $isCorrection
                     ? 'Telah dihantar kepada PIC untuk tindakan yang sewajarnya.'
-                    : 'Laporan telah diverifikasi.'
+                    : 'Laporan telah berjaya diverifikasi.'
             );
     }
 
@@ -4001,7 +3993,7 @@ class TicketWorkflowController extends Controller
                     'Menunggu Semakan Laporan'
                 );
 
-                $chiefCorrectionStatus = 'Pembetulan Laporan';
+                $chiefCorrectionStatus = 'Menunggu Pembetulan';
 
                 $allowedStatuses = $isCorrection
                     ? [$reportReviewStatus]
@@ -4061,11 +4053,9 @@ class TicketWorkflowController extends Controller
                     }
 
                     $ticket->update([
-                        'status_tiket' => config(
-                            's2p_workflow.statuses.pic_correction',
-                            'Laporan Perlu Pembetulan'
-                        ),
+                        'status_tiket' => 'Menunggu Pembetulan',
                         'ulasan_semakan' => $validated['ulasan'],
+                        'disahkan_oleh_ic' => null,
                     ]);
 
                 } else {
@@ -4206,7 +4196,7 @@ class TicketWorkflowController extends Controller
                 'success',
                 $isCorrection
                     ? 'Dihantar ke PIC untuk tindakan sewajarnya.'
-                    : 'Laporan telah diverifikasi.'
+                    : 'Laporan telah berjaya diverifikasi.'
             );
     }
 
@@ -4319,7 +4309,7 @@ class TicketWorkflowController extends Controller
 
                 if ($isCorrection) {
                     $ticket->update([
-                        'status_tiket' => 'Pembetulan Laporan',
+                        'status_tiket' => 'Menunggu Pembetulan',
                         'ulasan_semakan' => $validated['ulasan'],
                         'tarikh_tutup' => null,
                     ]);
@@ -4423,7 +4413,7 @@ class TicketWorkflowController extends Controller
                 'success',
                 $isCorrection
                     ? 'Telah dihantar kepada KUPP untuk tindakan yang sewajarnya.'
-                    : 'Laporan telah divalidasi.'
+                    : 'Laporan telah berjaya divalidasi.'
             );
     }
 
@@ -4536,7 +4526,7 @@ class TicketWorkflowController extends Controller
 
                 if ($isCorrection) {
                     $ticket->update([
-                        'status_tiket' => 'Pembetulan Laporan',
+                        'status_tiket' => 'Menunggu Pembetulan',
                         'ulasan_semakan' => $validated['ulasan'],
                         'tarikh_tutup' => null,
                     ]);
@@ -4640,7 +4630,7 @@ class TicketWorkflowController extends Controller
                 'success',
                 $isCorrection
                     ? 'Dihantar ke KUPP untuk tindakan sewajarnya.'
-                    : 'Laporan telah divalidasi.'
+                    : 'Laporan telah berjaya divalidasi.'
             );
     }
 
@@ -4819,7 +4809,7 @@ class TicketWorkflowController extends Controller
             )
             ->with(
                 'success',
-                'Maklumat kajian telah dikemaskini.'
+                'Laporan telah berjaya dikemaskini.'
             );
     }
 
@@ -5192,7 +5182,7 @@ class TicketWorkflowController extends Controller
             )
             ->with(
                 'success',
-                'Maklumat kajian telah dikemaskini.'
+                'Laporan telah berjaya dikemaskini.'
             );
     }
 
@@ -5391,7 +5381,7 @@ class TicketWorkflowController extends Controller
             )
             ->with(
                 'success',
-                'Laporan tiket telah dikemaskini.'
+                'Laporan telah berjaya dikemaskini.'
             );
     }
 

@@ -264,7 +264,7 @@ export default function BorangLKKPemodenanV2({
                 skop_kajian:
                     cleanTextRows(skopKajian),
             },
-            'Maklumat kajian telah dikemaskini.'
+            'Laporan telah berjaya dikemaskini.'
         );
     };
 
@@ -282,7 +282,7 @@ export default function BorangLKKPemodenanV2({
                 senarai_pic_ic:
                     senaraiPicIc.filter(Boolean),
             },
-            'Laporan tiket telah dikemaskini.'
+            'Laporan telah berjaya dikemaskini.'
         );
     };
 
@@ -400,7 +400,7 @@ export default function BorangLKKPemodenanV2({
                                     }
                                     disabled={!isInitialReview}
                                     required={isInitialReview}
-                                    className="flex-1 min-h-[70px] border-gray-200 rounded-xl p-3 disabled:bg-gray-50"
+                                    className="flex-1 min-h-[70px] border-gray-200 rounded-xl p-3 font-normal disabled:bg-gray-50"
                                 />
 
                                 {isInitialReview && (
@@ -463,7 +463,7 @@ export default function BorangLKKPemodenanV2({
                                     }
                                     disabled={!isInitialReview}
                                     required={isInitialReview}
-                                    className="flex-1 min-h-[70px] border-gray-200 rounded-xl p-3 disabled:bg-gray-50"
+                                    className="flex-1 min-h-[70px] border-gray-200 rounded-xl p-3 font-normal disabled:bg-gray-50"
                                 />
 
                                 {isInitialReview && (

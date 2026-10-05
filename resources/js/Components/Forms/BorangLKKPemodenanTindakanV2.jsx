@@ -77,18 +77,26 @@ export default function BorangLKKPemodenanTindakanV2({
         Boolean(currentUser.no_ic)
         && assignedIds.includes(currentUser.no_ic);
 
+    const isPicCorrection =
+        status === 'menunggu pembetulan'
+        && !ticket.disahkan_oleh_ic;
+
+    const isKuppCorrection =
+        status === 'menunggu pembetulan'
+        && Boolean(ticket.disahkan_oleh_ic);
+
     const canPicEdit =
-        [
-            'dalam tindakan',
-            'laporan perlu pembetulan',
-        ].includes(status)
+        (
+            status === 'dalam tindakan'
+            || isPicCorrection
+        )
         && isAssignedPic;
 
     const canKuppEdit =
-        [
-            'menunggu semakan laporan',
-            'pembetulan laporan',
-        ].includes(status)
+        (
+            status === 'menunggu semakan laporan'
+            || isKuppCorrection
+        )
         && isKUPP;
 
     const canKwValidate =
@@ -307,7 +315,7 @@ export default function BorangLKKPemodenanTindakanV2({
                 gambar_tapak: gambarTapak,
                 gambar_cadangan: gambarCadangan,
             },
-            'Maklumat laporan telah dikemaskini.',
+            'Laporan telah berjaya dikemaskini.',
             true
         );
     };
@@ -351,14 +359,23 @@ export default function BorangLKKPemodenanTindakanV2({
                         ),
                 rumusan: String(rumusan).trim(),
             },
-            'Maklumat laporan telah dikemaskini.'
+            'Laporan telah berjaya dikemaskini.'
         );
     };
 
     const reviewKupp = action => {
         const comment = String(ulasan).trim();
 
-send(
+        if (
+            action === 'VERIFIKASI'
+            && !window.confirm(
+                'Adakah anda ingin verifikasi laporan ini?'
+            )
+        ) {
+            return;
+        }
+
+        send(
             'tickets.workflow.reviewModernizationLkk',
             {
                 tindakan: action,
@@ -369,7 +386,7 @@ send(
             },
             action === 'PEMBETULAN'
                 ? 'Dihantar ke PIC untuk tindakan sewajarnya.'
-                : 'Laporan telah diverifikasi.'
+                : 'Laporan telah berjaya diverifikasi.'
         );
     };
 
@@ -379,7 +396,7 @@ send(
         if (
             action !== 'PEMBETULAN'
             && !window.confirm(
-                'Adakah laporan ingin divalidasi?'
+                'Adakah anda ingin validasi laporan ini?'
             )
         ) {
             return;
@@ -399,7 +416,7 @@ send(
             },
             action === 'PEMBETULAN'
                 ? 'Dihantar ke KUPP untuk tindakan sewajarnya.'
-                : 'Laporan telah divalidasi.'
+                : 'Laporan telah berjaya divalidasi.'
         );
     };
 
@@ -788,10 +805,14 @@ send(
             </form>
             {(canKuppEdit || canKwValidate) && (
                 <div className="bg-white p-6 rounded-2xl border border-gray-200 shadow-sm space-y-4">
+                    <label className="block text-xs font-black text-blue-900 uppercase tracking-wider">
+                        Ulasan (Jika Ada)
+                    </label>
+
                     <textarea
                         value={ulasan}
                         onChange={event => setUlasan(event.target.value)}
-                        placeholder="Ulasan (Jika Ada)"
+                        placeholder="Perkara"
                         className="w-full min-h-[90px] border-gray-200 rounded-xl p-3"
                     />
 

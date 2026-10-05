@@ -50,10 +50,12 @@ export default function BorangLKKPembekalanTindakanV2({
     const isAssignedTechnician =
         assignedIds.includes(currentUser.no_ic);
 
-    const isTechnicianPhase = [
-        'dalam tindakan',
-        'laporan perlu pembetulan',
-    ].includes(statusFormat);
+    const isTechnicianPhase =
+        statusFormat === 'dalam tindakan'
+        || (
+            statusFormat === 'menunggu pembetulan'
+            && !ticket.disahkan_oleh_ic
+        );
 
     const report = ticket.laporan || {};
 
@@ -116,8 +118,8 @@ export default function BorangLKKPembekalanTindakanV2({
                 preserveScroll: true,
                 onSuccess: () => {
                     alert(
-                        'Laporan hasil kajian berjaya ' +
-                        'dihantar kepada KUPP.'
+                        'Laporan telah dihantar ke KUPP ' +
+                        'untuk tindakan yang sewajarnya.'
                     );
                 },
                 onError: () => {
