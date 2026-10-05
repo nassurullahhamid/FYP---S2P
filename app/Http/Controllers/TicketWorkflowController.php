@@ -435,7 +435,7 @@ class TicketWorkflowController extends Controller
             )
             ->with(
                 'success',
-                'Tiket telah disemak.'
+                'Tiket telah berjaya dikemaskini.'
             );
     }
 
@@ -999,7 +999,7 @@ class TicketWorkflowController extends Controller
                     $ticket->update([
                         'status_tiket' => config(
                             's2p_workflow.statuses.chief_correction',
-                            'Pembetulan Ketua'
+                            'Pembetulan Laporan'
                         ),
                         'ulasan_semakan' => $validated['ulasan'],
                         'tarikh_tutup' => null,
@@ -1101,7 +1101,7 @@ class TicketWorkflowController extends Controller
                 'success',
                 $isCorrection
                     ? 'LKK dipulangkan kepada KUTD untuk pembetulan.'
-                    : 'Laporan telah divalidasi.'
+                    : 'Laporan telah berjaya divalidasi.'
             );
     }
 
@@ -1161,12 +1161,16 @@ class TicketWorkflowController extends Controller
 
                     $allowedStatuses = [
                         config(
+                            's2p_workflow.statuses.report_review',
+                            'Menunggu Semakan Laporan'
+                        ),
+                        config(
                             's2p_workflow.statuses.ready_for_verification',
                             'Sedia Diverifikasi'
                         ),
                         config(
                             's2p_workflow.statuses.chief_correction',
-                            'Pembetulan Ketua'
+                            'Pembetulan Laporan'
                         ),
                     ];
 
@@ -1178,7 +1182,7 @@ class TicketWorkflowController extends Controller
                         )
                     ) {
                         throw ValidationException::withMessages([
-                            'sistem' => 'Laporan lawatan tapak perlu disahkan!',
+                            'sistem' => 'Maklumat Laporan telah berjaya dikemaskini.',
                         ]);
                     }
 
@@ -1264,12 +1268,8 @@ class TicketWorkflowController extends Controller
                             JSON_THROW_ON_ERROR
                             | JSON_UNESCAPED_UNICODE
                         ),
-                        'kos_items' => json_encode(
-                            $validated['kos_items']
+                        'kos_items' => $validated['kos_items']
                             ?? [],
-                            JSON_THROW_ON_ERROR
-                            | JSON_UNESCAPED_UNICODE
-                        ),
                         'rumusan' => $validated['rumusan']
                             ?? '',
                         'logical_diagram' => $logicalPath,
@@ -1424,8 +1424,8 @@ class TicketWorkflowController extends Controller
             ->with(
                 'success',
                 $isDraft
-                    ? 'Draf LKK Rangkaian berjaya disimpan.'
-                    : 'Laporan telah diverifikasi.'
+                    ? 'Maklumat Laporan telah berjaya dikemaskini.'
+                    : 'Laporan telah berjaya diverifikasi.'
             );
     }
 
@@ -1991,7 +1991,7 @@ class TicketWorkflowController extends Controller
             )
             ->with(
                 'success',
-                'Laporan lawatan tapak telah dikemaskini.'
+                'Maklumat Laporan telah berjaya dikemaskini.'
             );
     }
 

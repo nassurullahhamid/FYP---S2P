@@ -80,7 +80,7 @@ export default function SenaraiTiket({ auth, tickets, selectedKategori, selected
         'Menunggu Semakan Laporan': 'bg-blue-50 text-blue-700 border-blue-200',
         'Laporan Perlu Pembetulan': 'bg-rose-50 text-rose-700 border-rose-200',
         'Sedia Diverifikasi': 'bg-violet-50 text-violet-700 border-violet-200',
-        'Pembetulan Ketua': 'bg-amber-50 text-amber-700 border-amber-200',
+        'Pembetulan Laporan': 'bg-amber-50 text-amber-700 border-amber-200',
     };
 
     // Calculate real-time ticket statistics from current data array
@@ -108,7 +108,7 @@ export default function SenaraiTiket({ auth, tickets, selectedKategori, selected
                 'Menunggu Semakan Laporan',
                 'Laporan Perlu Pembetulan',
                 'Sedia Diverifikasi',
-                'Pembetulan Ketua',
+                'Pembetulan Laporan',
             ].includes(t.status_tiket)).length,
 
             siap: ticketArray.filter(t =>

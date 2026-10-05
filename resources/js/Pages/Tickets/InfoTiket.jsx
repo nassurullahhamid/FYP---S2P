@@ -445,7 +445,7 @@ export default function InfoTiket({ auth, backUrl, ticket, senaraiPengguna, sena
                 klasifikasi
                     ? 'Tiket telah berjaya diklasifikasi.'
                     : semakanNetworkV2
-                        ? 'Tiket telah disemak.'
+                        ? 'Tiket telah berjaya dikemaskini.'
                         : semakanHelpdeskV2
                             ? 'Tiket telah berjaya dikemaskini.'
                             : 'Tiket telah berjaya dikemaskini!'
