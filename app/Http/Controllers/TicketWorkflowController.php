@@ -584,7 +584,7 @@ class TicketWorkflowController extends Controller
             )
             ->with(
                 'success',
-                'Tiket berjaya disemak dan petugas telah dilantik.'
+                'Tiket telah berjaya dikemaskini.'
             );
     }
 
@@ -2139,7 +2139,7 @@ class TicketWorkflowController extends Controller
             )
             ->with(
                 'success',
-                'Catatan tindakan berjaya dihantar kepada KUTD.'
+                'Tiket telah berjaya dikemaskini.'
             );
     }
 
@@ -2261,7 +2261,7 @@ class TicketWorkflowController extends Controller
             )
             ->with(
                 'success',
-                'Tiket Meja Bantuan berjaya disahkan dan ditutup.'
+                'Tiket telah Berjaya disahkan.'
             );
     }
 
@@ -2441,7 +2441,7 @@ class TicketWorkflowController extends Controller
             )
             ->with(
                 'success',
-                'Tiket peminjaman berjaya disahkan dan ditutup.'
+                'Tiket telah Berjaya disahkan.'
             );
     }
 
@@ -2723,7 +2723,7 @@ class TicketWorkflowController extends Controller
             )
             ->with(
                 'success',
-                'Borang peminjaman berjaya dihantar kepada KUTD.'
+                'Tiket telah berjaya dikemaskini.'
             );
     }
 
