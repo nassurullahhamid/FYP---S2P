@@ -539,7 +539,7 @@ class ProcurementWorkflowV2Test extends TestCase
 
         $this->assertDatabaseHas('tiket', [
             'id_tiket' => $ticketId,
-            'status_tiket' => 'Laporan Perlu Pembetulan',
+            'status_tiket' => 'Menunggu Pembetulan',
             'ulasan_semakan' => 'Sila perincikan keadaan semasa.',
         ]);
 
@@ -603,7 +603,7 @@ class ProcurementWorkflowV2Test extends TestCase
 
         $this->assertDatabaseHas('tiket', [
             'id_tiket' => $ticketId,
-            'status_tiket' => 'Pembetulan Laporan',
+            'status_tiket' => 'Menunggu Pembetulan',
             'ulasan_semakan' => 'Sila semak semula rumusan kos.',
         ]);
 

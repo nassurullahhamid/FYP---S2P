@@ -236,7 +236,7 @@ export default function BorangLKKPembekalanICTV2({ ticket, senaraiPegawai = [], 
                 preserveScroll: true,
                 onSuccess: () => {
                     alert(
-                        'Maklumat kajian telah dikemaskini.'
+                        'Laporan telah berjaya dikemaskini.'
                     );
                 },
                 onError: (errors) => {

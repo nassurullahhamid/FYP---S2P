@@ -25,6 +25,7 @@ class DashboardController extends Controller
                 'LKK Perlu Pembetulan',
                 'Dalam Tindakan',
                 'Laporan Perlu Pembetulan',
+                'Menunggu Pembetulan',
             ];
 
             $statsJuruteknik = [
@@ -89,6 +90,7 @@ class DashboardController extends Controller
                 'Laporan Perlu Pembetulan',
                 'Sedia Diverifikasi',
                 'Pembetulan Laporan',
+                'Menunggu Pembetulan',
                 'Menunggu Validasi',
             ];
 
@@ -141,6 +143,7 @@ class DashboardController extends Controller
                 'Laporan Perlu Pembetulan',
                 'Sedia Diverifikasi',
                 'Pembetulan Laporan',
+                'Menunggu Pembetulan',
             ];
 
             $kpiUmum = [
@@ -183,6 +186,7 @@ class DashboardController extends Controller
                 'Laporan Perlu Pembetulan',
                 'Sedia Diverifikasi',
                 'Pembetulan Laporan',
+                'Menunggu Pembetulan',
             ];
 
             $statsSistem = [

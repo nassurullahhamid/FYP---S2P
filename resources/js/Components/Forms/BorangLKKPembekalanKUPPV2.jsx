@@ -61,7 +61,8 @@ export default function BorangLKKPembekalanKUPPV2({
         'menunggu semakan laporan';
 
     const isChiefCorrection =
-        statusFormat === 'pembetulan laporan';
+        statusFormat === 'menunggu pembetulan'
+        && Boolean(ticket.disahkan_oleh_ic);
 
     const canEdit =
         isKUPP
@@ -213,7 +214,7 @@ export default function BorangLKKPembekalanKUPPV2({
                 preserveScroll: true,
                 onSuccess: () => {
                     alert(
-                        'Maklumat laporan telah dikemaskini.'
+                        'Laporan telah berjaya dikemaskini.'
                     );
                 },
                 onError: () => {
@@ -256,7 +257,7 @@ export default function BorangLKKPembekalanKUPPV2({
 
         const confirmationMessage =
             action === 'VERIFIKASI'
-                ? 'Adakah laporan disahkan untuk diverifikasi?'
+                ? 'Adakah anda ingin verifikasi laporan ini?'
                 : 'Laporan perlu dihantar semula kepada PIC?';
 
         if (!window.confirm(confirmationMessage)) {
@@ -282,7 +283,7 @@ export default function BorangLKKPembekalanKUPPV2({
                 onSuccess: () => {
                     alert(
                         action === 'VERIFIKASI'
-                            ? 'Laporan telah diverifikasi.'
+                            ? 'Laporan telah berjaya diverifikasi.'
                             : 'Telah dihantar kepada PIC untuk tindakan yang sewajarnya.'
                     );
                 },

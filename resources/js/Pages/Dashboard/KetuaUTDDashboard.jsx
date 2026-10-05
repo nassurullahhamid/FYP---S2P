@@ -52,6 +52,7 @@ export default function KetuaUTDDashboard({ auth, stats, recentTickets }) {
                     'Laporan Perlu Pembetulan',
                     'Sedia Diverifikasi',
                     'Pembetulan Laporan',
+                    'Menunggu Pembetulan',
                     'Menunggu Validasi',
                 ],
             })
@@ -79,6 +80,7 @@ export default function KetuaUTDDashboard({ auth, stats, recentTickets }) {
         'Laporan Perlu Pembetulan': 'bg-rose-50 border-rose-200 text-rose-700',
         'Sedia Diverifikasi': 'bg-violet-50 border-violet-200 text-violet-700',
         'Pembetulan Laporan': 'bg-amber-50 border-amber-200 text-amber-700',
+        'Menunggu Pembetulan': 'bg-orange-50 border-orange-200 text-orange-700',
         'Menunggu Validasi': 'bg-teal-50 border-teal-200 text-teal-700',
     };
 
@@ -167,6 +169,7 @@ export default function KetuaUTDDashboard({ auth, stats, recentTickets }) {
                                                         'Laporan Perlu Pembetulan',
                                                         'Sedia Diverifikasi',
                                                         'Pembetulan Laporan',
+                                                        'Menunggu Pembetulan',
                                                         'Menunggu Validasi',
                                                     ],
                                                 })}

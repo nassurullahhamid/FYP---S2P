@@ -58,7 +58,7 @@ export default function BorangLKKPembekalanKWV2({
 
         const message =
             action === 'LULUS'
-                ? 'Adakah laporan disahkan untuk divalidasi?'
+                ? 'Adakah anda ingin validasi laporan ini?'
                 : 'Laporan dikembalikan semula kepada KUPP?';
 
         if (!window.confirm(message)) {
@@ -84,7 +84,7 @@ export default function BorangLKKPembekalanKWV2({
                 onSuccess: () => {
                     alert(
                         action === 'LULUS'
-                            ? 'Laporan telah divalidasi.'
+                            ? 'Laporan telah berjaya divalidasi.'
                             : 'Telah dihantar kepada KUPP untuk tindakan yang sewajarnya.'
                     );
                 },
@@ -124,7 +124,7 @@ export default function BorangLKKPembekalanKWV2({
 
             <div className="rounded-2xl border border-gray-200 bg-white p-5 shadow-sm">
                 <label className="mb-2 block text-xs font-black uppercase tracking-wider text-slate-800">
-                    Ulasan
+                    Ulasan (Jika Ada)
                 </label>
 
                 <textarea

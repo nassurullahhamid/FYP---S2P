@@ -79,6 +79,7 @@ class TicketController extends Controller
                     'Laporan Perlu Pembetulan',
                     'Sedia Diverifikasi',
                     'Pembetulan Laporan',
+                    'Menunggu Pembetulan',
                     'Menunggu Validasi',
                 ]);
             } elseif ($status === 'belum_tindakan') {

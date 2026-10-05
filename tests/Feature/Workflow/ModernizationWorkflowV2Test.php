@@ -112,7 +112,7 @@ class ModernizationWorkflowV2Test extends TestCase
             ])
             ->assertSessionHasNoErrors();
 
-        $this->assertTicketStatus($ticketId, 'Laporan Perlu Pembetulan');
+        $this->assertTicketStatus($ticketId, 'Menunggu Pembetulan');
 
         $this->submitReport($users['technician'], $ticketId, 'Versi juruteknik diperbetulkan.');
         $this->saveLkk($users['kupp'], $ticketId);
@@ -125,7 +125,7 @@ class ModernizationWorkflowV2Test extends TestCase
             ])
             ->assertSessionHasNoErrors();
 
-        $this->assertTicketStatus($ticketId, 'Pembetulan Laporan');
+        $this->assertTicketStatus($ticketId, 'Menunggu Pembetulan');
 
         Notification::assertSentTo(
             $users['kupp'],

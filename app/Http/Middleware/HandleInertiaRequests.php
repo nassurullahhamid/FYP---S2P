@@ -84,6 +84,7 @@ class HandleInertiaRequests extends Middleware
                                 'Menunggu Kelulusan',
                                 'Menunggu Semakan Laporan',
                                 'Pembetulan Laporan',
+                                'Menunggu Pembetulan',
                             ]);
                         })
                         ->when($isKUTD, function ($query) {
@@ -97,7 +98,7 @@ class HandleInertiaRequests extends Middleware
                                 'Menunggu Semakan Laporan',
                                 'Pembetulan Laporan',
                                 'Sedia Diverifikasi',
-                                'Pembetulan Laporan',
+                                'Menunggu Pembetulan',
                             ]);
                         })
                         ->when($isKW, function ($query) {
@@ -113,6 +114,7 @@ class HandleInertiaRequests extends Middleware
                                 'LKK Perlu Pembetulan',
                                 'Dalam Tindakan',
                                 'Laporan Perlu Pembetulan',
+                                'Menunggu Pembetulan',
                             ])
                                 ->whereHas('petugas', function ($subQuery) use ($user) {
                                     $subQuery->where('tugasan_tiket.no_ic', $user->no_ic);
