@@ -12,13 +12,13 @@ class RoleMiddlewareTest extends TestCase
 {
     public function test_admin_dibenarkan_mengakses_laluan_admin(): void
     {
-        $user = new Pengguna();
+        $user = new Pengguna;
         $user->peranan = 'admin';
 
         $request = Request::create('/pengurusan-pengguna');
         $request->setUserResolver(fn () => $user);
 
-        $middleware = new RoleMiddleware();
+        $middleware = new RoleMiddleware;
 
         $response = $middleware->handle(
             $request,
@@ -31,13 +31,13 @@ class RoleMiddlewareTest extends TestCase
 
     public function test_juruteknik_dihalang_mengakses_laluan_admin(): void
     {
-        $user = new Pengguna();
+        $user = new Pengguna;
         $user->peranan = 'juruteknik';
 
         $request = Request::create('/pengurusan-pengguna');
         $request->setUserResolver(fn () => $user);
 
-        $middleware = new RoleMiddleware();
+        $middleware = new RoleMiddleware;
 
         $this->expectException(HttpException::class);
         $this->expectExceptionCode(0);
@@ -54,7 +54,7 @@ class RoleMiddlewareTest extends TestCase
         $request = Request::create('/pengurusan-pengguna');
         $request->setUserResolver(fn () => null);
 
-        $middleware = new RoleMiddleware();
+        $middleware = new RoleMiddleware;
 
         $this->expectException(HttpException::class);
 
