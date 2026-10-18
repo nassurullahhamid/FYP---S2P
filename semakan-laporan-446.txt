@@ -1,0 +1,458 @@
+===== VALIDASI LAPORAN RANGKAIAN =====
+    public function validateNetworkLkk(
+        ValidateNetworkLkkRequest $request,
+        string $id_tiket
+    ): RedirectResponse {
+        $validated = $request->validated();
+        $validator = $request->user();
+
+        $isCorrection =
+            $validated['tindakan'] === 'PEMBETULAN';
+
+        [
+            $ticket,
+            $reviewers,
+            $subCategory,
+        ] = DB::transaction(
+            function () use (
+                $id_tiket,
+                $validator,
+                $validated,
+                $isCorrection
+            ): array {
+                $ticket = Tiket::query()
+                    ->where('id_tiket', $id_tiket)
+                    ->lockForUpdate()
+                    ->firstOrFail();
+
+                $expectedStatus = config(
+                    's2p_workflow.statuses.validation',
+                    'Menunggu Validasi'
+                );
+
+                if (
+                    $ticket->status_tiket
+                    !== $expectedStatus
+                ) {
+                    throw ValidationException::withMessages([
+                        'sistem' => 'LKK ini bukan lagi dalam peringkat validasi.',
+                    ]);
+                }
+
+                if (
+                    $ticket->kategori
+                    !== 'Konsultasi Rangkaian'
+                ) {
+                    throw ValidationException::withMessages([
+                        'sistem' => 'Tindakan ini hanya dibenarkan untuk tiket Konsultasi Rangkaian.',
+                    ]);
+                }
+
+                $networkRecord = DB::table(
+                    'konsultasi_rangkaian'
+                )
+                    ->where('id_tiket', $id_tiket)
+                    ->lockForUpdate()
+                    ->first();
+
+                if ($networkRecord === null) {
+                    throw ValidationException::withMessages([
+                        'sistem' => 'Rekod Konsultasi Rangkaian tidak ditemui.',
+                    ]);
+                }
+
+                $subCategory = trim(
+                    (string) $networkRecord->sub_kategori
+                );
+
+                $allowedSubCategories = config(
+                    's2p_workflow.flows.rangkaian.sub_kategori',
+                    []
+                );
+
+                if (
+                    ! in_array(
+                        $subCategory,
+                        $allowedSubCategories,
+                        true
+                    )
+                ) {
+                    throw ValidationException::withMessages([
+                        'sistem' => 'Subkategori tiket tidak menggunakan aliran Konsultasi Rangkaian.',
+                    ]);
+                }
+
+                $report = Laporan::query()
+                    ->where('id_tiket', $id_tiket)
+                    ->lockForUpdate()
+                    ->first();
+
+                if (
+                    $report === null
+                    || trim(
+                        (string) $report->pendahuluan
+                    ) === ''
+                    || trim(
+                        (string) $report->rumusan
+                    ) === ''
+                    || empty($report->logical_diagram)
+                    || empty($report->physical_diagram)
+                ) {
+                    throw ValidationException::withMessages([
+                        'sistem' => 'LKK belum lengkap dan tidak boleh divalidasi.',
+                    ]);
+                }
+
+                $reviewers = Pengguna::query()
+                    ->where(
+                        'peranan',
+                        config(
+                            's2p_workflow.flows.rangkaian.verification_role',
+                            'ketua_utd'
+                        )
+                    )
+                    ->where('status_pengguna', 'Aktif')
+                    ->lockForUpdate()
+                    ->get();
+
+                if (
+                    $isCorrection
+                    && $reviewers->isEmpty()
+                ) {
+                    throw ValidationException::withMessages([
+                        'sistem' => 'Tiada KUTD aktif untuk menerima arahan pembetulan.',
+                    ]);
+                }
+
+                if ($isCorrection) {
+                    $ticket->update([
+                        'status_tiket' => config(
+                            's2p_workflow.statuses.chief_correction',
+                            'Pembetulan Laporan'
+                        ),
+                        'ulasan_semakan' => $validated['ulasan'],
+                        'tarikh_tutup' => null,
+                    ]);
+
+                } else {
+                    $report->update([
+                        'disemak_oleh' => $validator->nama,
+                    ]);
+
+                    $ticket->update([
+                        'status_tiket' => config(
+                            's2p_workflow.statuses.completed',
+                            'Selesai'
+                        ),
+                        'ulasan_semakan' => null,
+                        'tarikh_tutup' => now(),
+                    ]);
+
+                    $ticket->rekodLog(
+                        config(
+                            's2p_workflow.trail_events.validated',
+                            'DIVALIDASI'
+                        ),
+                        'Oleh '.$validator->nama,
+                        'LULUS'
+                    );
+
+                    $ticket->rekodLog(
+                        config(
+                            's2p_workflow.trail_events.closed',
+                            'TIKET DITUTUP'
+                        ),
+                        'Oleh '.$validator->nama,
+                        'SELESAI'
+                    );
+                }
+
+                DB::table('notifications')
+                    ->where(
+                        'notifiable_type',
+                        $validator->getMorphClass()
+                    )
+===== PENYIMPANAN LAPORAN RANGKAIAN =====
+    public function saveNetworkLkk(
+        SaveNetworkLkkRequest $request,
+        string $id_tiket
+    ): RedirectResponse {
+        $validated = $request->validated();
+        $reviewer = $request->user();
+        $isDraft = (bool) $validated['is_draft'];
+
+        $newLogicalPath = null;
+        $newPhysicalPath = null;
+        $oldLogicalPath = null;
+        $oldPhysicalPath = null;
+
+        try {
+            if ($request->hasFile('logical_diagram')) {
+                $newLogicalPath = $request
+                    ->file('logical_diagram')
+                    ->store('diagrams', 'public');
+            }
+
+            if ($request->hasFile('physical_diagram')) {
+                $newPhysicalPath = $request
+                    ->file('physical_diagram')
+                    ->store('diagrams', 'public');
+            }
+
+            [
+                $ticket,
+                $subCategory,
+                $oldLogicalPath,
+                $oldPhysicalPath,
+            ] = DB::transaction(
+                function () use (
+                    $id_tiket,
+                    $reviewer,
+                    $validated,
+                    $isDraft,
+                    $newLogicalPath,
+                    $newPhysicalPath
+                ): array {
+                    $ticket = Tiket::query()
+                        ->where('id_tiket', $id_tiket)
+                        ->lockForUpdate()
+                        ->firstOrFail();
+
+                    if (
+                        $ticket->kategori
+                        !== 'Konsultasi Rangkaian'
+                    ) {
+                        throw ValidationException::withMessages([
+                            'sistem' => 'Tindakan ini hanya dibenarkan untuk tiket Konsultasi Rangkaian.',
+                        ]);
+                    }
+
+                    $allowedStatuses = [
+                        config(
+                            's2p_workflow.statuses.report_review',
+                            'Menunggu Semakan Laporan'
+                        ),
+                        config(
+                            's2p_workflow.statuses.ready_for_verification',
+                            'Sedia Diverifikasi'
+                        ),
+                        config(
+                            's2p_workflow.statuses.chief_correction',
+                            'Pembetulan Laporan'
+                        ),
+                    ];
+
+                    if (
+                        ! in_array(
+                            $ticket->status_tiket,
+                            $allowedStatuses,
+                            true
+                        )
+                    ) {
+                        throw ValidationException::withMessages([
+                            'sistem' => 'Maklumat Laporan telah berjaya dikemaskini.',
+                        ]);
+                    }
+
+                    $networkRecord = DB::table(
+                        'konsultasi_rangkaian'
+                    )
+                        ->where('id_tiket', $id_tiket)
+                        ->lockForUpdate()
+                        ->first();
+
+                    if ($networkRecord === null) {
+                        throw ValidationException::withMessages([
+                            'sistem' => 'Rekod Konsultasi Rangkaian tidak ditemui.',
+                        ]);
+                    }
+
+                    $subCategory = trim(
+                        (string) $networkRecord->sub_kategori
+                    );
+
+                    $allowedSubCategories = config(
+                        's2p_workflow.flows.rangkaian.sub_kategori',
+                        []
+                    );
+
+                    if (
+                        ! in_array(
+                            $subCategory,
+                            $allowedSubCategories,
+                            true
+                        )
+                    ) {
+                        throw ValidationException::withMessages([
+                            'sistem' => 'Subkategori tiket tidak menggunakan aliran Konsultasi Rangkaian.',
+                        ]);
+                    }
+
+                    $existingReport = Laporan::query()
+                        ->where('id_tiket', $id_tiket)
+                        ->lockForUpdate()
+                        ->first();
+
+                    $oldLogicalPath =
+                        $existingReport?->logical_diagram;
+
+                    $oldPhysicalPath =
+                        $existingReport?->physical_diagram;
+
+                    $logicalPath =
+                        $newLogicalPath
+                        ?? $oldLogicalPath;
+
+                    $physicalPath =
+                        $newPhysicalPath
+                        ?? $oldPhysicalPath;
+
+                    if (
+                        ! $isDraft
+                        && (
+                            empty($logicalPath)
+                            || empty($physicalPath)
+                        )
+                    ) {
+                        throw ValidationException::withMessages([
+                            'sistem' => 'Logical diagram dan physical diagram mesti disediakan sebelum LKK dihantar.',
+===== SEMAKAN LAPORAN TAPAK RANGKAIAN =====
+    public function reviewNetworkSiteReport(
+        ReviewNetworkSiteReportRequest $request,
+        string $id_tiket
+    ): RedirectResponse {
+        $validated = $request->validated();
+        $reviewer = $request->user();
+
+        $isCorrection =
+            $validated['tindakan'] === 'PEMBETULAN';
+
+        [
+            $ticket,
+            $technicians,
+            $subCategory,
+        ] = DB::transaction(
+            function () use (
+                $id_tiket,
+                $reviewer,
+                $validated,
+                $isCorrection
+            ): array {
+                $ticket = Tiket::query()
+                    ->where('id_tiket', $id_tiket)
+                    ->lockForUpdate()
+                    ->firstOrFail();
+
+                $expectedStatus = config(
+                    's2p_workflow.statuses.report_review',
+                    'Menunggu Semakan Laporan'
+                );
+
+                if (
+                    $ticket->status_tiket
+                    !== $expectedStatus
+                ) {
+                    throw ValidationException::withMessages([
+                        'sistem' => 'Laporan tapak ini bukan lagi dalam peringkat semakan.',
+                    ]);
+                }
+
+                if (
+                    $ticket->kategori
+                    !== 'Konsultasi Rangkaian'
+                ) {
+                    throw ValidationException::withMessages([
+                        'sistem' => 'Tindakan ini hanya dibenarkan untuk tiket Konsultasi Rangkaian.',
+                    ]);
+                }
+
+                $networkRecord = DB::table(
+                    'konsultasi_rangkaian'
+                )
+                    ->where('id_tiket', $id_tiket)
+                    ->lockForUpdate()
+                    ->first();
+
+                if ($networkRecord === null) {
+                    throw ValidationException::withMessages([
+                        'sistem' => 'Rekod laporan tapak Rangkaian tidak ditemui.',
+                    ]);
+                }
+
+                $subCategory = trim(
+                    (string) $networkRecord->sub_kategori
+                );
+
+                $allowedSubCategories = config(
+                    's2p_workflow.flows.rangkaian.sub_kategori',
+                    []
+                );
+
+                if (
+                    ! in_array(
+                        $subCategory,
+                        $allowedSubCategories,
+                        true
+                    )
+                ) {
+                    throw ValidationException::withMessages([
+                        'sistem' => 'Subkategori tiket tidak menggunakan aliran Konsultasi Rangkaian.',
+                    ]);
+                }
+
+                if (
+                    trim(
+                        (string) $networkRecord->rumusan
+                    ) === ''
+                    || trim(
+                        (string) $networkRecord->ulasan_teknikal
+                    ) === ''
+                ) {
+                    throw ValidationException::withMessages([
+                        'sistem' => 'Laporan tapak belum lengkap dan tidak boleh disemak.',
+                    ]);
+                }
+
+                $assignedIds = DB::table(
+                    'tugasan_tiket'
+                )
+                    ->where('id_tiket', $id_tiket)
+                    ->lockForUpdate()
+                    ->pluck('no_ic')
+                    ->all();
+
+                $technicians = Pengguna::query()
+                    ->whereIn('no_ic', $assignedIds)
+                    ->where('peranan', 'juruteknik')
+                    ->where('status_pengguna', 'Aktif')
+                    ->lockForUpdate()
+                    ->get();
+
+                if (
+                    $isCorrection
+                    && $technicians->isEmpty()
+                ) {
+                    throw ValidationException::withMessages([
+                        'sistem' => 'Tiada Juruteknik aktif ditugaskan untuk menerima arahan pembetulan.',
+                    ]);
+                }
+
+                $newStatus = $isCorrection
+                    ? config(
+                        's2p_workflow.statuses.pic_correction',
+                        'Laporan Perlu Pembetulan'
+                    )
+                    : config(
+                        's2p_workflow.statuses.ready_for_verification',
+                        'Sedia Diverifikasi'
+                    );
+
+                $ticket->update([
+                    'status_tiket' => $newStatus,
+                    'ulasan_semakan' => $isCorrection
+                        ? $validated['ulasan']
+                        : null,
+                ]);
+
+                $ticket->rekodLog(
+                    $isCorrection

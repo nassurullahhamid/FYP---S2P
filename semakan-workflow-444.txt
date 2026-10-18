@@ -1,0 +1,168 @@
+57:    public function classify(
+63:        [$ticket, $reviewRole] = DB::transaction(
+79:                if ($ticket->status_tiket !== $classificationStatus) {
+129:                    'status_tiket' => config(
+135:                $ticket->rekodLog(
+256:        [$ticket, $technicians, $subCategory] = DB::transaction(
+272:                if ($ticket->status_tiket !== $expectedStatus) {
+365:                DB::table('tugasan_tiket')
+369:                $assignmentTime = now();
+371:                DB::table('tugasan_tiket')->insert(
+377:                                'created_at' => $assignmentTime,
+378:                                'updated_at' => $assignmentTime,
+385:                    'status_tiket' => config(
+393:                $ticket->rekodLog(
+449:        [$ticket, $pic, $subCategory] = DB::transaction(
+465:                if ($ticket->status_tiket !== $expectedStatus) {
+523:                DB::table('tugasan_tiket')
+527:                DB::table('tugasan_tiket')->insert([
+535:                    'status_tiket' => config(
+543:                $ticket->rekodLog(
+606:        if ($ticket->status_tiket !== $expectedStatus) {
+668:        [$ticket, $pic, $assetName] = DB::transaction(
+684:                if ($ticket->status_tiket !== $expectedStatus) {
+790:                DB::table('tugasan_tiket')
+794:                DB::table('tugasan_tiket')->insert([
+819:                    'status_tiket' => config(
+825:                $ticket->rekodLog(
+887:        ] = DB::transaction(
+905:                    $ticket->status_tiket
+1000:                        'status_tiket' => config(
+1014:                        'status_tiket' => config(
+1022:                    $ticket->rekodLog(
+1031:                    $ticket->rekodLog(
+1139:            ] = DB::transaction(
+1179:                            $ticket->status_tiket,
+1289:                            'status_tiket' => config(
+1297:                        $ticket->rekodLog(
+1446:        ] = DB::transaction(
+1464:                    $ticket->status_tiket
+1528:                $assignedIds = DB::table(
+1529:                    'tugasan_tiket'
+1537:                    ->whereIn('no_ic', $assignedIds)
+1563:                    'status_tiket' => $newStatus,
+1569:                $ticket->rekodLog(
+1682:            ] = DB::transaction(
+1717:                            $ticket->status_tiket,
+1727:                    $isAssigned = DB::table('tugasan_tiket')
+1848:                        'status_tiket' => config(
+1855:                    $ticket->rekodLog(
+1871:                    $assignedPicIds = DB::table('tugasan_tiket')
+1886:                            $assignedPicIds
+2005:        [$ticket, $subCategory] = DB::transaction(
+2021:                if ($ticket->status_tiket !== $expectedStatus) {
+2066:                $isAssignedPic = DB::table('tugasan_tiket')
+2081:                    'status_tiket' => config(
+2087:                $ticket->rekodLog(
+2153:        $ticket = DB::transaction(
+2169:                if ($ticket->status_tiket !== $expectedStatus) {
+2225:                    'status_tiket' => config(
+2234:                $ticket->rekodLog(
+2243:                $ticket->rekodLog(
+2275:        $ticket = DB::transaction(
+2291:                if ($ticket->status_tiket !== $expectedStatus) {
+2405:                    'status_tiket' => config(
+2414:                $ticket->rekodLog(
+2423:                $ticket->rekodLog(
+2454:        DB::transaction(
+2564:        abort_unless(
+2572:        $ticket = DB::transaction(
+2668:                    'status_tiket' => config(
+2674:                $ticket->rekodLog(
+2740:        ] = DB::transaction(
+2761:                        $ticket->status_tiket,
+2798:                $isAssigned = DB::table('tugasan_tiket')
+2836:                    'status_tiket' => config(
+2843:                $ticket->rekodLog(
+2852:                $assignedTechnicianIds = DB::table(
+2853:                    'tugasan_tiket'
+2862:                if ($assignedTechnicianIds !== []) {
+2870:                            $assignedTechnicianIds
+2946:        $ticket = DB::transaction(
+2967:                        $ticket->status_tiket,
+3060:            ] = DB::transaction(
+3084:                            $ticket->status_tiket,
+3129:                    $isAssigned = DB::table('tugasan_tiket')
+3309:                        'status_tiket' => config(
+3316:                    $ticket->rekodLog(
+3325:                    $assignedPicIds = DB::table('tugasan_tiket')
+3340:                            $assignedPicIds
+3459:        [$ticket, $validators, $isChiefCorrection, $subCategory] = DB::transaction(
+3478:                $isChiefCorrection = $ticket->status_tiket === 'Menunggu Pembetulan';
+3482:                        $ticket->status_tiket,
+3573:                        'status_tiket' => config(
+3581:                    $ticket->rekodLog(
+3668:        ] = DB::transaction(
+3731:                        $ticket->status_tiket,
+3756:                            DB::table('tugasan_tiket')
+3780:                        'status_tiket' => 'Menunggu Pembetulan',
+3816:                        'status_tiket' => config(
+3824:                    $ticket->rekodLog(
+3944:        ] = DB::transaction(
+4007:                        $ticket->status_tiket,
+4032:                            DB::table('tugasan_tiket')
+4056:                        'status_tiket' => 'Menunggu Pembetulan',
+4089:                        'status_tiket' => config(
+4097:                    $ticket->rekodLog(
+4217:        ] = DB::transaction(
+4235:                    $ticket->status_tiket
+4312:                        'status_tiket' => 'Menunggu Pembetulan',
+4326:                        'status_tiket' => config(
+4334:                    $ticket->rekodLog(
+4343:                    $ticket->rekodLog(
+4434:        ] = DB::transaction(
+4452:                    $ticket->status_tiket
+4529:                        'status_tiket' => 'Menunggu Pembetulan',
+4543:                        'status_tiket' => config(
+4551:                    $ticket->rekodLog(
+4560:                    $ticket->rekodLog(
+4644:        $ticket = DB::transaction(
+4656:                    $ticket->status_tiket
+4726:                    'status_tiket' => config(
+4735:                $ticket->rekodLog(
+4770:            $assigners = Pengguna::query()
+4774:                        's2p_workflow.flows.pembekalan.assignment_role',
+4781:            if ($assigners->isEmpty()) {
+4788:                    $assigners,
+4816:    public function assignProcurementTicket(
+4821:        $assigner = $request->user();
+4827:        ] = DB::transaction(
+4831:                $assigner
+4839:                    $ticket->status_tiket
+4909:                DB::table('tugasan_tiket')
+4913:                $assignmentTime = now();
+4915:                DB::table('tugasan_tiket')->insert(
+4921:                                'created_at' => $assignmentTime,
+4922:                                'updated_at' => $assignmentTime,
+4929:                    'status_tiket' => config(
+4936:                $ticket->rekodLog(
+4938:                    'Oleh '.$assigner->nama,
+4945:                        $assigner->getMorphClass()
+4949:                        (string) $assigner->getKey()
+4978:                    $assigner->nama,
+5013:        $ticket = DB::transaction(
+5029:                if ($ticket->status_tiket !== $expectedStatus) {
+5095:                    'status_tiket' => config(
+5104:                $ticket->rekodLog(
+5143:            $assigners = Pengguna::query()
+5147:                        's2p_workflow.flows.pemodenan.assignment_role',
+5154:            if ($assigners->isEmpty()) {
+5161:                    $assigners,
+5189:    public function assignModernizationTicket(
+5194:        $assigner = $request->user();
+5200:        ] = DB::transaction(
+5204:                $assigner
+5216:                if ($ticket->status_tiket !== $expectedStatus) {
+5289:                DB::table('tugasan_tiket')
+5293:                $assignmentTime = now();
+5295:                DB::table('tugasan_tiket')->insert(
+5301:                                'created_at' => $assignmentTime,
+5302:                                'updated_at' => $assignmentTime,
+5309:                    'status_tiket' => config(
+5316:                $ticket->rekodLog(
+5318:                    'Oleh '.$assigner->nama,
+5329:                        $assigner->getMorphClass()
+5333:                        (string) $assigner->getKey()
+5360:                    $assigner->nama,
+5398:        if ($ticket->status_tiket !== $expectedStatus) {
+5419:        $isAssignedPic = DB::table('tugasan_tiket')
